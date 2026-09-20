@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>FANDHARN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Patrick+Hand&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div class="hud-row">
+    <span id="hud-wave">WAVE 1/5</span>
+    <span id="hud-diff">NORMAL</span>
+    <span id="hud-scribbles">0 scribbles</span>
+  </div>
+  <div class="hud-row small">
+    <span id="hud-cursor">Plain Cursor</span>
+    <span id="hud-upgrades"></span>
+  </div>
+</div>
+
+<div id="menu" class="screen">
+  <h1>FANDHARN</h1>
+  <p class="tag">it doesn't mean anything. it's just the name.</p>
+  <p class="blurb">
+    A castle sits in the middle of the paper with 3 hearts over it.
+    Five waves come for it. Click them to death &mdash; 2 damage a click,
+    10% chance to crit for 50% more. Spend your scribbles between waves.
+  </p>
+  <div class="diffs">
+    <button class="diff easy" data-diff="easy"><b>EASY</b><span>thin enemies, thin crowds</span></button>
+    <button class="diff normal" data-diff="normal"><b>NORMAL</b><span>the drawing as intended</span></button>
+    <button class="diff hard" data-diff="hard"><b>HARD</b><span>fat HP, packed waves</span></button>
+  </div>
+  <p class="hint">mouse click or tap &mdash; same thing</p>
+</div>
+
+<div id="shop" class="screen hidden">
+  <div class="shop-top">
+    <h2 id="shop-title">WAVE DOWN</h2>
+    <span id="shop-purse" class="purse">0 scribbles</span>
+  </div>
+  <div id="shop-list"></div>
+  <button id="shop-continue">NEXT WAVE &rarr;</button>
+</div>
+
+<div id="end" class="screen hidden">
+  <h2 id="end-title">THE CASTLE FELL</h2>
+  <div id="end-body" class="end-body"></div>
+  <button data-action="menu">BACK TO THE TITLE</button>
+</div>
+
+<script src="js/rough.js"></script>
+<script src="js/config.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/waveanim.js"></script>
+<script src="js/cursors.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
