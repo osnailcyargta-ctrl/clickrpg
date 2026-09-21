@@ -2,6 +2,8 @@
    coloured in with crayon that spills past the outline; you buy one of them,
    or skip and keep your scribbles. */
 
+const OFFER_DELAY = 0.5;
+
 function buildOffers(game) {
   const pool = [];
 
@@ -36,7 +38,9 @@ class OfferScreen {
     this.earned = earned;
     this.offers = buildOffers(game);
     this.id = nextId();
-    this.t = 0;
+    // half a second of nothing before the cards start drawing themselves, so
+    // the wave ending gets a beat of its own
+    this.t = -OFFER_DELAY;
     this.done = false;
     this.hover = -1;
     this.hoverSkip = false;
@@ -49,8 +53,6 @@ class OfferScreen {
     this.fillStart = 0.85; this.fillDur = 0.7;
     this.ready = this.fillStart + this.stagger * 2 + this.fillDur;
   }
-
-  skipIntro() { if (this.t < this.ready) this.t = this.ready; }
 
   layout(w, h) {
     const stack = w < 680;
@@ -105,7 +107,7 @@ class OfferScreen {
 
   click(x, y, w, h) {
     if (this.chosen >= 0) return;
-    if (this.t < this.ready) { this.skipIntro(); return; }
+    if (this.t < this.ready) return;        // the intro plays out, it can't be skipped
     this.move(x, y, w, h);
     if (this.hoverSkip) { this.done = true; return; }
     if (this.hover < 0) return;

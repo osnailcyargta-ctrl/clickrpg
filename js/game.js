@@ -354,6 +354,14 @@ const Game = {
     }
   },
 
+  /* Summoned mid-fight by a boss skill, rather than by the wave spawner. */
+  spawnMinion(kind, x, y, hp, speed) {
+    const k = ENEMY_KINDS[kind];
+    const e = new Enemy(kind, Math.max(2, Math.round(hp * k.hpMul)), speed * k.speedMul, x, y);
+    this.enemies.push(e);
+    return e;
+  },
+
   /* ----------------------------------------------------------------- loop */
   frame(now) {
     let dt = (now - this.last) / 1000;

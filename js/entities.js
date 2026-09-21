@@ -27,6 +27,10 @@ class Enemy {
     this.hpShown = 1;         // HP bar eases toward the real value
     this.wobblePhase = Math.random() * 10;
     this.boss = kind === 'boss' || kind === 'warden';
+    this.skillT = kind === 'boss' ? 4.5 : 7;   // boss skill cooldown
+    this.immuneT = 0;                          // the warden's chalk barrier
+    this.barrierT = 0;                         // barrier flare when it blocks
+    this.calledGuards = false;
   }
 
   get speed() {
@@ -40,6 +44,13 @@ class Enemy {
   hurt(amount, game, opts) {
     opts = opts || {};
     if (this.dead) return 0;
+    if (this.immuneT > 0) {                    // the warden's barrier eats it
+      this.barrierT = 1;
+      if (!opts.silent && Math.random() < 0.3) {
+        game.effects.push(new FloatText(this.x + Rough.jit(14), this.y - this.r, 'nope', '#8ec5e8', 15, false));
+      }
+      return 0;
+    }
     const dealt = Math.min(this.hp, amount);
     this.hp -= amount;
     this.flash = 0.12;
@@ -63,6 +74,14 @@ class Enemy {
   die(game) {
     if (this.dead) return;
     this.dead = true;
+    if (this.kind === 'boss') {                // bursts into three blotlings
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2 + Math.random();
+        game.spawnMinion('blotling', this.x + Math.cos(a) * 26, this.y + Math.sin(a) * 26,
+          this.maxHp * 0.09, this.baseSpeed * 2.6);
+      }
+      game.effects.push(new FloatText(this.x, this.y - this.r, 'it split', '#7a5cc4', 24, true));
+    }
     game.onEnemyKilled(this);
     game.effects.push(new DeathSplat(this.x, this.y, this.r, this.fill, this.boss));
     if (this.boss) game.shake(14);
@@ -85,6 +104,8 @@ class Enemy {
     }
     if (this.slow > 0) this.slow -= dt;
     if (this.flash > 0) this.flash -= dt;
+    if (this.barrierT > 0) this.barrierT = Math.max(0, this.barrierT - dt / 0.3);
+    if (this.boss) this.bossSkill(dt, game);
     if (this.faded > 0) this.faded = Math.max(0, this.faded - dt * 0.6);
     if (this.stun > 0) { this.stun -= dt; return; }
 
@@ -97,6 +118,45 @@ class Enemy {
       game.castleHit(this);
       this.dead = true;
       game.effects.push(new DeathSplat(this.x, this.y, this.r, this.fill, false));
+    }
+  }
+
+  /* Each boss has one trick of its own. */
+  bossSkill(dt, game) {
+    this.skillT -= dt;
+
+    if (this.kind === 'boss') {
+      // THE BLOT: coughs up a blotling every few seconds, and bursts into
+      // three more when it finally dies.
+      if (this.skillT <= 0) {
+        this.skillT = 4.5;
+        game.spawnMinion('blotling', this.x, this.y, this.maxHp * 0.09, this.baseSpeed * 2.6);
+        game.effects.push(new FloatText(this.x, this.y - this.r - 10, 'split!', '#7a5cc4', 19, false));
+        game.effects.push(new Splash(this.x, this.y, this.r * 0.9));
+      }
+      return;
+    }
+
+    // THE WARDEN: chalks a barrier around itself that eats everything for a
+    // couple of seconds, and calls two bricks the first time it drops to half.
+    if (this.immuneT > 0) {
+      this.immuneT -= dt;
+      return;
+    }
+    if (!this.calledGuards && this.hp <= this.maxHp * 0.5) {
+      this.calledGuards = true;
+      for (let i = 0; i < 2; i++) {
+        const a = Math.random() * Math.PI * 2;
+        game.spawnMinion('brick', this.x + Math.cos(a) * 60, this.y + Math.sin(a) * 60, this.maxHp * 0.13, this.baseSpeed * 1.5);
+      }
+      game.effects.push(new FloatText(this.x, this.y - this.r - 10, 'guards', '#5c1f3a', 21, true));
+      game.shake(10);
+    }
+    if (this.skillT <= 0) {
+      this.skillT = 9;
+      this.immuneT = 2.5;
+      game.effects.push(new FloatText(this.x, this.y - this.r - 10, 'shielded!', '#8ec5e8', 19, false));
+      game.effects.push(new ShieldPop(this.r + 16));
     }
   }
 
@@ -152,6 +212,15 @@ class Enemy {
     const mouth = this.burn > 0 ? 0.55 : 0.35;
     Rough.line(ctx, x - eye, y + ry * mouth, x + eye, y + ry * mouth,
       { color: '#2b2b2b', width: this.boss ? 2.6 : 1.8, jitter: 1.4, passes: 1 });
+
+    if (this.immuneT > 0) {
+      const flare = E.pop(this.barrierT) * 5;
+      ctx.save();
+      ctx.globalAlpha = 0.55 + Math.sin(t * 9) * 0.2 + this.barrierT * 0.3;
+      Rough.circle(ctx, x, y, this.r + 13 + flare, { color: '#8ec5e8', width: 4, jitter: 4 });
+      Rough.circle(ctx, x, y, this.r + 19 + flare, { color: '#bcdcf2', width: 2.5, jitter: 5 });
+      ctx.restore();
+    }
 
     if (this.faded > 0) {
       ctx.globalAlpha = Math.min(0.85, this.faded);

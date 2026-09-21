@@ -1,7 +1,7 @@
 /* FANDHARN - tuning tables. */
 
 const BLOCK = 40;                  // one "block" of the doodle grid
-const BASE_CLICK_DAMAGE = 2;
+const BASE_CLICK_DAMAGE = 3;
 const BASE_CRIT_CHANCE = 0.10;
 const CRIT_MULT = 1.5;             // crit = 50% more damage
 const CASTLE_HP = 5;               // 5 bar segments, 20% each
@@ -15,25 +15,28 @@ const DIFFICULTIES = {
 };
 
 // Ten waves. Wave 5 and wave 10 carry a boss.
+// Enemy COUNT climbs up to the first boss and then stops for good - after that
+// fight the waves get meaner through HP and speed, not through bigger crowds.
 const WAVE_TABLE = [
   { count: 6,  hp: 8,  speed: 34, interval: 1.70 },
   { count: 8,  hp: 11, speed: 37, interval: 1.60 },
   { count: 10, hp: 15, speed: 40, interval: 1.50 },
   { count: 12, hp: 19, speed: 43, interval: 1.40 },
-  { count: 11, hp: 23, speed: 45, interval: 1.40, boss: 'boss' },
-  { count: 15, hp: 27, speed: 47, interval: 1.25 },
-  { count: 17, hp: 31, speed: 49, interval: 1.20 },
-  { count: 18, hp: 36, speed: 51, interval: 1.15 },
-  { count: 20, hp: 41, speed: 53, interval: 1.10 },
-  { count: 18, hp: 46, speed: 55, interval: 1.15, boss: 'warden' }
+  { count: 13, hp: 23, speed: 45, interval: 1.40, boss: 'boss' },
+  { count: 13, hp: 30, speed: 47, interval: 1.30 },
+  { count: 13, hp: 37, speed: 49, interval: 1.25 },
+  { count: 13, hp: 45, speed: 51, interval: 1.20 },
+  { count: 13, hp: 54, speed: 53, interval: 1.15 },
+  { count: 13, hp: 64, speed: 55, interval: 1.15, boss: 'warden' }
 ];
 
 const ENEMY_KINDS = {
   blob:   { r: 17, hpMul: 1.0,  speedMul: 1.00, fill: '#7a5cc4' },
   dart:   { r: 13, hpMul: 0.65, speedMul: 1.55, fill: '#3f97c9' },
   brick:  { r: 22, hpMul: 1.9,  speedMul: 0.65, fill: '#b5623a' },
-  boss:   { r: 40, hpMul: 5.0,  speedMul: 0.45, fill: '#2f2f3f' },
-  warden: { r: 52, hpMul: 9.0,  speedMul: 0.38, fill: '#5c1f3a' }
+  boss:   { r: 40, hpMul: 5.0,  speedMul: 0.45, fill: '#2f2f3f' },   // splits, and spits blotlings
+  warden: { r: 52, hpMul: 7.0,  speedMul: 0.38, fill: '#5c1f3a' },  // shields itself, and calls guards
+  blotling: { r: 11, hpMul: 1.0, speedMul: 1.35, fill: '#6b4fb0' }
 };
 
 /* ---- CURSORS -------------------------------------------------------------
@@ -43,7 +46,7 @@ const CURSORS = [
   {
     id: 'plain', name: 'Plain Cursor', cost: 0, color: '#2b2b2b', every: 0,
     desc: 'The arrow you were born with.',
-    detail: '2 damage a click, no trick up its sleeve.'
+    detail: '3 damage a click, no trick up its sleeve.'
   },
   {
     id: 'wet', name: 'Wet Cursor', cost: 28, color: '#2f8fd6', every: 15,
