@@ -13,40 +13,33 @@
 <canvas id="game"></canvas>
 
 <div id="hud" class="hidden">
-  <div class="hud-row">
-    <span id="hud-wave">WAVE 1/5</span>
-    <span id="hud-diff">NORMAL</span>
-    <span id="hud-scribbles">0 scribbles</span>
+  <div class="hud-left">
+    <div id="hud-pips" class="pips"></div>
+    <div class="hud-line">
+      <span id="hud-cursor" class="chip">Plain Cursor</span>
+      <span id="hud-upgrades" class="badges"></span>
+    </div>
   </div>
-  <div class="hud-row small">
-    <span id="hud-cursor">Plain Cursor</span>
-    <span id="hud-upgrades"></span>
+  <div class="hud-right">
+    <div id="hud-scribbles" class="purse-chip">0</div>
+    <div id="hud-diff" class="diff-chip">NORMAL</div>
   </div>
 </div>
 
 <div id="menu" class="screen">
   <h1>FANDHARN</h1>
-  <p class="tag">it doesn't mean anything. it's just the name.</p>
-  <p class="blurb">
-    A castle sits in the middle of the paper with 3 hearts over it.
-    Five waves come for it. Click them to death &mdash; 2 damage a click,
-    10% chance to crit for 50% more. Spend your scribbles between waves.
-  </p>
+  <div class="rules">
+    <div class="rule"><b>CLICK</b><span>2 damage a click, 10% crit</span></div>
+    <div class="rule"><b>10 WAVES</b><span>bosses on 5 and 10</span></div>
+    <div class="rule"><b>5 HP</b><span>one segment per leak</span></div>
+    <div class="rule"><b>BUY</b><span>pick 1 of 3 between waves</span></div>
+  </div>
   <div class="diffs">
     <button class="diff easy" data-diff="easy"><b>EASY</b><span>thin enemies, thin crowds</span></button>
     <button class="diff normal" data-diff="normal"><b>NORMAL</b><span>the drawing as intended</span></button>
     <button class="diff hard" data-diff="hard"><b>HARD</b><span>fat HP, packed waves</span></button>
   </div>
-  <p class="hint">mouse click or tap &mdash; same thing</p>
-</div>
-
-<div id="shop" class="screen hidden">
-  <div class="shop-top">
-    <h2 id="shop-title">WAVE DOWN</h2>
-    <span id="shop-purse" class="purse">0 scribbles</span>
-  </div>
-  <div id="shop-list"></div>
-  <button id="shop-continue">NEXT WAVE &rarr;</button>
+  <p class="hint">mouse or touch &mdash; same thing</p>
 </div>
 
 <div id="end" class="screen hidden">
@@ -58,7 +51,7 @@
 <script src="js/rough.js"></script>
 <script src="js/config.js"></script>
 <script src="js/entities.js"></script>
-<script src="js/waveanim.js"></script>
+<script src="js/offers.js"></script>
 <script src="js/cursors.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/game.js"></script>

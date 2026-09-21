@@ -2,12 +2,10 @@
 
 A top-down doodle tower defense you play with your cursor.
 
-**"Fandharn" doesn't mean anything.** It's gibberish, and that's the whole story
-behind the name.
-
-A castle sits in the middle of the paper with 3 hearts drawn over it. Five waves
-of scribbled-on monsters walk in from the edges. There are no towers to place and
-nothing to aim — you *are* the weapon, and you kill things by clicking them.
+A castle sits in the middle of the paper with a 5 segment HP bar over it. Ten
+waves of scribbled-on monsters walk in from the edges. There are no towers to
+place and nothing to aim — you *are* the weapon, and you kill things by clicking
+them.
 
 Open `index.html` in a browser. That's the whole install.
 
@@ -15,55 +13,63 @@ Open `index.html` in a browser. That's the whole install.
 
 - **Click an enemy = 2 damage.** 10% of clicks crit for 50% more.
 - Touch works exactly like a click, so it plays fine on a phone.
-- **3 castle HP.** Every enemy that reaches the castle takes one heart.
-- **5 waves per run**, then the run is over either way.
-- Difficulty is picked at the start and sets enemy HP and how many spawn per wave:
+- **5 castle HP**, drawn as five even 20% segments. Every leak costs one.
+- **10 waves.** Wave 5 brings a boss, wave 10 brings the warden.
+- Kills pay out **scribbles**. After each wave you get **three cards** — a
+  cursor or an upgrade each — and you buy one of them, or skip and keep the
+  money.
 
-  | | enemy HP | enemies per wave | enemy speed |
-  |---|---|---|---|
-  | EASY | 65% | 65% | 85% |
-  | NORMAL | 100% | 100% | 100% |
-  | HARD | 170% | 155% | 120% |
-
-Kills pay out **scribbles**, the currency. After every wave the three-box clear
-animation plays (the boxes get drawn, then coloured in with crayon that spills
-past the outline) and the shop opens.
+| | enemy HP | enemies per wave | speed | spawn rate |
+|---|---|---|---|---|
+| EASY | 65% | 65% | 85% | slower |
+| NORMAL | 100% | 100% | 100% | — |
+| HARD | 170% | 140% | 120% | faster |
 
 ## Cursors
 
-The cursor **is** the weapon, so buying one swaps out whatever you were holding.
-Only one is ever active, and each keeps its own click counter.
+The cursor **is** the weapon. Buying one throws the old one away for good —
+there's no inventory, so going back means buying it again.
 
 | Cursor | Charge | What it does |
 |---|---|---|
-| **Plain Cursor** | — | The arrow you start with. Nothing up its sleeve. |
-| **Wet Cursor** | 15 clicks | Spits 6 water drops. Each one swells, hops one block in one of 9 random directions, shrinks as gravity grabs it, then pops for 2 damage. |
-| **Graphite Cursor** | 10 clicks | Scribbles a live pencil line between your previous and current click. Stays on the paper 2.5s and grinds 1 damage every 0.25s into anything crossing it. |
-| **Eraser Cursor** | 12 clicks | Rubs a 1.5 block hole in the drawing. Enemies caught lose 20% of max HP outright and crawl 25% slower for 2s — their legs got erased. |
-| **Buzz Cursor** | 8 clicks | Arcs static to the 3 nearest enemies within 4 blocks: 3 damage each, frozen mid-scribble for 0.35s. |
+| **Plain Cursor** | — | The arrow you start with. |
+| **Wet Cursor** | 15 clicks | Spits 6 water drops. Each swells, hops one block in one of 9 random directions, shrinks as gravity grabs it, then pops for 2 damage. |
+| **Pen Tool** | drag | A pencil that never stops drawing. Leaves a live ink trail wherever you drag it; the trail lingers 1.4s and grinds 1 damage into anything crossing it. |
+| **Eraser Cursor** | 12 clicks | Rubs a 1.5 block hole in the drawing. Enemies caught lose 20% of max HP outright and crawl 25% slower for 2s. |
+| **Buzz Cursor** | 8 clicks | Arcs static to the 3 nearest enemies within 4 blocks: 3 damage each, frozen for 0.35s. |
 
 ## Upgrades
 
-Passive, three levels each, and they keep working with any cursor.
+**One-shot** — bought once, then gone from the offers forever:
 
-| Upgrade | What it does |
+| | What it does |
 |---|---|
-| **Molten Leftkey** | Every 5 clicks (4 at lv2, 3 at lv3) a fire blast erupts 2 blocks around your cursor for half your click damage and sets everything it touches on fire for 3s: 2–3 damage per second, and burning enemies move 15% faster. |
-| **Ink Overflow** | Every crit bursts the cartridge into an ink puddle (1.2–1.8 blocks, 4s) that slows enemies 30% and stains them for 1–3 damage per second. |
-| **Chalk Ward** | The castle gets 1–3 chalk shield charges. Each eats a hit instead of a heart, and the whole ward is re-drawn at the start of every wave. |
+| **Molten Leftkey** | Every 5 clicks a fire blast erupts 2 blocks around your cursor for half your click damage, and sets what it touches on fire for 3s: 2–3 damage a second, +15% enemy speed while burning. |
+| **Ink Overflow** | Every crit dumps a 1.4 block ink puddle for 4s: 30% slow, 2 damage a second. |
+| **Chalk Ward** | Two shield charges that eat a hit instead of your HP, re-drawn every wave. |
+| **Stick Sentry** | A doodled archer by the castle plinks the nearest enemy every 1.6s for 3 damage. |
+
+**Stacking** — no level cap, they keep coming back and cost more each time:
+
+| | What it does |
+|---|---|
+| **Thick Lead** | +0.5 click damage per level. |
+| **Sharp Nib** | +3% crit chance per level. |
+| **Fat Crayon** | +12% size and +10% damage on every blast, puddle and pop. |
+| **Tape Patch** | Tapes one castle segment back together. Only offered while damaged. |
 
 ## Files
 
 ```
 index.html        markup, HUD and screens
 style.css         paper-and-ink styling
-js/rough.js       crayon renderer: wobbly strokes, scribble fills that overflow
+js/rough.js       crayon renderer: wobbly strokes, scribble fills, noise, easings
 js/config.js      difficulties, wave table, cursor and upgrade tables
-js/entities.js    enemies, status effects, every flying doodle
-js/waveanim.js    the three-box wave clear animation
-js/cursors.js     cursor weapon powers + the drawn pointer
-js/ui.js          menu, HUD, shop, end screens
-js/game.js        loop, input, waves, castle
+js/entities.js    enemies, status effects, sentry, every flying doodle
+js/offers.js      the three-card between-wave screen
+js/cursors.js     cursor powers and the drawn pointer sprites
+js/ui.js          menu, HUD, end screen
+js/game.js        loop, input, waves, castle, ground
 ```
 
 No build step, no dependencies. The handwriting fonts load from Google Fonts and

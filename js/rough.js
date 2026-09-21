@@ -175,5 +175,86 @@ const Rough = (function () {
     ctx.restore();
   }
 
-  return { srand, rnd, jit, boil, line, poly, circle, circlePts, rectPts, scribble, blob, text, centroid };
+
+  /* A closed ring with layered noise on its radius, so the edge reads as
+     hand-drawn ground rather than a compass circle. */
+  function noisyRing(x, y, radius, seedVal, n, amount) {
+    srand(seedVal);
+    n = n || 80;
+    amount = amount == null ? 0.14 : amount;
+    const ph = [rnd() * 6.28, rnd() * 6.28, rnd() * 6.28];
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const wob = Math.sin(a * 3 + ph[0]) * 0.55
+        + Math.sin(a * 5 + ph[1]) * 0.3
+        + Math.sin(a * 9 + ph[2]) * 0.15;
+      const rr = radius * (1 + wob * amount);
+      pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr]);
+    }
+    return pts;
+  }
+
+  /* Crayon grain: sparse dots that break up a flat fill. */
+  function grain(ctx, pts, color, density, seedVal) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of pts) {
+      if (p[0] < minX) minX = p[0];
+      if (p[0] > maxX) maxX = p[0];
+      if (p[1] < minY) minY = p[1];
+      if (p[1] > maxY) maxY = p[1];
+    }
+    srand(seedVal || 1234);
+    ctx.save();
+    tracePoly(ctx, pts, 1, (minX + maxX) / 2, (minY + maxY) / 2);
+    ctx.clip();
+    ctx.fillStyle = color;
+    const n = Math.round((maxX - minX) * (maxY - minY) * (density || 0.0025));
+    for (let i = 0; i < n; i++) {
+      ctx.globalAlpha = 0.05 + rnd() * 0.16;
+      const s = 1 + rnd() * 2;
+      ctx.fillRect(minX + rnd() * (maxX - minX), minY + rnd() * (maxY - minY), s, s);
+    }
+    ctx.restore();
+  }
+
+  /* Crayon progress arc - used for cursor charge. */
+  function arc(ctx, x, y, r, from, to, o) {
+    o = o || {};
+    const steps = Math.max(3, Math.round(Math.abs(to - from) * r / 4));
+    const pts = [];
+    for (let i = 0; i <= steps; i++) {
+      const a = from + (to - from) * (i / steps);
+      pts.push([x + Math.cos(a) * r, y + Math.sin(a) * r]);
+    }
+    poly(ctx, pts, Object.assign({ closed: false }, o));
+  }
+
+  function wrap(ctx, str, size, maxWidth) {
+    ctx.save();
+    ctx.font = size + 'px ' + HAND_FONT;
+    const words = String(str).split(' ');
+    const lines = [];
+    let line = '';
+    for (const wd of words) {
+      const test = line ? line + ' ' + wd : wd;
+      if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = wd; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+    ctx.restore();
+    return lines;
+  }
+
+  // easings, for animation that lands softly instead of snapping
+  const ease = {
+    out: t => 1 - Math.pow(1 - t, 3),
+    outQuint: t => 1 - Math.pow(1 - t, 5),
+    inOut: t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+    back: t => { const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); },
+    pop: t => Math.sin(t * Math.PI),
+    clamp01: v => v < 0 ? 0 : (v > 1 ? 1 : v)
+  };
+
+  return { srand, rnd, jit, boil, line, poly, circle, circlePts, rectPts, scribble, blob, text, centroid, noisyRing, grain, arc, wrap, ease };
 })();

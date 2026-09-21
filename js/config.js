@@ -1,124 +1,129 @@
-/* FANDHARN - tuning tables. "Fandharn" doesn't mean anything, it's gibberish. */
+/* FANDHARN - tuning tables. */
 
-const BLOCK = 40;               // one "block" of the doodle grid
+const BLOCK = 40;                  // one "block" of the doodle grid
 const BASE_CLICK_DAMAGE = 2;
 const BASE_CRIT_CHANCE = 0.10;
-const CRIT_MULT = 1.5;          // crit = 50% more damage
-const CASTLE_HP = 3;
-const WAVES_PER_RUN = 5;
+const CRIT_MULT = 1.5;             // crit = 50% more damage
+const CASTLE_HP = 5;               // 5 bar segments, 20% each
+const WAVES_PER_RUN = 10;
+const GROUND_RADIUS = BLOCK * 3;   // the coloured ground around the castle
 
 const DIFFICULTIES = {
-  easy:   { name: 'EASY',   hpMul: 0.65, countMul: 0.65, speedMul: 0.85, intervalMul: 1.2, color: '#4c9f70', reward: 0.9 },
-  normal: { name: 'NORMAL', hpMul: 1.00, countMul: 1.00, speedMul: 1.00, intervalMul: 1.0, color: '#d99a26', reward: 1.0 },
+  easy:   { name: 'EASY',   hpMul: 0.65, countMul: 0.65, speedMul: 0.85, intervalMul: 1.2,  color: '#4c9f70', reward: 0.9 },
+  normal: { name: 'NORMAL', hpMul: 1.00, countMul: 1.00, speedMul: 1.00, intervalMul: 1.0,  color: '#d99a26', reward: 1.0 },
   hard:   { name: 'HARD',   hpMul: 1.70, countMul: 1.40, speedMul: 1.20, intervalMul: 0.85, color: '#c8433a', reward: 1.25 }
 };
 
-// Per-wave baseline, scaled by difficulty. Five waves, that's the whole run.
+// Ten waves. Wave 5 and wave 10 carry a boss.
 const WAVE_TABLE = [
   { count: 6,  hp: 8,  speed: 34, interval: 1.70 },
-  { count: 9,  hp: 12, speed: 38, interval: 1.55 },
-  { count: 12, hp: 17, speed: 42, interval: 1.40 },
-  { count: 14, hp: 24, speed: 46, interval: 1.30 },
-  { count: 17, hp: 33, speed: 50, interval: 1.20, boss: true }
+  { count: 8,  hp: 11, speed: 37, interval: 1.60 },
+  { count: 10, hp: 15, speed: 40, interval: 1.50 },
+  { count: 12, hp: 19, speed: 43, interval: 1.40 },
+  { count: 11, hp: 23, speed: 45, interval: 1.40, boss: 'boss' },
+  { count: 15, hp: 27, speed: 47, interval: 1.25 },
+  { count: 17, hp: 31, speed: 49, interval: 1.20 },
+  { count: 18, hp: 36, speed: 51, interval: 1.15 },
+  { count: 20, hp: 41, speed: 53, interval: 1.10 },
+  { count: 18, hp: 46, speed: 55, interval: 1.15, boss: 'warden' }
 ];
 
 const ENEMY_KINDS = {
-  blob:  { r: 17, hpMul: 1.0,  speedMul: 1.0,  fill: '#7a5cc4', label: 'blob' },
-  dart:  { r: 13, hpMul: 0.65, speedMul: 1.55, fill: '#3f97c9', label: 'dart' },
-  brick: { r: 22, hpMul: 1.9,  speedMul: 0.65, fill: '#b5623a', label: 'brick' },
-  boss:  { r: 38, hpMul: 3.0,  speedMul: 0.5,  fill: '#2f2f3f', label: 'boss' }
+  blob:   { r: 17, hpMul: 1.0,  speedMul: 1.00, fill: '#7a5cc4' },
+  dart:   { r: 13, hpMul: 0.65, speedMul: 1.55, fill: '#3f97c9' },
+  brick:  { r: 22, hpMul: 1.9,  speedMul: 0.65, fill: '#b5623a' },
+  boss:   { r: 40, hpMul: 5.0,  speedMul: 0.45, fill: '#2f2f3f' },
+  warden: { r: 52, hpMul: 9.0,  speedMul: 0.38, fill: '#5c1f3a' }
 };
 
 /* ---- CURSORS -------------------------------------------------------------
-   A cursor IS the weapon. Buying one swaps the weapon you're holding, so only
-   one is ever active. Each keeps its own click counter. */
+   The cursor IS the weapon. Buying one throws the old one away for good -
+   there is no inventory, so going back means buying it again. */
 const CURSORS = [
   {
-    id: 'plain',
-    name: 'Plain Cursor',
-    cost: 0,
-    color: '#2b2b2b',
-    every: 0,
-    desc: 'The arrow you were born with. 2 damage per click, 10% crit.',
-    detail: 'No trick up its sleeve.'
+    id: 'plain', name: 'Plain Cursor', cost: 0, color: '#2b2b2b', every: 0,
+    desc: 'The arrow you were born with.',
+    detail: '2 damage a click, no trick up its sleeve.'
   },
   {
-    id: 'wet',
-    name: 'Wet Cursor',
-    cost: 26,
-    color: '#2f8fd6',
-    every: 15,
+    id: 'wet', name: 'Wet Cursor', cost: 28, color: '#2f8fd6', every: 15,
     desc: 'Every 15 clicks it spits 6 water shots.',
     detail: 'Each drop swells, hops one block in one of 9 random directions, shrinks as gravity grabs it, then pops for 2 damage.'
   },
   {
-    id: 'graphite',
-    name: 'Graphite Cursor',   // original
-    cost: 30,
-    color: '#5a5f6a',
-    every: 10,
-    desc: 'Every 10 clicks it scribbles a live pencil line.',
-    detail: 'The line is drawn between your previous and current click and stays on the paper for 2.5s, grinding 1 damage every 0.25s into anything that crosses it.'
+    id: 'pen', name: 'Pen Tool', cost: 34, color: '#2f6f4f', every: 0, trail: true,
+    desc: 'A pencil that never stops drawing.',
+    detail: 'Leaves a live ink trail wherever you drag it. The trail lingers 1.4s and grinds 1 damage into anything that crosses it.'
   },
   {
-    id: 'eraser',
-    name: 'Eraser Cursor',     // original
-    cost: 34,
-    color: '#e58ba0',
-    every: 12,
-    desc: 'Every 12 clicks it rubs a 1.5 block hole in the drawing.',
-    detail: 'Enemies caught lose 20% of their max HP outright (undrawn, not damaged) and crawl 25% slower for 2s because their legs got erased.'
+    id: 'eraser', name: 'Eraser Cursor', cost: 32, color: '#e58ba0', every: 12,
+    desc: 'Every 12 clicks it rubs a hole in the drawing.',
+    detail: 'Enemies caught lose 20% of their max HP outright - undrawn, not damaged - and crawl 25% slower for 2s.'
   },
   {
-    id: 'buzz',
-    name: 'Buzz Cursor',       // original
-    cost: 38,
-    color: '#e8c33a',
-    every: 8,
+    id: 'buzz', name: 'Buzz Cursor', cost: 38, color: '#e8c33a', every: 8,
     desc: 'Every 8 clicks it arcs static to 3 enemies.',
     detail: 'Chains up to 3 targets within 4 blocks for 3 damage each and freezes them mid-scribble for 0.35s.'
   }
 ];
 
-/* ---- UPGRADES ------------------------------------------------------------
-   Passive, stack up to 3 levels, keep working no matter which cursor you hold. */
-const UPGRADES = [
+/* ---- ONE-SHOT UPGRADES ---------------------------------------------------
+   Bought once, then gone from the offers forever. */
+const ONESHOT = [
   {
-    id: 'molten',
-    name: 'Molten Leftkey',
-    levels: 3,
-    cost: [28, 40, 55],
-    color: '#e0562d',
+    id: 'molten', name: 'Molten Leftkey', cost: 40, color: '#e0562d',
     desc: 'Your left key runs hot.',
-    detail: function (lv) {
-      const n = [5, 4, 3][Math.max(0, lv - 1)] || 5;
-      return 'Every ' + n + ' clicks, a fire blast erupts 2 blocks around your cursor for half your click damage, and sets everything it touches on fire for 3s (2-3 damage per second, +15% enemy speed while burning).';
-    }
+    detail: 'Every 5 clicks a fire blast erupts 2 blocks around your cursor for half your click damage, and sets whatever it touches on fire for 3s: 2-3 damage a second, and burning enemies move 15% faster.'
   },
   {
-    id: 'ink',
-    name: 'Ink Overflow',      // original
-    levels: 3,
-    cost: [26, 38, 52],
-    color: '#37306b',
+    id: 'ink', name: 'Ink Overflow', cost: 36, color: '#37306b',
     desc: 'Crits burst the ink cartridge.',
-    detail: function (lv) {
-      return 'Every critical hit dumps an ink puddle (' + (1.2 + 0.3 * (lv - 1)).toFixed(1) + ' blocks) that lasts 4s, slows enemies by 30% and stains them for ' + lv + ' damage per second.';
-    }
+    detail: 'Every critical hit dumps a 1.4 block ink puddle for 4s that slows enemies 30% and stains them for 2 damage a second.'
   },
   {
-    id: 'chalk',
-    name: 'Chalk Ward',        // original
-    levels: 3,
-    cost: [30, 45, 62],
-    color: '#8ec5e8',
+    id: 'chalk', name: 'Chalk Ward', cost: 34, color: '#8ec5e8',
     desc: 'A chalk circle around the castle.',
-    detail: function (lv) {
-      return 'The castle gains ' + lv + ' chalk shield charge' + (lv > 1 ? 's' : '') + '. Each one eats a hit instead of your HP, and the whole ward is re-drawn at the start of every wave.';
-    }
+    detail: 'Two chalk shield charges. Each one eats a hit instead of your HP, and the ward is re-drawn at the start of every wave.'
+  },
+  {
+    id: 'sentry', name: 'Stick Sentry', cost: 46, color: '#4c9f70',
+    desc: 'A stick figure joins the defence.',
+    detail: 'A doodled archer stands by the castle and plinks the nearest enemy every 1.6s for 3 damage. It never gets tired, because it is a drawing.'
   }
 ];
 
-function upgradeDetail(up, lv) {
-  return typeof up.detail === 'function' ? up.detail(Math.max(1, lv)) : up.detail;
-}
+/* ---- STACKING UPGRADES ---------------------------------------------------
+   No level cap. They keep showing up in the offers, and the price climbs
+   every time you take one. */
+const STACKING = [
+  {
+    id: 'lead', name: 'Thick Lead', base: 22, growth: 1.35, color: '#5a5f6a',
+    desc: 'Press harder.',
+    detail: lv => '+0.5 click damage per level. Right now your click hits for ' + (BASE_CLICK_DAMAGE + 0.5 * lv).toFixed(1) + '.'
+  },
+  {
+    id: 'nib', name: 'Sharp Nib', base: 20, growth: 1.35, color: '#c8433a',
+    desc: 'Sharpened to a needle.',
+    detail: lv => '+3% crit chance per level. Right now you crit ' + Math.round((BASE_CRIT_CHANCE + 0.03 * lv) * 100) + '% of the time, for 50% more damage.'
+  },
+  {
+    id: 'wax', name: 'Fat Crayon', base: 26, growth: 1.35, color: '#e0562d',
+    desc: 'A crayon the size of your fist.',
+    detail: lv => '+12% size and +10% damage on every blast, puddle and pop. Right now they are ' + Math.round((1 + 0.12 * lv) * 100) + '% size.'
+  },
+  {
+    id: 'patch', name: 'Tape Patch', base: 18, growth: 1.5, color: '#4c9f70',
+    desc: 'Sticky tape over the cracks.',
+    detail: () => 'Tapes one castle segment back together. Only offered while the castle is damaged, and the tape costs more every time.'
+  }
+];
+
+// Cards cost more the deeper the run goes, so a fat purse never trivialises
+// the choice.
+function waveCostMul(wave) { return 1 + 0.2 * Math.max(0, wave - 1); }
+function offerCost(base, wave) { return Math.round(base * waveCostMul(wave)); }
+
+function cursorById(id) { return CURSORS.find(c => c.id === id) || CURSORS[0]; }
+function oneshotById(id) { return ONESHOT.find(u => u.id === id); }
+function stackingById(id) { return STACKING.find(u => u.id === id); }
+function stackingCost(up, level) { return Math.round(up.base * Math.pow(up.growth, level)); }
