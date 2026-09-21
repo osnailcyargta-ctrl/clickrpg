@@ -9,6 +9,8 @@ const UI = {
     this.menu = document.getElementById('menu');
     this.hud = document.getElementById('hud');
     this.end = document.getElementById('end');
+    const tag = document.getElementById('build-tag');
+    if (tag) tag.textContent = 'build ' + (window.BUILD_V || '?');
 
     document.querySelectorAll('[data-diff]').forEach(btn => {
       btn.addEventListener('click', () => { Sfx.play('button', { volume: 0.7 }); game.start(btn.dataset.diff); });

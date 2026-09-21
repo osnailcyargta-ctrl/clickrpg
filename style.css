@@ -129,6 +129,8 @@ button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1
 .diff.normal { border-color: #d99a26; color: #a5741b; }
 .diff.hard { border-color: #c8433a; color: #a4352e; }
 
+.build-tag { opacity: 0.6; font-size: 11px; margin-left: 6px; }
+
 .end-body { text-align: center; line-height: 1.7; font-size: 16px; opacity: 0.85; }
 .end-small { font-size: 12px; opacity: 0.6; margin-top: 4px; }
 

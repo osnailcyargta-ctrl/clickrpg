@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Patrick+Hand&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -42,7 +42,7 @@
     <button class="diff normal" data-diff="normal"><b>NORMAL</b><span>the drawing as intended</span></button>
     <button class="diff hard" data-diff="hard"><b>HARD</b><span>fat HP, packed waves</span></button>
   </div>
-  <p class="hint">mouse or touch &mdash; same thing</p>
+  <p class="hint">mouse or touch &mdash; same thing <span id="build-tag" class="build-tag"></span></p>
 </div>
 
 <div id="end" class="screen hidden">
@@ -51,13 +51,15 @@
   <button data-action="menu">BACK TO THE TITLE</button>
 </div>
 
-<script src="js/audio.js"></script>
-<script src="js/rough.js"></script>
-<script src="js/config.js"></script>
-<script src="js/entities.js"></script>
-<script src="js/offers.js"></script>
-<script src="js/cursors.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/game.js"></script>
+<!-- BUILD: bump this (and the ?v= on every asset) to beat browser caches -->
+<script>window.BUILD_V = "6";</script>
+<script src="js/audio.js?v=6"></script>
+<script src="js/rough.js?v=6"></script>
+<script src="js/config.js?v=6"></script>
+<script src="js/entities.js?v=6"></script>
+<script src="js/offers.js?v=6"></script>
+<script src="js/cursors.js?v=6"></script>
+<script src="js/ui.js?v=6"></script>
+<script src="js/game.js?v=6"></script>
 </body>
 </html>

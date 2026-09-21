@@ -94,6 +94,24 @@ just plays the files.
 - **M** toggles sound, or use the chip in the top-right. The setting is
   remembered.
 
+## Deploying, and why an update can look like it did nothing
+
+The site is served by GitHub Pages straight from this branch. Pages lets
+browsers hold on to `js` and `css` for a long time, so a fresh deploy can
+still show you the old game.
+
+Every local asset in `index.html` therefore carries a `?v=` stamp, and the
+menu prints the build number it is actually running. **Bump it on every
+deploy** so returning players get the new files:
+
+```
+python3 tools/bump.py        # 6 -> 7, rewrites every ?v= and window.BUILD_V
+```
+
+If the menu shows an older build than you just pushed, it is the cache, not
+the deploy: hard-refresh (Ctrl/Cmd+Shift+R), or on a phone open it in a
+private tab.
+
 ## Files
 
 ```
@@ -108,6 +126,7 @@ js/cursors.js     cursor powers and the drawn pointer sprites
 js/ui.js          menu, HUD, end screen
 js/game.js        loop, input, waves, castle (per-HP art + collapse), ground
 tools/make_sfx.py renders assets/sfx/*.mp3
+tools/bump.py     bumps the cache-busting build number
 ```
 
 No build step, no dependencies. The handwriting fonts load from Google Fonts and

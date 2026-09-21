@@ -14,6 +14,7 @@ const Sfx = {
     'erase', 'compass_ring', 'snip', 'sentry_shot', 'ink_splat', 'button'
   ],
   path: 'assets/sfx/',
+  ver: (typeof window !== 'undefined' && window.BUILD_V) ? '?v=' + window.BUILD_V : '',
 
   ctx: null,
   master: null,
@@ -64,7 +65,7 @@ const Sfx = {
   loadBuffers() {
     let failed = 0;
     for (const name of this.names) {
-      fetch(this.path + name + '.mp3')
+      fetch(this.path + name + '.mp3' + this.ver)
         .then(r => r.arrayBuffer())
         .then(buf => new Promise((res, rej) => this.ctx.decodeAudioData(buf, res, rej)))
         .then(audio => { this.buffers[name] = audio; this.ready = true; })
@@ -77,7 +78,7 @@ const Sfx = {
 
   preloadElements() {
     for (const name of this.names) {
-      const a = new Audio(this.path + name + '.mp3');
+      const a = new Audio(this.path + name + '.mp3' + this.ver);
       a.preload = 'auto';
       a.volume = this.volume;
       this.pools[name] = [a];
