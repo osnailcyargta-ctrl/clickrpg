@@ -26,6 +26,13 @@ Open `index.html` in a browser. That's the whole install.
     bricks the first time it drops to half HP.
 - Enemy **counts stop growing once you've beaten a boss** — after that the
   waves get meaner through HP and speed, not bigger crowds.
+- **Skills.** Every cursor has one. It charges over 50 clicks and you fire it
+  by hand — **right-click** on a mouse, or the button in the bottom-right
+  corner on a touchscreen (it only appears once you've touched the screen).
+  It never fires itself, and there are **30 seconds between casts** whatever
+  your click rate, so it stays an event rather than a rotation. Every cast
+  darkens the page, drags the world into slow motion and slams the skill's
+  name down before the payload lands.
 - Kills pay out **scribbles**. After each wave you get **three cards** — a
   cursor or an upgrade each — and you buy one of them, or skip and keep the
   money. The cards take half a second to appear and draw themselves in; the
@@ -54,8 +61,24 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Pen Tool** | 2 | drag | A live ink trail wherever you drag it. Lingers 1.4s and grinds 1 damage into everything crossing it, so a whole crowd walks through it. |
 | **Eraser Cursor** | 2.5 | 12 clicks | Rubs a 1.5 block hole in the drawing: enemies caught lose 20% of max HP outright and crawl 25% slower for 2s. Best against fat targets. |
 | **Buzz Cursor** | 2.5 | 8 clicks | Arcs static to the 3 nearest enemies within 4 blocks: 3 damage each, frozen for 0.35s. |
-| **Compass Cursor** | 2 | 10 clicks | Softest click, widest hit: sweeps an ink ring out to 3 blocks over a second, carving 5 damage into everything the line passes through. |
+| **Compass Cursor** | 2 | 10 clicks | Softest click, widest hit: sweeps an ink ring out to 3 blocks over a second, carving 5 damage into **everything the circle swallows**, each enemy once. |
+| **Storm Caller** | 1.5 | 15 clicks | Softest click in the game. A cloud gathers over a random enemy; half a second later the bolt lands for 50% of your click damage and splashes 4 into everything within a block of it. |
 | **Scissor Cursor** | 4 | — | Hardest click, no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Useless against a crowd. |
+
+### Skills
+
+50 clicks to charge, 30s between casts, fired by hand.
+
+| Cursor | Skill | What it does |
+|---|---|---|
+| **Storm Caller** | THUNDERHEAD | The sky opens. Every enemy within 5 blocks of your cursor, and every enemy standing on the castle's ground, is struck for 125% of your click damage — 105% on a boss. |
+| **Compass** | PERIMETER | A circle drawn from the castle grows until it nearly fills the page, shoving every enemy out to the edge with it. No damage, just distance. |
+| **Scissor** | GUILLOTINE | The page is cut in two. Whichever half holds more enemies is scrapped: 10 damage to everything in it. |
+| **Buzz** | EIGHT WAYS | Static tears out of the cursor down eight lines and earths itself through every enemy on the paper: 125% of your click damage and a 0.6s freeze. |
+| **Wet** | CLOUDBURST | The page floods — 8 damage to everything, and a 40% slow for 3s. |
+| **Pen Tool** | CROSSHATCH | The whole screen is hatched over and the lines bite: 12 damage to everything. |
+| **Eraser** | BLANK SLATE | Three blocks around your cursor are rubbed out: 25% of max HP off everything inside, and a heavy slow. |
+| **Plain** | EXCLAMATION | One enormous mark slams down where you point, for ten times your click damage in 1.6 blocks. |
 
 ## Upgrades
 
@@ -66,6 +89,7 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Molten Leftkey** | Every 5 clicks a fire blast erupts 2 blocks around your cursor for half your click damage, and sets what it touches on fire for 3s: 2–3 damage a second, +15% enemy speed while burning. |
 | **Ink Overflow** | Every crit dumps a 1.4 block ink puddle for 4s: 30% slow, 2 damage a second. |
 | **Chalk Ward** | Two shield charges that eat a hit instead of your HP, re-drawn every wave. |
+| **Thick Paper** | One more castle segment, permanently — six instead of five — and the new one starts full. |
 | **Stick Sentry** | A doodled archer by the castle plinks the nearest enemy every 1.6s for 3 damage. |
 
 **Stacking** — no level cap, they keep coming back and cost more each time:
@@ -75,6 +99,7 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Thick Lead** | +0.5 click damage per level. |
 | **Sharp Nib** | +3% crit chance per level. |
 | **Fat Crayon** | +12% size and +10% damage on every blast, puddle and pop. |
+| **Deep Ink** | +0.3s on every status you inflict, per level: burns, slows, stains, stuns. |
 | **Tape Patch** | Tapes one castle segment back together. Only offered while damaged. |
 
 ## Sound
@@ -121,6 +146,7 @@ js/rough.js       crayon renderer: wobbly strokes, scribble fills, noise, easing
 js/config.js      difficulties, wave table, cursor and upgrade tables
 js/audio.js       mp3 playback: Web Audio with an <audio> fallback
 js/entities.js    enemies, bosses, status effects, sentry, every flying doodle
+js/skills.js      the cast cinematic and one payload per cursor
 js/offers.js      the three-card between-wave screen
 js/cursors.js     cursor powers and the drawn pointer sprites
 js/ui.js          menu, HUD, end screen

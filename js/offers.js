@@ -16,7 +16,7 @@ function buildOffers(game) {
     pool.push({ kind: 'oneshot', id: u.id, name: u.name, color: u.color, cost: offerCost(u.cost, game.wave), desc: u.desc, detail: u.detail, tag: 'ONE-SHOT' });
   }
   for (const u of STACKING) {
-    if (u.id === 'patch' && game.castleHp >= CASTLE_HP) continue;   // nothing to tape
+    if (u.id === 'patch' && game.castleHp >= game.maxHp) continue;    // nothing to tape
     const lv = game.stacking[u.id] || 0;
     pool.push({
       kind: 'stack', id: u.id, name: u.name, color: u.color, cost: offerCost(stackingCost(u, lv), game.wave),
@@ -145,7 +145,7 @@ class OfferScreen {
     const hy = L.cards[0].y - (L.stack ? 62 : 74) - (1 - E.back(hp)) * 26;
     Rough.text(ctx, 'WAVE ' + this.wave + ' CLEAR', w / 2, hy, Math.min(42, w * 0.075), '#2b2b2b');
     Rough.text(ctx,
-      '+' + this.earned + ' scribbles  ·  purse ' + this.game.scribbles + '  ·  castle ' + this.game.castleHp + '/' + CASTLE_HP,
+      '+' + this.earned + ' scribbles  ·  purse ' + this.game.scribbles + '  ·  castle ' + this.game.castleHp + '/' + this.game.maxHp,
       w / 2, hy + 26, Math.min(16, w * 0.033), '#6b6b6b');
     ctx.restore();
 

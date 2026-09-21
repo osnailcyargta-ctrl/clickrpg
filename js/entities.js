@@ -749,7 +749,7 @@ class FireBlast {
       if (e.dead) continue;
       if (Math.hypot(e.x - this.x, e.y - this.y) <= radius + e.r) {
         e.hurt(damage, game, { color: '#e0562d' });
-        if (!e.dead) e.ignite(3);
+        if (!e.dead) e.ignite(3 + game.statusBonus());
       }
     }
     for (let i = 0; i < 10; i++) game.effects.push(new Ember(x, y, radius * 0.7));
@@ -889,7 +889,7 @@ class EraseBurst {
       if (e.dead) continue;
       if (Math.hypot(e.x - this.x, e.y - this.y) <= radius + e.r) {
         e.hurt(e.maxHp * 0.2, game, { color: '#b06078' });
-        if (!e.dead) { e.applySlow(2, 0.75); e.faded = 0.85; }
+        if (!e.dead) { e.applySlow(2 + game.statusBonus(), 0.75); e.faded = 0.85; }
       }
     }
   }
@@ -930,10 +930,10 @@ class Bolt {
 
 /* Ink Overflow puddle. */
 class InkPuddle {
-  constructor(x, y, radius, dps) {
+  constructor(x, y, radius, dps, life) {
     this.id = nextId();
     this.x = x; this.y = y; this.radius = radius; this.dps = dps;
-    this.life = 4; this.max = this.life; this.tick = 1; this.grow = 0;
+    this.life = life || 4; this.max = this.life; this.tick = 1; this.grow = 0;
     this.pts = Rough.noisyRing(x, y, radius, this.id, 26, 0.18);
   }
   update(dt, game) {
@@ -1007,7 +1007,7 @@ class CompassRing {
     for (const e of game.enemies) {
       if (e.dead || this.hit.has(e.id)) continue;
       const d = Math.hypot(e.x - this.x, e.y - this.y);
-      if (d <= r + e.r && d >= r - e.r - 14) {      // the line itself, not the disc
+      if (d <= r + e.r) {                 // everything the circle has swallowed
         this.hit.add(e.id);
         e.hurt(this.damage, game, { color: '#8a5cc4' });
       }

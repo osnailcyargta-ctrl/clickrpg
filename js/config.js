@@ -6,6 +6,8 @@ const BASE_CRIT_CHANCE = 0.10;
 const CRIT_MULT = 1.5;             // crit = 50% more damage
 const CASTLE_HP = 5;               // 5 bar segments, 20% each
 const WAVES_PER_RUN = 10;
+const SKILL_CHARGE = 50;        // clicks to charge a skill
+const SKILL_COOLDOWN = 30;      // seconds between casts, however fast you click
 const GROUND_RADIUS = BLOCK * 3;   // the coloured ground around the castle
 
 const DIFFICULTIES = {
@@ -80,6 +82,11 @@ const CURSORS = [
     detail: 'The softest click at 2, and the widest hit: the compass sweeps an ink ring out to 3 blocks over a second, carving 5 damage into everything the line passes through.'
   },
   {
+    id: 'storm', name: 'Storm Caller', cost: 50, color: '#4a5b8f', every: 15, dmg: 1.5,
+    desc: 'Every 15 clicks it calls down a bolt.',
+    detail: 'The softest click at 1.5. A cloud gathers over a random enemy and half a second later the bolt lands for 50% of your click damage, splashing 4 into everything within a block of it.'
+  },
+  {
     id: 'scissor', name: 'Scissor Cursor', cost: 44, color: '#c8433a', every: 0, dmg: 4,
     desc: 'Snips anything that is nearly gone.',
     detail: 'The hardest click at 4, with no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Nothing here helps against a crowd.'
@@ -103,6 +110,11 @@ const ONESHOT = [
     id: 'chalk', name: 'Chalk Ward', cost: 34, color: '#8ec5e8',
     desc: 'A chalk circle around the castle.',
     detail: 'Two chalk shield charges. Each one eats a hit instead of your HP, and the ward is re-drawn at the start of every wave.'
+  },
+  {
+    id: 'paper', name: 'Thick Paper', cost: 62, color: '#c9a36b',
+    desc: 'The castle is redrawn on card stock.',
+    detail: 'One more castle segment, permanently - six instead of five - and the new one starts full. It is the only thing in the game that raises your ceiling instead of patching the damage.'
   },
   {
     id: 'sentry', name: 'Stick Sentry', cost: 46, color: '#4c9f70',
@@ -131,6 +143,11 @@ const STACKING = [
     detail: lv => '+12% size and +10% damage on every blast, puddle and pop. Right now they are ' + Math.round((1 + 0.12 * lv) * 100) + '% size.'
   },
   {
+    id: 'deepink', name: 'Deep Ink', base: 24, growth: 1.35, color: '#37306b',
+    desc: 'Everything soaks in longer.',
+    detail: lv => 'Every status you inflict lasts +' + (0.3 * lv).toFixed(1) + 's longer at this level: burns, slows, stains, stuns, the lot.'
+  },
+  {
     id: 'patch', name: 'Tape Patch', base: 18, growth: 1.5, color: '#4c9f70',
     desc: 'Sticky tape over the cracks.',
     detail: () => 'Tapes one castle segment back together. Only offered while the castle is damaged, and the tape costs more every time.'
@@ -141,6 +158,24 @@ const STACKING = [
 // the choice.
 function waveCostMul(wave) { return 1 + 0.2 * Math.max(0, wave - 1); }
 function offerCost(base, wave) { return Math.round(base * waveCostMul(wave)); }
+
+/* ---- SKILLS --------------------------------------------------------------
+   Every cursor has one, charged by clicking and fired by hand: right-click on
+   a mouse, or the button in the corner on a touchscreen. It never fires
+   itself. 50 clicks to charge, and 30s between casts whatever your click
+   rate, so it stays an event rather than a rotation. */
+const SKILLS = {
+  storm:   { name: 'THUNDERHEAD', blurb: 'the sky opens over everything near you and over the castle' },
+  compass: { name: 'PERIMETER',   blurb: 'a circle drawn from the castle shoves the whole board to the edges' },
+  scissor: { name: 'GUILLOTINE',  blurb: 'the paper is cut in half and the busier half is scrapped' },
+  buzz:    { name: 'EIGHT WAYS',  blurb: 'static fires out of your cursor down eight lines at once' },
+  wet:     { name: 'CLOUDBURST',  blurb: 'the page floods, and everything standing in it is soaked and slowed' },
+  pen:     { name: 'CROSSHATCH',  blurb: 'the whole screen is hatched over, and the lines bite' },
+  eraser:  { name: 'BLANK SLATE', blurb: 'a third of the drawing is rubbed out around your cursor' },
+  plain:   { name: 'EXCLAMATION', blurb: 'one enormous mark slams down where you point it' }
+};
+
+function skillFor(cursorId) { return SKILLS[cursorId] || SKILLS.plain; }
 
 function cursorById(id) { return CURSORS.find(c => c.id === id) || CURSORS[0]; }
 function oneshotById(id) { return ONESHOT.find(u => u.id === id); }

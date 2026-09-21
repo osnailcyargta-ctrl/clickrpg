@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Patrick+Hand&display=swap">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -22,11 +22,16 @@
     </div>
   </div>
   <div class="hud-right">
+    <div id="hud-skill" class="skill-chip">SKILL 0/50</div>
     <div id="hud-scribbles" class="purse-chip">0</div>
     <div id="hud-diff" class="diff-chip">NORMAL</div>
     <button id="hud-mute" class="mute-chip" title="mute (M)">SOUND ON</button>
   </div>
 </div>
+
+<button id="skill-button" class="skill-button hidden" aria-label="use skill">
+  <span id="skill-button-label">SKILL</span>
+</button>
 
 <div id="menu" class="screen">
   <h1>FANDHARN</h1>
@@ -35,7 +40,8 @@
     <div class="rule"><b>10 WAVES</b><span>bosses on 5 and 10, each with a trick</span></div>
     <div class="rule"><b>5 HP</b><span>one segment per leak</span></div>
     <div class="rule"><b>BUY</b><span>pick 1 of 3 between waves</span></div>
-    <div class="rule"><b>7 CURSORS</b><span>each hits for its own number</span></div>
+    <div class="rule"><b>8 CURSORS</b><span>each hits for its own number</span></div>
+    <div class="rule"><b>SKILLS</b><span>50 clicks, then right-click</span></div>
   </div>
   <div class="diffs">
     <button class="diff easy" data-diff="easy"><b>EASY</b><span>thin enemies, thin crowds</span></button>
@@ -52,14 +58,15 @@
 </div>
 
 <!-- BUILD: bump this (and the ?v= on every asset) to beat browser caches -->
-<script>window.BUILD_V = "6";</script>
-<script src="js/audio.js?v=6"></script>
-<script src="js/rough.js?v=6"></script>
-<script src="js/config.js?v=6"></script>
-<script src="js/entities.js?v=6"></script>
-<script src="js/offers.js?v=6"></script>
-<script src="js/cursors.js?v=6"></script>
-<script src="js/ui.js?v=6"></script>
-<script src="js/game.js?v=6"></script>
+<script>window.BUILD_V = "7";</script>
+<script src="js/audio.js?v=7"></script>
+<script src="js/rough.js?v=7"></script>
+<script src="js/config.js?v=7"></script>
+<script src="js/entities.js?v=7"></script>
+<script src="js/skills.js?v=7"></script>
+<script src="js/offers.js?v=7"></script>
+<script src="js/cursors.js?v=7"></script>
+<script src="js/ui.js?v=7"></script>
+<script src="js/game.js?v=7"></script>
 </body>
 </html>

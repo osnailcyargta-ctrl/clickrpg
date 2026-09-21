@@ -18,6 +18,17 @@ const CursorPowers = {
     }
   },
 
+  storm(game, x, y) {
+    const live = game.enemies.filter(e => !e.dead && e.spawnT > 0.3);
+    const pick = live.length ? live[Math.floor(Math.random() * live.length)] : null;
+    const tx = pick ? pick.x : x + Rough.jit(BLOCK * 3);
+    const ty = pick ? pick.y : y + Rough.jit(BLOCK * 3);
+    game.effects.push(new GatheringCloud(tx, ty, game,
+      game.aoeDamage(game.clickDamage() * 0.5),   // the bolt itself
+      BLOCK * game.aoeScale(),                    // one block of splash
+      game.aoeDamage(4)));                        // which only ever does 4
+  },
+
   eraser(game, x, y) {
     game.effects.push(new EraseBurst(x, y, BLOCK * 1.5 * game.aoeScale(), game));
     Sfx.play('erase', { volume: 0.7 });
@@ -38,7 +49,7 @@ const CursorPowers = {
     for (const e of pool) {
       pts.push([e.x, e.y]);
       e.hurt(game.aoeDamage(3), game, { color: '#b99a1c' });
-      if (!e.dead) e.stun = Math.max(e.stun, 0.35);
+      if (!e.dead) e.stun = Math.max(e.stun, 0.35 + game.statusBonus());
     }
     Sfx.play('zap', { volume: 0.7 });
     if (pts.length > 1) game.effects.push(new Bolt(pts));
@@ -143,6 +154,21 @@ const CursorSprites = {
     }
     const pivot = at(19, 0);
     Rough.circle(ctx, pivot[0], pivot[1], 2.6 * s, { color: '#2b2b2b', width: 1.8, jitter: 0.5 });
+  },
+
+  /* A little storm cloud with the bolt dangling where the arrow tip would be. */
+  storm(ctx, x, y, s, color, t) {
+    const drift = Math.sin(t * 1.4) * 1.5;
+    Rough.blob(ctx, x + 11 * s + drift, y + 7 * s, 8 * s, color, '#2b2b2b', { spacing: 5, fillWidth: 4, sides: 9, width: 2 });
+    Rough.blob(ctx, x + 4 * s + drift * 0.6, y + 10 * s, 6 * s, color, '#2b2b2b', { spacing: 4, fillWidth: 3.5, sides: 8, width: 1.8 });
+    Rough.blob(ctx, x + 19 * s + drift * 1.3, y + 10 * s, 5.5 * s, color, '#2b2b2b', { spacing: 4, fillWidth: 3.5, sides: 8, width: 1.8 });
+    const flick = 0.55 + Math.abs(Math.sin(t * 7)) * 0.45;
+    ctx.save();
+    ctx.globalAlpha = flick;
+    const bolt = [[x + 10 * s, y + 15 * s], [x + 6 * s, y + 23 * s], [x + 11 * s, y + 23 * s], [x + 6 * s, y + 32 * s]];
+    Rough.poly(ctx, bolt, { color: '#e8c33a', width: 2.6, jitter: 1, closed: false });
+    ctx.restore();
+    Rough.line(ctx, x, y, x + 5 * s, y + 5 * s, { color: '#2b2b2b', width: 2, jitter: 0.6, passes: 1 });
   },
 
   buzz(ctx, x, y, s, color, t) {

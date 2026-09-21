@@ -15,6 +15,11 @@ const UI = {
     document.querySelectorAll('[data-diff]').forEach(btn => {
       btn.addEventListener('click', () => { Sfx.play('button', { volume: 0.7 }); game.start(btn.dataset.diff); });
     });
+    const skillBtn = document.getElementById('skill-button');
+    skillBtn.addEventListener('click', e => { e.stopPropagation(); game.castSkill(); });
+    skillBtn.addEventListener('touchstart', e => { e.stopPropagation(); e.preventDefault(); game.castSkill(); }, { passive: false });
+    skillBtn.addEventListener('contextmenu', e => e.preventDefault());
+
     const mute = document.getElementById('hud-mute');
     const paint = () => {
       mute.textContent = Sfx.muted ? 'SOUND OFF' : 'SOUND ON';
@@ -30,6 +35,12 @@ const UI = {
       btn.addEventListener('click', () => { Sfx.play('button', { volume: 0.7 }); this.showMenu(); });
     });
     this.showMenu();
+  },
+
+  /* Only a touchscreen gets a button - a mouse has the right button. */
+  showSkillButton() {
+    const b = document.getElementById('skill-button');
+    if (b) b.classList.remove('hidden');
   },
 
   showMenu() {
@@ -87,6 +98,26 @@ const UI = {
     chip.style.color = cur.color;
     chip.style.borderColor = cur.color;
 
+    // skill chip: charging, ready, or cooling down
+    const skill = skillFor(g.cursorId);
+    const chipEl = document.getElementById('hud-skill');
+    const btnEl = document.getElementById('skill-button');
+    const btnLabel = document.getElementById('skill-button-label');
+    let txt, cls;
+    if (g.skillCd > 0) { txt = skill.name + '  ' + Math.ceil(g.skillCd) + 's'; cls = 'cooling'; }
+    else if (g.skillCharge >= SKILL_CHARGE) { txt = skill.name + '  READY'; cls = 'ready'; }
+    else { txt = skill.name + '  ' + g.skillCharge + '/' + SKILL_CHARGE; cls = ''; }
+    chipEl.textContent = txt;
+    chipEl.className = 'skill-chip ' + cls;
+    chipEl.style.borderColor = cls === 'ready' ? cur.color : '';
+    chipEl.style.color = cls === 'ready' ? cur.color : '';
+    if (btnEl) {
+      btnLabel.textContent = cls === 'cooling' ? Math.ceil(g.skillCd) + 's' : (cls === 'ready' ? skill.name : g.skillCharge + '/' + SKILL_CHARGE);
+      btnEl.className = 'skill-button ' + cls + (g.touchMode ? '' : ' hidden');
+      btnEl.style.borderColor = cls === 'ready' ? cur.color : '';
+      btnEl.style.color = cls === 'ready' ? cur.color : '';
+    }
+
     const badges = [];
     for (const u of ONESHOT) {
       if (g.oneshot[u.id]) badges.push(badge(u.name, u.color, ''));
@@ -116,7 +147,7 @@ const UI = {
     document.getElementById('end-body').innerHTML =
       '<div>' + DIFFICULTIES[g.difficulty].name + ' &middot; wave ' + g.wave + ' of ' + WAVES_PER_RUN + '</div>'
       + '<div>' + g.totalKills + ' scribbles erased</div>'
-      + '<div>castle ' + g.castleHp + '/' + CASTLE_HP + '</div>'
+      + '<div>castle ' + g.castleHp + '/' + g.maxHp + '</div>'
       + '<div>holding: ' + cursorById(g.cursorId).name + '</div>'
       + (stacks.length ? '<div class="end-small">' + stacks.join(' &middot; ') + '</div>' : '');
   }

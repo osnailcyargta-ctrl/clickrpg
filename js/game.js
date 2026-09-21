@@ -11,6 +11,7 @@ const Game = {
   difficulty: 'normal',
   wave: 0,
   castleHp: CASTLE_HP,
+  maxHp: CASTLE_HP,         // Thick Paper raises this
   hpShown: CASTLE_HP,       // eased, so the bar drains instead of jumping
   castleRadius: 46,
   castleHitT: 0,
@@ -26,6 +27,11 @@ const Game = {
   moltenCharge: 0,
   penTrail: null,
   sentry: null,
+  skillCharge: 0,           // clicks banked toward the skill
+  skillCd: 0,               // seconds until it can be cast again
+  skillAnnounced: false,
+  cinematic: null,          // the cast playing out, if any
+  touchMode: false,         // a touch was seen, so show the skill button
   pointer: { x: 0, y: 0, down: 0, inside: false },
   spawnLeft: 0, spawnTimer: 0, waveSpec: null,
   shakeAmt: 0, shakeX: 0, shakeY: 0,
@@ -45,10 +51,16 @@ const Game = {
     const c = this.canvas;
     c.addEventListener('mousemove', e => this.movePointer(e.clientX, e.clientY));
     c.addEventListener('mouseleave', () => { this.pointer.inside = false; });
-    c.addEventListener('mousedown', e => { e.preventDefault(); this.movePointer(e.clientX, e.clientY); this.press(); });
+    c.addEventListener('mousedown', e => {
+      e.preventDefault();
+      this.movePointer(e.clientX, e.clientY);
+      if (e.button === 2) this.castSkill();    // right-click is the skill now
+      else if (e.button === 0) this.press();
+    });
     c.addEventListener('mouseup', () => { this.pointer.down = 0; });
     c.addEventListener('touchstart', e => {
       e.preventDefault();
+      if (!this.touchMode) { this.touchMode = true; UI.showSkillButton(); }
       const t = e.changedTouches[0];
       this.movePointer(t.clientX, t.clientY);
       this.press();
@@ -164,6 +176,7 @@ const Game = {
     this.effects = [];
     this.wave = 0;
     this.castleHp = CASTLE_HP;
+    this.maxHp = CASTLE_HP;
     this.hpShown = CASTLE_HP;
     this.scribbles = 0;
     this.totalKills = 0;
@@ -177,6 +190,10 @@ const Game = {
     this.penTrail = null;
     this.sentry = null;
     this.offerScreen = null;
+    this.skillCharge = 0;
+    this.skillCd = 0;
+    this.skillAnnounced = false;
+    this.cinematic = null;
     UI.hideAll();
     this.startWave();
   },
@@ -210,22 +227,26 @@ const Game = {
   critChance() { return BASE_CRIT_CHANCE + 0.03 * (this.stacking.nib || 0); },
   aoeScale() { return 1 + 0.12 * (this.stacking.wax || 0); },
   aoeDamage(base) { return base * (1 + 0.10 * (this.stacking.wax || 0)); },
+  statusBonus() { return 0.3 * (this.stacking.deepink || 0); },   // Deep Ink
+  skillReady() { return this.skillCharge >= SKILL_CHARGE && this.skillCd <= 0 && !this.cinematic; },
 
   buyOffer(off) {
     this.scribbles -= off.cost;
     if (off.kind === 'cursor') {
       this.cursorId = off.id;                 // the old cursor is gone for good
       this.cursorCharge = 0;
+      this.skillAnnounced = false;            // a new cursor means a new skill
       this.penTrail = off.id === 'pen' ? new PenTrail() : null;
     } else if (off.kind === 'oneshot') {
       this.oneshot[off.id] = true;
       if (off.id === 'chalk') this.shield = 2;
       if (off.id === 'sentry') this.sentry = new Sentry(-this.castleRadius - 26, 14);
       if (off.id === 'molten') this.moltenCharge = 0;
+      if (off.id === 'paper') { this.maxHp++; this.castleHp++; }   // the new segment starts full
     } else {
       const lv = (this.stacking[off.id] || 0) + 1;
       this.stacking[off.id] = lv;
-      if (off.id === 'patch') this.castleHp = Math.min(CASTLE_HP, this.castleHp + 1);
+      if (off.id === 'patch') this.castleHp = Math.min(this.maxHp, this.castleHp + 1);
     }
     UI.syncHud(this);
   },
@@ -257,6 +278,7 @@ const Game = {
     const cursor = cursorById(this.cursorId);
     this.cursorCharge++;
     this.moltenCharge++;
+    if (this.skillCharge < SKILL_CHARGE) this.skillCharge++;
 
     let target = null, bestDist = Infinity;
     for (const e of this.enemies) {
@@ -275,7 +297,8 @@ const Game = {
       if (crit) {
         this.shake(3);
         if (this.oneshot.ink) {
-          this.effects.push(new InkPuddle(target.x, target.y, BLOCK * 1.4 * this.aoeScale(), this.aoeDamage(2)));
+          this.effects.push(new InkPuddle(target.x, target.y, BLOCK * 1.4 * this.aoeScale(),
+            this.aoeDamage(2), 4 + this.statusBonus()));
           Sfx.play('ink_splat', { volume: 0.5, throttle: 120 });
         }
       }
@@ -294,6 +317,25 @@ const Game = {
       Sfx.play('fire_blast', { volume: 0.65, throttle: 90 });
     }
 
+    UI.syncHud(this);
+  },
+
+  /* Fired by hand only: right-click, or the corner button on a touchscreen. */
+  castSkill() {
+    if (this.state !== 'playing' || this.cinematic) return;
+    if (!this.skillReady()) {
+      Sfx.play('click_miss', { volume: 0.5 });
+      const why = this.skillCd > 0 ? Math.ceil(this.skillCd) + 's' : (SKILL_CHARGE - this.skillCharge) + ' clicks';
+      this.effects.push(new FloatText(this.pointer.x - this.w / 2, this.pointer.y - this.h / 2 - 20,
+        why, '#b8b2a3', 16, false));
+      return;
+    }
+    this.skillCharge = 0;
+    this.skillCd = SKILL_COOLDOWN;
+    this.skillAnnounced = false;
+    this.cinematic = new SkillCinematic(this, this.cursorId,
+      this.pointer.x - this.w / 2, this.pointer.y - this.h / 2);
+    Sfx.play('skill_cast', { volume: 1, rateVar: 0 });
     UI.syncHud(this);
   },
 
@@ -342,6 +384,19 @@ const Game = {
   },
 
   shake(amount) { this.shakeAmt = Math.min(24, this.shakeAmt + amount); },
+
+  /* Effects can spawn other effects while they update - a cloud drops its
+     bolt, a drop pops into a splash. A filter() would build its new array
+     from the old one and quietly lose those, so walk the live array by index
+     instead and let anything added mid-pass survive. */
+  updateEffects(dt) {
+    const live = [];
+    for (let i = 0; i < this.effects.length; i++) {
+      const fx = this.effects[i];
+      if (fx.update(dt, this)) live.push(fx);
+    }
+    this.effects = live;
+  },
 
   spawnEnemy() {
     const w = this.waveSpec;
@@ -404,9 +459,29 @@ const Game = {
     } else { this.shakeX = this.shakeY = 0; }
     if (this.banner && !this.banner.update(dt)) this.banner = null;
 
+    if (this.skillCd > 0) {
+      this.skillCd = Math.max(0, this.skillCd - dt);
+      if (this.skillCd === 0) UI.syncHud(this);
+    }
+    if (!this.skillAnnounced && this.skillReady() && this.state === 'playing') {
+      this.skillAnnounced = true;
+      Sfx.play('skill_ready', { volume: 0.7 });
+      this.effects.push(new FloatText(0, -this.castleRadius - 54, skillFor(this.cursorId).name + ' READY',
+        cursorById(this.cursorId).color, 20, false));
+      UI.syncHud(this);
+    }
+
+    // a cast drags the world into slow motion while it plays
+    let scale = 1;
+    if (this.cinematic) {
+      scale = this.cinematic.timeScale;
+      if (!this.cinematic.update(dt, this)) this.cinematic = null;
+    }
+    dt *= scale;
+
     if (this.state === 'collapsing') {
       this.collapse += dt;
-      this.effects = this.effects.filter(f => f.update(dt, this));
+      this.updateEffects(dt);
       if (this.collapse >= COLLAPSE_TIME) {
         this.state = 'gameover';
         UI.showEnd(this, false);
@@ -419,7 +494,7 @@ const Game = {
         this.offerScreen = null;
         this.startWave();
       }
-      this.effects = this.effects.filter(f => f.update(dt, this));
+      this.updateEffects(dt);
       return;
     }
     if (this.state !== 'playing') return;
@@ -435,7 +510,7 @@ const Game = {
 
     for (const e of this.enemies) if (!e.dead) e.update(dt, this);
     this.enemies = this.enemies.filter(e => !e.dead);
-    this.effects = this.effects.filter(f => f.update(dt, this));
+    this.updateEffects(dt);
     if (this.penTrail) this.penTrail.update(dt, this);
     if (this.sentry) this.sentry.update(dt, this);
 
@@ -485,6 +560,7 @@ const Game = {
       ctx.restore();
     }
 
+    if (this.cinematic) this.cinematic.draw(ctx, this.w, this.h, this.time);
     if (this.banner) this.banner.draw(ctx, this.w, this.h, this.time);
     if (this.state === 'offers' && this.offerScreen) this.offerScreen.draw(ctx, this.w, this.h, this.time);
 
@@ -502,7 +578,7 @@ const Game = {
     Rough.boil(7, t * 0.35);
     const R = this.castleRadius;
     const hit = E.pop(this.castleHitT);
-    const dmg = Math.max(0, CASTLE_HP - this.castleHp);   // 0 (fine) .. 5 (gone)
+    const dmg = Math.min(5, Math.max(0, this.maxHp - this.castleHp));   // 0 (fine) .. 5 (gone)
 
     if (this.collapse > 0) { this.drawCollapse(ctx, R, t); return; }
 
@@ -691,7 +767,7 @@ const Game = {
 
   /* Five symmetrical segments, 20% of the castle each. */
   drawHpBar(ctx, x, y) {
-    const segW = 22, gap = 5, n = CASTLE_HP;
+    const n = this.maxHp, segW = n > 5 ? 19 : 22, gap = 5;
     const totalW = segW * n + gap * (n - 1);
     const left = x - totalW / 2;
     Rough.boil(31, this.time * 0.4);
@@ -716,7 +792,7 @@ const Game = {
     }
     ctx.save();
     ctx.globalAlpha = 0.75;
-    Rough.text(ctx, Math.max(0, this.castleHp) + ' / ' + CASTLE_HP, x, y - 19, 13, '#6b6b6b');
+    Rough.text(ctx, Math.max(0, this.castleHp) + ' / ' + this.maxHp, x, y - 19, 13, '#6b6b6b');
     ctx.restore();
   }
 };

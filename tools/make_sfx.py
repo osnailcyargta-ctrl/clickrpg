@@ -307,6 +307,62 @@ def s_button():
     return bp(noise(0.05), 1600, 1.2) * env(0.05, 0.0004, curve=11) * 0.8
 
 
+
+def s_thunder_strike():
+    # the crack of the bolt, then the air collapsing behind it
+    crack = hp(noise(0.12), 2200) * env(0.12, 0.0004, curve=9)
+    body = bp(noise(0.5), 260, 1.1) * env(0.5, 0.002, curve=4)
+    boom = lp(noise(0.7), 140, 3) * env(0.7, 0.004, curve=3)
+    return mix(crack * 1.2, body * 0.8, boom * 1.1)
+
+
+def s_thunder_roll():
+    # the long rumble under the whole skill
+    roll = lp(noise(2.2), 150, 3) * swell(2.2, 0.22, 1.8)
+    groan = am(bp(noise(2.2), 90, 2.0) * swell(2.2, 0.3, 1.6), 3.2, 0.45)
+    debris = grains(2.2, 30, spread=1.8, length=0.03, band=(300, 2000), decay=0.8)
+    return mix(roll * 1.2, groan, debris * 0.35)
+
+
+def s_storm_cloud():
+    # a cloud gathering: air pulled inward
+    return sweep(noise(0.55) * swell(0.55, 0.6, 2.2), 300, 1400, 1.3) * 0.9
+
+
+def s_skill_ready():
+    # the pencil box rattling - your ultimate is charged
+    parts = []
+    for i, f in enumerate([1800, 2500]):
+        g = ring(noise(0.22), f, 20) * env(0.22, 0.002, curve=6)
+        parts.append(np.pad(g, (int(SR * 0.09 * i), 0)))
+    return mix(*parts, hp(noise(0.4), 4500) * swell(0.4, 0.3, 3.0) * 0.4)
+
+
+def s_skill_cast():
+    # the wind-up: everything sucked in, then let go
+    pull = sweep(noise(0.75) * swell(0.75, 0.75, 1.6), 400, 3000, 1.4)
+    hit = np.pad(mix(bp(noise(0.3), 120, 1.4) * env(0.3, 0.001, curve=5),
+                     hp(noise(0.25), 3000) * env(0.25, 0.0006, curve=7) * 0.7),
+                 (int(SR * 0.6), 0))
+    return mix(pull * 0.85, hit * 1.2)
+
+
+def s_push_wave():
+    # a broad shove of air
+    return mix(sweep(noise(0.9) * swell(0.9, 0.25, 2.0), 250, 1200, 1.1) * 1.1,
+               lp(noise(0.5), 200, 3) * env(0.5, 0.004, curve=4) * 0.6)
+
+
+def s_guillotine():
+    # one enormous pair of scissors closing on the paper
+    slide = sweep(noise(0.42) * swell(0.42, 0.7, 2.4), 1200, 4200, 1.6)
+    snap = np.pad(mix(ring(noise(0.16), 3800, 22) * env(0.16, 0.0003, curve=9),
+                      bp(noise(0.3), 180, 1.4) * env(0.3, 0.0015, curve=5) * 0.9),
+                  (int(SR * 0.34), 0))
+    tear = np.pad(sweep(noise(0.45) * swell(0.45, 0.15, 2.6), 900, 3600, 1.4), (int(SR * 0.4), 0))
+    return mix(slide * 0.8, snap * 1.2, tear * 0.7)
+
+
 SOUNDS = {
     'click_hit': s_click_hit, 'click_miss': s_click_miss, 'crit': s_crit,
     'kill': s_kill, 'kill_big': s_kill_big, 'castle_hit': s_castle_hit,
@@ -317,6 +373,9 @@ SOUNDS = {
     'water_pop': s_water_pop, 'zap': s_zap, 'erase': s_erase,
     'compass_ring': s_compass_ring, 'snip': s_snip, 'sentry_shot': s_sentry_shot,
     'ink_splat': s_ink_splat, 'button': s_button,
+    'thunder_strike': s_thunder_strike, 'thunder_roll': s_thunder_roll,
+    'storm_cloud': s_storm_cloud, 'skill_ready': s_skill_ready,
+    'skill_cast': s_skill_cast, 'push_wave': s_push_wave, 'guillotine': s_guillotine,
 }
 
 if __name__ == '__main__':
