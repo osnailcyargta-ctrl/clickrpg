@@ -37,10 +37,15 @@ const UI = {
     this.showMenu();
   },
 
-  /* Only a touchscreen gets a button - a mouse has the right button. */
+  /* The button is there for everyone - right-click still works too. */
   showSkillButton() {
     const b = document.getElementById('skill-button');
     if (b) b.classList.remove('hidden');
+  },
+
+  hideSkillButton() {
+    const b = document.getElementById('skill-button');
+    if (b) b.classList.add('hidden');
   },
 
   showMenu() {
@@ -53,12 +58,14 @@ const UI = {
     this.hideAll();
     this.menu.classList.remove('hidden');
     this.hud.classList.add('hidden');
+    this.hideSkillButton();
   },
 
   hideAll() {
     this.menu.classList.add('hidden');
     this.end.classList.add('hidden');
     this.hud.classList.remove('hidden');
+    this.showSkillButton();
   },
 
   syncHud(g) {
@@ -113,7 +120,7 @@ const UI = {
     chipEl.style.color = cls === 'ready' ? cur.color : '';
     if (btnEl) {
       btnLabel.textContent = cls === 'cooling' ? Math.ceil(g.skillCd) + 's' : (cls === 'ready' ? skill.name : g.skillCharge + '/' + SKILL_CHARGE);
-      btnEl.className = 'skill-button ' + cls + (g.touchMode ? '' : ' hidden');
+      btnEl.className = 'skill-button ' + cls;
       btnEl.style.borderColor = cls === 'ready' ? cur.color : '';
       btnEl.style.color = cls === 'ready' ? cur.color : '';
     }
@@ -136,6 +143,7 @@ const UI = {
   showEnd(g, won) {
     this.end.classList.remove('hidden');
     this.hud.classList.add('hidden');
+    this.hideSkillButton();
     const title = document.getElementById('end-title');
     if (won) Sfx.play('victory', { volume: 1, rateVar: 0 });   // the loss plays with the collapse
     title.textContent = won ? 'FANDHARN HOLDS' : 'THE CASTLE FELL';

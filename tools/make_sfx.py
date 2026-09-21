@@ -363,6 +363,91 @@ def s_guillotine():
     return mix(slide * 0.8, snap * 1.2, tear * 0.7)
 
 
+
+# ---- one per skill, so no two ultimates sound alike --------------------
+def s_sk_thunderhead():
+    # a sky tearing open: flashes, then the strike, then a tail that rolls
+    pre = grains(0.5, 8, spread=0.45, length=0.03, band=(1500, 6000), decay=0.6)
+    crack = np.pad(hp(noise(0.18), 2000) * env(0.18, 0.0003, curve=7), (int(SR * 0.45), 0))
+    slam = np.pad(bp(noise(0.9), 85, 1.2) * env(0.9, 0.003, curve=3), (int(SR * 0.46), 0))
+    roll = np.pad(lp(noise(2.4), 170, 3) * swell(2.4, 0.15, 1.7), (int(SR * 0.5), 0))
+    stabs = []
+    for i in range(5):
+        g = hp(noise(0.14), 2600) * env(0.14, 0.0004, curve=8)
+        stabs.append(np.pad(g, (int(SR * (0.6 + i * 0.16)), 0)) * (0.7 - i * 0.09))
+    return mix(pre * 0.5, crack * 1.2, slam * 1.3, roll * 1.1, *stabs)
+
+
+def s_sk_perimeter():
+    # a compass arm dragged all the way round, shoving air out with it
+    scrape = am(sweep(noise(1.1) * swell(1.1, 0.35, 1.9), 700, 2600, 1.5), 11, 0.55)
+    shove = sweep(noise(1.0) * swell(1.0, 0.2, 2.0), 200, 900, 1.0)
+    thump = np.pad(bp(noise(0.4), 110, 1.4) * env(0.4, 0.002, curve=4), (int(SR * 0.08), 0))
+    return mix(scrape * 0.8, shove * 1.2, thump * 0.7)
+
+
+def s_sk_guillotine():
+    # the shears travelling, meeting, and the page coming apart
+    travel = am(sweep(noise(0.5) * swell(0.5, 0.8, 2.6), 900, 4600, 1.7), 30, 0.4)
+    meet = np.pad(mix(ring(noise(0.2), 3600, 24) * env(0.2, 0.0003, curve=8),
+                      ring(noise(0.2), 5200, 20) * env(0.2, 0.0004, curve=9) * 0.7,
+                      bp(noise(0.45), 150, 1.3) * env(0.45, 0.0015, curve=4)),
+                 (int(SR * 0.44), 0))
+    tear = np.pad(sweep(noise(0.8) * swell(0.8, 0.12, 2.0), 1400, 350, 1.3), (int(SR * 0.5), 0))
+    return mix(travel * 0.85, meet * 1.25, tear * 0.9)
+
+
+def s_sk_eightways():
+    # eight cracks fanning out, then the buzz that stays in the air
+    outs = []
+    for i in range(8):
+        g = hp(noise(0.16), 3000) * env(0.16, 0.0004, curve=8)
+        outs.append(np.pad(g, (int(SR * (0.02 + i * 0.018)), 0)) * (0.9 - i * 0.05))
+    hum = np.pad(am(hp(noise(0.9), 2400) * swell(0.9, 0.12, 2.4), 60, 0.5), (int(SR * 0.1), 0))
+    return mix(*outs, hum * 0.75)
+
+
+def s_sk_cloudburst():
+    # the page taking a bucket of water
+    roar = lp(noise(1.5), 2600, 2) * swell(1.5, 0.18, 1.8)
+    hiss = hp(noise(1.5), 3600) * swell(1.5, 0.22, 1.9)
+    slap = bp(noise(0.5), 400, 1.2) * env(0.5, 0.002, curve=4)
+    return mix(roar * 1.1, hiss * 0.7, slap * 0.8)
+
+
+def s_sk_crosshatch():
+    # a hand scribbling across the whole page, fast
+    strokes = []
+    for i in range(12):
+        g = bp(noise(0.14), rng.uniform(1100, 3400), 1.3) * env(0.14, 0.0008, curve=6)
+        strokes.append(np.pad(g, (int(SR * (0.02 + i * 0.055)), 0)) * rng.uniform(0.6, 1.0))
+    return mix(*strokes)
+
+
+def s_sk_blankslate():
+    # an enormous rub-out, crumbs and all
+    scrub = am(bp(noise(1.0), 1600, 1.0) * swell(1.0, 0.2, 2.0), 7, 0.7)
+    crumbs = grains(1.1, 30, spread=0.8, length=0.012, band=(800, 3600), decay=1.4)
+    return mix(scrub * 1.1, crumbs * 0.55)
+
+
+def s_sk_exclamation():
+    # something very heavy landing on paper
+    whistle = sweep(noise(0.32) * swell(0.32, 0.8, 2.6), 2400, 700, 2.2)
+    slam = np.pad(mix(bp(noise(0.8), 70, 1.2) * env(0.8, 0.002, curve=3),
+                      bp(noise(0.3), 300, 1.6) * env(0.3, 0.001, curve=6) * 0.8,
+                      grains(0.6, 18, spread=0.2, length=0.014, band=(600, 3400), decay=2.0) * 0.6),
+                 (int(SR * 0.3), 0))
+    return mix(whistle * 0.7, slam * 1.3)
+
+
+def s_skill_charge():
+    # the wind-up: everything dragged inward before the release
+    pull = am(sweep(noise(0.85) * swell(0.85, 0.85, 1.4), 300, 3600, 1.5), 7, 0.35)
+    shimmer = hp(noise(0.85), 5000) * swell(0.85, 0.8, 1.5)
+    return mix(pull, shimmer * 0.5)
+
+
 SOUNDS = {
     'click_hit': s_click_hit, 'click_miss': s_click_miss, 'crit': s_crit,
     'kill': s_kill, 'kill_big': s_kill_big, 'castle_hit': s_castle_hit,
@@ -376,6 +461,11 @@ SOUNDS = {
     'thunder_strike': s_thunder_strike, 'thunder_roll': s_thunder_roll,
     'storm_cloud': s_storm_cloud, 'skill_ready': s_skill_ready,
     'skill_cast': s_skill_cast, 'push_wave': s_push_wave, 'guillotine': s_guillotine,
+    'skill_charge': s_skill_charge,
+    'sk_thunderhead': s_sk_thunderhead, 'sk_perimeter': s_sk_perimeter,
+    'sk_guillotine': s_sk_guillotine, 'sk_eightways': s_sk_eightways,
+    'sk_cloudburst': s_sk_cloudburst, 'sk_crosshatch': s_sk_crosshatch,
+    'sk_blankslate': s_sk_blankslate, 'sk_exclamation': s_sk_exclamation,
 }
 
 if __name__ == '__main__':

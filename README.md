@@ -16,8 +16,9 @@ Open `index.html` in a browser. That's the whole install.
 - **5 castle HP**, drawn as five even 20% segments. Every leak costs one, and
   the castle is redrawn for each one it loses: cracks, then broken merlons,
   then a hole in the wall and smoke, then it collapses.
-- **10 waves.** Wave 5 brings the Blot, wave 10 brings the Warden, and each
-  boss has a trick of its own:
+- **10 waves.** Wave 5 brings the Blot, wave 10 brings the Warden. Both boss
+  waves hold a smaller crowd than the ones around them, because the bosses
+  keep adding to it themselves. Each boss has a trick of its own:
   - **The Blot** coughs up a fast blotling every 4.5s, and bursts into three
     more when it dies.
   - **The Warden** — a slab with one enormous eye in it — chalks a barrier
@@ -30,7 +31,8 @@ Open `index.html` in a browser. That's the whole install.
   by hand — **right-click** on a mouse, or the button in the bottom-right
   corner on a touchscreen (it only appears once you've touched the screen).
   It never fires itself, and there are **30 seconds between casts** whatever
-  your click rate, so it stays an event rather than a rotation. Every cast
+  your click rate, so it stays an event rather than a rotation. The button is
+  always on screen; right-click does the same thing. Every cast
   darkens the page, drags the world into slow motion and slams the skill's
   name down before the payload lands.
 - Kills pay out **scribbles**. After each wave you get **three cards** — a
@@ -78,18 +80,22 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Wet** | CLOUDBURST | The page floods — 8 damage to everything, and a 40% slow for 3s. |
 | **Pen Tool** | CROSSHATCH | The whole screen is hatched over and the lines bite: 12 damage to everything. |
 | **Eraser** | BLANK SLATE | Three blocks around your cursor are rubbed out: 25% of max HP off everything inside, and a heavy slow. |
-| **Plain** | EXCLAMATION | One enormous mark slams down where you point, for ten times your click damage in 1.6 blocks. |
+| **Plain** | EXCLAMATION | One enormous mark slams down where you point, for six times your click damage in 2 blocks. The biggest single hit in the game, and the smallest area. |
 
 ## Upgrades
 
-**One-shot** — bought once, then gone from the offers forever:
+**One-shot** — bought once, then gone from the offers forever. Each one also
+leaves its mark on the cursor, so your build is legible at a glance: Molten
+Leftkey wreathes it in flame, Ink Overflow stains its tip and drips, Chalk
+Ward trails a ring of chalk dust, and Stick Sentry posts an archer at your
+shoulder.
 
 | | What it does |
 |---|---|
 | **Molten Leftkey** | Every 5 clicks a fire blast erupts 2 blocks around your cursor for half your click damage, and sets what it touches on fire for 3s: 2–3 damage a second, +15% enemy speed while burning. |
 | **Ink Overflow** | Every crit dumps a 1.4 block ink puddle for 4s: 30% slow, 2 damage a second. |
 | **Chalk Ward** | Two shield charges that eat a hit instead of your HP, re-drawn every wave. |
-| **Thick Paper** | One more castle segment, permanently — six instead of five — and the new one starts full. |
+| **Thick Paper** | One more castle segment, permanently — six instead of five — and the new one starts full. The castle is redrawn inside an uncoloured outer shell so you can see it. |
 | **Stick Sentry** | A doodled archer by the castle plinks the nearest enemy every 1.6s for 3 damage. |
 
 **Stacking** — no level cap, they keep coming back and cost more each time:

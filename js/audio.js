@@ -11,7 +11,11 @@ const Sfx = {
     'click_hit', 'click_miss', 'crit', 'kill', 'kill_big', 'castle_hit', 'ward',
     'wave_start', 'wave_clear', 'card_draw', 'card_buy', 'skip', 'boss_spawn',
     'warden_shield', 'game_over', 'victory', 'fire_blast', 'water_pop', 'zap',
-    'erase', 'compass_ring', 'snip', 'sentry_shot', 'ink_splat', 'button'
+    'erase', 'compass_ring', 'snip', 'sentry_shot', 'ink_splat', 'button',
+    'thunder_strike', 'thunder_roll', 'storm_cloud', 'skill_ready', 'skill_cast',
+    'skill_charge', 'push_wave', 'guillotine',
+    'sk_thunderhead', 'sk_perimeter', 'sk_guillotine', 'sk_eightways',
+    'sk_cloudburst', 'sk_crosshatch', 'sk_blankslate', 'sk_exclamation'
   ],
   path: 'assets/sfx/',
   ver: (typeof window !== 'undefined' && window.BUILD_V) ? '?v=' + window.BUILD_V : '',

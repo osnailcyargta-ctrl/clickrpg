@@ -335,7 +335,7 @@ const Game = {
     this.skillAnnounced = false;
     this.cinematic = new SkillCinematic(this, this.cursorId,
       this.pointer.x - this.w / 2, this.pointer.y - this.h / 2);
-    Sfx.play('skill_cast', { volume: 1, rateVar: 0 });
+    Sfx.play('skill_charge', { volume: 0.95, rateVar: 0 });
     UI.syncHud(this);
   },
 
@@ -566,7 +566,7 @@ const Game = {
 
     if ((this.state === 'playing' || this.state === 'offers') && this.pointer.inside) {
       drawCursor(ctx, cursorById(this.cursorId), this.pointer.x, this.pointer.y,
-        this.cursorCharge, this.pointer.down > 0 ? 1 : 0, this.time);
+        this.cursorCharge, this.pointer.down > 0 ? 1 : 0, this.time, this.oneshot);
     }
   },
 
@@ -609,6 +609,25 @@ const Game = {
       body = Rough.rectPts(-R * 0.8, -R * 0.45, R * 1.6, R * 1.15);
     }
     body = body.map(p => [p[0] + Rough.jit(2), p[1] + Rough.jit(2)]);
+
+    // Thick Paper: an outer shell drawn around the whole thing and left
+    // uncoloured, so you can see the card stock it was redrawn on
+    if (this.oneshot.paper) {
+      const shell = [[-R * 0.98, -R * 0.95], [R * 0.98, -R * 0.95], [R * 0.98, R * 0.88], [-R * 0.98, R * 0.88]]
+        .map(p => [p[0] + Rough.jit(2.6), p[1] + Rough.jit(2.6)]);
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      Rough.poly(ctx, shell, { color: '#2b2b2b', width: 2.6, jitter: 1.8 });
+      ctx.globalAlpha = 0.3;
+      Rough.poly(ctx, shell.map(p => [p[0] * 0.965, p[1] * 0.965]), { color: '#2b2b2b', width: 1.6, jitter: 1.4 });
+      // the corner folds, so it reads as a sheet wrapped round the castle
+      for (const sx of [-1, 1]) {
+        Rough.line(ctx, sx * R * 0.98, -R * 0.95, sx * R * 0.86, -R * 0.78,
+          { color: '#2b2b2b', width: 1.8, jitter: 1.2, passes: 1 });
+      }
+      ctx.restore();
+    }
+
     Rough.scribble(ctx, body, { color: '#c9a36b', spacing: 7, width: 6, overflow: 1.12 });
     Rough.grain(ctx, body, '#7a5a38', 0.004 + dmg * 0.002, 12);
     Rough.poly(ctx, body, { color: '#2b2b2b', width: 3, jitter: 1.3 });

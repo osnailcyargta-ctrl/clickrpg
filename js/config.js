@@ -24,12 +24,12 @@ const WAVE_TABLE = [
   { count: 8,  hp: 11, speed: 37, interval: 1.60 },
   { count: 10, hp: 15, speed: 40, interval: 1.50 },
   { count: 12, hp: 19, speed: 43, interval: 1.40 },
-  { count: 13, hp: 23, speed: 45, interval: 1.40, boss: 'boss' },
+  { count: 9,  hp: 23, speed: 45, interval: 1.60, boss: 'boss' },    // the Blot brings its own
   { count: 13, hp: 28, speed: 47, interval: 1.40 },
   { count: 13, hp: 33, speed: 49, interval: 1.35 },
   { count: 13, hp: 38, speed: 51, interval: 1.30 },
   { count: 13, hp: 44, speed: 53, interval: 1.25 },
-  { count: 13, hp: 50, speed: 55, interval: 1.30, boss: 'warden' }
+  { count: 9,  hp: 50, speed: 55, interval: 1.55, boss: 'warden' }   // so does the Warden
 ];
 
 const ENEMY_KINDS = {

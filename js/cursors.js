@@ -182,13 +182,97 @@ const CursorSprites = {
   }
 };
 
-function drawCursor(ctx, cursor, x, y, charge, pressed, t) {
+/* What the one-shot upgrades leave on the cursor itself: fire around it,
+   ink on its tip, chalk dust, an archer at its shoulder. */
+const CursorMarks = {
+  /* Molten Leftkey: the thing runs hot, so it burns. */
+  molten(ctx, x, y, s, t) {
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + t * 0.6;
+      const wob = Math.sin(t * 9 + i * 1.7) * 0.5 + 0.5;
+      const d = (16 + wob * 5) * s;
+      const fx = x + 8 * s + Math.cos(a) * d, fy = y + 14 * s + Math.sin(a) * d * 0.8;
+      const h = (5 + wob * 5) * s;
+      const tongue = [[fx - 2.6 * s, fy + h * 0.35], [fx, fy - h], [fx + 2.6 * s, fy + h * 0.35]];
+      ctx.save();
+      ctx.globalAlpha = 0.35 + wob * 0.45;
+      Rough.scribble(ctx, tongue, { color: i % 2 ? '#e8c33a' : '#e0562d', spacing: 4, width: 4, overflow: 1.2, alpha: 0.8 });
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.globalAlpha = 0.5 + Math.sin(t * 11) * 0.3;
+    ctx.fillStyle = Math.sin(t * 17) > 0 ? '#e0562d' : '#e8c33a';
+    ctx.fillRect(x + 8 * s + Rough.jit(16), y + 4 * s + Rough.jit(14), 2.5, 2.5);
+    ctx.restore();
+  },
+
+  /* Ink Overflow: the tip is permanently stained, and it drips. */
+  ink(ctx, x, y, s, t) {
+    const blot = Rough.circlePts(x - 1.5 * s, y + 5 * s, 4.2 * s, 1.6 * s, 9);
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    Rough.scribble(ctx, blot, { color: '#37306b', spacing: 3.5, width: 3.5, overflow: 1.2, alpha: 0.85 });
+    Rough.poly(ctx, blot, { color: '#241d4d', width: 1.6, jitter: 1.2 });
+    // a bead gathering at the point, falling now and then
+    const drip = (t * 0.7) % 1;
+    const dy = drip < 0.6 ? drip * 5 : 3 + (drip - 0.6) * 34;
+    ctx.globalAlpha = drip < 0.6 ? 0.9 : Math.max(0, 1 - (drip - 0.6) * 2.5);
+    Rough.blob(ctx, x - 2 * s, y + 9 * s + dy * s, (2.2 - drip * 0.8) * s, '#37306b', '#241d4d',
+      { spacing: 3, fillWidth: 3, sides: 7, width: 1.4 });
+    ctx.restore();
+  },
+
+  /* Chalk Ward: chalk dust never comes off your hands. */
+  chalk(ctx, x, y, s, t) {
+    ctx.save();
+    ctx.globalAlpha = 0.28 + Math.sin(t * 2) * 0.1;
+    Rough.circle(ctx, x + 8 * s, y + 13 * s, 25 * s, { color: '#8ec5e8', width: 1.6, jitter: 3.4 });
+    Rough.srand(Math.floor(t * 4) + 11);
+    ctx.fillStyle = '#bcdcf2';
+    for (let i = 0; i < 6; i++) {
+      ctx.globalAlpha = 0.25 + Rough.rnd() * 0.4;
+      const a = Rough.rnd() * Math.PI * 2, d = (18 + Rough.rnd() * 10) * s;
+      ctx.fillRect(x + 8 * s + Math.cos(a) * d, y + 13 * s + Math.sin(a) * d, 2, 2);
+    }
+    ctx.restore();
+  },
+
+  /* Stick Sentry: one of them tags along at your shoulder. */
+  sentry(ctx, x, y, s, t) {
+    const bx = x - 16 * s, by = y + 16 * s + Math.sin(t * 2.5) * 1.5;
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    Rough.circle(ctx, bx, by - 9 * s, 3.4 * s, { color: '#2f6f4f', width: 1.8, jitter: 0.8 });
+    Rough.line(ctx, bx, by - 6 * s, bx, by + 3 * s, { color: '#2f6f4f', width: 1.8, jitter: 0.8, passes: 1 });
+    Rough.line(ctx, bx, by + 3 * s, bx - 3 * s, by + 8 * s, { color: '#2f6f4f', width: 1.6, jitter: 0.8, passes: 1 });
+    Rough.line(ctx, bx, by + 3 * s, bx + 3 * s, by + 8 * s, { color: '#2f6f4f', width: 1.6, jitter: 0.8, passes: 1 });
+    const aim = Math.sin(t * 1.3) * 0.4 - 0.2;
+    Rough.arc(ctx, bx + 6 * s, by - 2 * s, 5 * s, aim - 1.1, aim + 1.1, { color: '#4c9f70', width: 1.8, jitter: 1 });
+    ctx.restore();
+  }
+};
+
+function drawCursor(ctx, cursor, x, y, charge, pressed, t, marks) {
   const s = 1 - pressed * 0.16;           // squash while held
+
+  // fire and chalk sit behind the cursor, ink and the archer in front
+  Rough.boil(998, Math.floor(t * 8));
+  if (marks) {
+    if (marks.chalk) CursorMarks.chalk(ctx, x, y, s, t);
+    if (marks.molten) CursorMarks.molten(ctx, x, y, s, t);
+  }
+
   Rough.boil(999, t * 1.5);
   ctx.save();
   ctx.globalAlpha = 1;
   (CursorSprites[cursor.id] || CursorSprites.plain)(ctx, x, y, s, cursor.color, t, pressed);
   ctx.restore();
+
+  if (marks) {
+    Rough.boil(997, Math.floor(t * 6));
+    if (marks.ink) CursorMarks.ink(ctx, x, y, s, t);
+    if (marks.sentry) CursorMarks.sentry(ctx, x, y, s, t);
+  }
 
   // charge ring, filling as the weapon gets closer to firing
   if (cursor.every > 0) {
