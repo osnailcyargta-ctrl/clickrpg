@@ -48,6 +48,9 @@ class OfferScreen {
     this.chosenT = 0;
     this.denied = -1;
     this.deniedT = 0;
+    this.hoverReroll = false;
+    this.rerolls = 0;
+    this.rerollDeniedT = 0;
     this.cardIn = this.offers.map(() => 0);
     this.outlineStart = 0.3; this.outlineDur = 0.55; this.stagger = 0.26;
     this.fillStart = 0.85; this.fillDur = 0.7;
@@ -63,13 +66,23 @@ class OfferScreen {
       const total = ch * 3 + gap * 2;
       const y0 = Math.max(h * 0.24, h / 2 - total / 2 + 10);
       for (let i = 0; i < 3; i++) cards.push({ x: (w - cw) / 2, y: y0 + i * (ch + gap), w: cw, h: ch });
-      return { cards, stack, skip: { x: (w - 190) / 2, y: y0 + total + 18, w: 190, h: 44 } };
+      const by = y0 + total + 16, bw = Math.min(168, (cw - 10) / 2);
+      return {
+        cards, stack,
+        reroll: { x: (w - (bw * 2 + 10)) / 2, y: by, w: bw, h: 42 },
+        skip: { x: (w - (bw * 2 + 10)) / 2 + bw + 10, y: by, w: bw, h: 42 }
+      };
     }
     const cw = Math.min(210, (w - 90) / 3), ch = Math.min(280, h * 0.46), gap = 22;
     const total = cw * 3 + gap * 2;
     const x0 = (w - total) / 2, y0 = h / 2 - ch / 2 + 14;
     for (let i = 0; i < 3; i++) cards.push({ x: x0 + i * (cw + gap), y: y0, w: cw, h: ch });
-    return { cards, stack, skip: { x: (w - 200) / 2, y: y0 + ch + 22, w: 200, h: 46 } };
+    const by = y0 + ch + 22, bw = 196;
+    return {
+      cards, stack,
+      reroll: { x: (w - (bw * 2 + 14)) / 2, y: by, w: bw, h: 46 },
+      skip: { x: (w - (bw * 2 + 14)) / 2 + bw + 14, y: by, w: bw, h: 46 }
+    };
   }
 
   cardProgress(i) {
@@ -77,6 +90,28 @@ class OfferScreen {
       outline: E.clamp01((this.t - (this.outlineStart + i * this.stagger)) / this.outlineDur),
       fill: E.clamp01((this.t - (this.fillStart + i * this.stagger)) / this.fillDur)
     };
+  }
+
+  rerollCost() { return rerollPrice(this.offers); }
+
+  /* Throw the hand away and draw three more. The animation replays, so it
+     cannot be used to peek early. */
+  reroll() {
+    const cost = this.rerollCost();
+    if (this.game.scribbles < cost) {
+      this.rerollDeniedT = 1;
+      Sfx.play('click_miss', { volume: 0.6 });
+      return;
+    }
+    this.game.scribbles -= cost;
+    this.rerolls++;
+    this.offers = buildOffers(this.game);
+    this.cardIn = this.offers.map(() => 0);
+    this.hover = -1;
+    this.denied = -1;
+    this.t = 0;                       // draw the new hand in from the start
+    Sfx.play('skip', { volume: 0.8 });
+    UI.syncHud(this.game);
   }
 
   update(dt, w, h) {
@@ -91,6 +126,7 @@ class OfferScreen {
       this.cardIn[i] += (want - this.cardIn[i]) * Math.min(1, dt * 12);
     }
     if (this.deniedT > 0) this.deniedT = Math.max(0, this.deniedT - dt / 0.5);
+    if (this.rerollDeniedT > 0) this.rerollDeniedT = Math.max(0, this.rerollDeniedT - dt / 0.5);
     if (this.chosen >= 0) {
       this.chosenT += dt;
       if (this.chosenT > 1.0) this.done = true;
@@ -106,8 +142,9 @@ class OfferScreen {
       const c = L.cards[i];
       if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) this.hover = i;
     }
-    const s = L.skip;
-    this.hoverSkip = x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h;
+    const inside = r => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+    this.hoverSkip = inside(L.skip);
+    this.hoverReroll = inside(L.reroll);
   }
 
   click(x, y, w, h) {
@@ -115,6 +152,7 @@ class OfferScreen {
     if (this.t < this.ready) return;        // the intro plays out, it can't be skipped
     this.move(x, y, w, h);
     if (this.hoverSkip) { Sfx.play('skip', { volume: 0.6 }); this.done = true; return; }
+    if (this.hoverReroll) { this.reroll(); return; }
     if (this.hover < 0) return;
     const off = this.offers[this.hover];
     if (this.game.scribbles < off.cost) {
@@ -151,19 +189,30 @@ class OfferScreen {
 
     for (let i = 0; i < this.offers.length; i++) this.drawCard(ctx, L, i, time);
 
-    // skip button
+    // the two buttons under the hand
     const ready = this.t >= this.ready && this.chosen < 0;
     if (ready) {
-      const s = L.skip;
-      ctx.save();
-      ctx.globalAlpha = E.clamp01((this.t - this.ready) / 0.3);
-      const lift = this.hoverSkip ? 2 : 0;
-      const pts = Rough.rectPts(s.x, s.y - lift, s.w, s.h).map(p => [p[0] + Rough.jit(2), p[1] + Rough.jit(2)]);
-      if (this.hoverSkip) Rough.scribble(ctx, pts, { color: '#d9d3c4', spacing: 7, width: 5, overflow: 1.1, alpha: 0.5 });
-      Rough.poly(ctx, pts, { color: '#6b6b6b', width: 2.4, jitter: 1.4 });
-      Rough.text(ctx, 'SKIP, KEEP THE LOT', s.x + s.w / 2, s.y + s.h / 2 - lift, 16, '#6b6b6b');
-      ctx.restore();
+      const a = E.clamp01((this.t - this.ready) / 0.3);
+      const cost = this.rerollCost();
+      const afford = this.game.scribbles >= cost;
+      this.drawButton(ctx, L.reroll, 'REROLL  ' + cost, this.hoverReroll, a,
+        afford ? '#d99a26' : '#b8b2a3', L.stack,
+        this.rerollDeniedT > 0 ? Math.sin(this.rerollDeniedT * 40) * this.rerollDeniedT * 7 : 0);
+      this.drawButton(ctx, L.skip, L.stack ? 'SKIP' : 'SKIP, KEEP THE LOT', this.hoverSkip, a, '#6b6b6b', L.stack, 0);
     }
+  }
+
+  drawButton(ctx, r, label, hovered, alpha, color, stack, shakeX) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    const lift = hovered ? 2 : 0;
+    Rough.boil(this.id + 400 + label.length, 0);
+    const pts = Rough.rectPts(r.x + shakeX, r.y - lift, r.w, r.h)
+      .map(p => [p[0] + Rough.jit(2), p[1] + Rough.jit(2)]);
+    if (hovered) Rough.scribble(ctx, pts, { color: color, spacing: 7, width: 5, overflow: 1.1, alpha: 0.28 });
+    Rough.poly(ctx, pts, { color: color, width: hovered ? 3 : 2.4, jitter: 1.4 });
+    Rough.text(ctx, label, r.x + shakeX + r.w / 2, r.y + r.h / 2 - lift, stack ? 14 : 16, color);
+    ctx.restore();
   }
 
   drawCard(ctx, L, i, time) {

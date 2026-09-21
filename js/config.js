@@ -41,7 +41,7 @@ const ENEMY_KINDS = {
   blotling: { r: 11, hpMul: 1.0,  speedMul: 1.35, fill: '#6b4fb0' },
   // wave 5 is a coin flip between the Blot and this: far less HP, but it
   // keeps its distance and shoots, and the shots have to be cleared
-  eagle:    { r: 34, hpMul: 2.2,  speedMul: 0.85, fill: '#4a5b8f' },
+  eagle:    { r: 34, hpMul: 3.6,  speedMul: 0.85, fill: '#4a5b8f' },   // immune to Storm Caller
   boltshot: { r: 12, hpMul: 0.0,  speedMul: 3.2,  fill: '#8ea6ff' }   // always 1 HP
 };
 
@@ -86,9 +86,9 @@ const CURSORS = [
     detail: 'The softest click at 2, and the widest hit: the compass sweeps an ink ring out to 3 blocks over a second, carving 5 damage into everything the line passes through.'
   },
   {
-    id: 'storm', name: 'Storm Caller', cost: 50, color: '#4a5b8f', every: 15, dmg: 1.5,
+    id: 'storm', name: 'Storm Caller', cost: 50, color: '#4a5b8f', every: 15, dmg: 2,
     desc: 'Every 15 clicks it calls down a bolt.',
-    detail: 'The softest click at 1.5. A cloud gathers over a random enemy and half a second later the bolt lands for 50% of your click damage, splashing 4 into everything within a block of it.'
+    detail: '2 a click. A cloud gathers over a random enemy and half a second later the bolt lands for 50% of your click damage, splashing 4 into everything within a block of it. The Thunder Eagle drinks lightning, so none of it touches her.'
   },
   {
     id: 'scissor', name: 'Scissor Cursor', cost: 44, color: '#c8433a', every: 0, dmg: 4,
@@ -152,6 +152,11 @@ const STACKING = [
     detail: lv => 'Every status you inflict lasts +' + (0.3 * lv).toFixed(1) + 's longer at this level: burns, slows, stains, stuns, the lot.'
   },
   {
+    id: 'credit', name: 'Extra Credit', base: 22, growth: 1.35, color: '#d99a26',
+    desc: 'Marks for effort.',
+    detail: lv => '+5% scribbles from every kill per level. At this level every body is worth ' + (100 + 5 * lv) + '% of what it used to be.'
+  },
+  {
     id: 'patch', name: 'Tape Patch', base: 18, growth: 1.5, color: '#4c9f70',
     desc: 'Sticky tape over the cracks.',
     detail: () => 'Tapes one castle segment back together. Only offered while the castle is damaged, and the tape costs more every time.'
@@ -161,6 +166,14 @@ const STACKING = [
 // Cards cost more the deeper the run goes, so a fat purse never trivialises
 // the choice.
 function waveCostMul(wave) { return 1 + 0.2 * Math.max(0, wave - 1); }
+
+// A reroll is priced off the three cards in front of you: the better the hand
+// you are throwing away, the more it costs to throw it away.
+const REROLL_DIVISOR = 2.5;
+function rerollPrice(offers) {
+  const sum = offers.reduce((t, o) => t + o.cost, 0);
+  return Math.max(5, Math.round(sum / REROLL_DIVISOR));
+}
 function offerCost(base, wave) { return Math.round(base * waveCostMul(wave)); }
 
 /* ---- SKILLS --------------------------------------------------------------

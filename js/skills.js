@@ -393,9 +393,9 @@ class LightningBolt {
           if (e.dead) continue;
           const d = Math.hypot(e.x - this.x, e.y - this.y);
           if (d <= this.radius + e.r) {
-            if (this.damage > 0) e.hurt(this.damage, game, { color: '#dfe6ff' });
+            if (this.damage > 0) e.hurt(this.damage, game, { color: '#dfe6ff', source: 'storm' });
           } else if (this.splash && d <= this.splash.radius + e.r) {
-            e.hurt(this.splash.damage, game, { color: '#9fb4ff' });
+            e.hurt(this.splash.damage, game, { color: '#9fb4ff', source: 'storm' });
           }
         }
       }

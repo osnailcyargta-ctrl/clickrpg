@@ -352,7 +352,8 @@ const Game = {
   onEnemyKilled(e) {
     Sfx.play(e.boss || e.kind === 'brick' ? 'kill_big' : 'kill',
       { volume: e.boss ? 1 : 0.5, throttle: e.boss ? 0 : 45, voices: 4 });
-    const gain = Math.max(1, Math.round((1 + e.maxHp / 5) * DIFFICULTIES[this.difficulty].reward));
+    const credit = 1 + 0.05 * (this.stacking.credit || 0);      // Extra Credit
+    const gain = Math.max(1, Math.round((1 + e.maxHp / 5) * DIFFICULTIES[this.difficulty].reward * credit));
     this.scribbles += gain;
     this.effects.push(new FloatText(e.x + 10, e.y + 6, '+' + gain, '#d99a26', 15, false));
     this.waveScribbles += gain;

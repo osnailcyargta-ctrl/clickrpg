@@ -31,6 +31,8 @@ class Enemy {
     this.dash = null;                          // the Eagle's swoop, while it lasts
     this.dashT = kind === 'eagle' ? 3.4 : 0;
     this.flap = Math.random() * 6;
+    this.immuneSource = kind === 'eagle' ? 'storm' : null;   // she drinks lightning
+    this.drink = 0;                                          // glow when she does
     this.smear = [];                           // recent positions, for the swoop blur
     this.immuneT = 0;                          // the warden's chalk barrier
     this.barrierT = 0;                         // barrier flare when it blocks
@@ -48,6 +50,15 @@ class Enemy {
   hurt(amount, game, opts) {
     opts = opts || {};
     if (this.dead) return 0;
+    // the Thunder Eagle is made of the stuff the Storm Caller throws
+    if (this.immuneSource && opts.source === this.immuneSource) {
+      this.drink = 1;
+      if (!opts.silent && Math.random() < 0.35) {
+        game.effects.push(new FloatText(this.x + Rough.jit(16), this.y - this.r,
+          'drinks it', '#dfe6ff', 16, false));
+      }
+      return 0;
+    }
     if (this.immuneT > 0) {                    // the warden's barrier eats it
       this.barrierT = 1;
       if (!opts.silent && Math.random() < 0.3) {
@@ -115,6 +126,7 @@ class Enemy {
     if (this.slow > 0) this.slow -= dt;
     if (this.flash > 0) this.flash -= dt;
     if (this.barrierT > 0) this.barrierT = Math.max(0, this.barrierT - dt / 0.3);
+    if (this.drink > 0) this.drink = Math.max(0, this.drink - dt / 0.5);
     if (this.boss) this.bossSkill(dt, game);
     if (this.faded > 0) this.faded = Math.max(0, this.faded - dt * 0.6);
     if (this.stun > 0) { this.stun -= dt; return; }
@@ -517,9 +529,20 @@ class Enemy {
     // eyes, lit from inside
     this.eyes(ctx, x, y - r * 0.15, r * 0.7, 2, t, '#dfe6ff');
 
+    // brighter for a moment after she swallows a bolt
+    if (this.drink > 0) {
+      ctx.save();
+      ctx.globalAlpha = this.drink * 0.8;
+      Rough.circle(ctx, x, y, r * (1.3 + (1 - this.drink) * 0.7),
+        { color: '#dfe6ff', width: 4, jitter: 5, wobble: 5 });
+      Rough.circle(ctx, x, y, r * (0.9 + (1 - this.drink) * 0.4),
+        { color: '#8ea6ff', width: 3, jitter: 4, wobble: 4 });
+      ctx.restore();
+    }
+
     // the charge it carries
     ctx.save();
-    ctx.globalAlpha = 0.35 + Math.abs(Math.sin(t * 11)) * 0.4;
+    ctx.globalAlpha = 0.35 + Math.abs(Math.sin(t * 11)) * 0.4 + this.drink * 0.3;
     for (let i = 0; i < 3; i++) {
       const a = t * 2 + i * 2.1;
       Rough.line(ctx, x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9,

@@ -25,7 +25,9 @@ Open `index.html` in a browser. That's the whole install.
     with less than half the Blot's HP, which never closes in. It holds a
     standoff five blocks out, looses a bolt at the castle every 3.2s that has
     **1 HP and has to be shot down** before it lands, and swoops in and back
-    out every few seconds. Killing it plays it out: it rears, tears free in a
+    out every few seconds. She is **immune to everything the Storm Caller
+    throws** — its bolts, its splash and THUNDERHEAD all get drunk — so that
+    is the one cursor you cannot bring to this fight. Killing it plays it out: it rears, tears free in a
     clap of light and climbs off the top of the page, leaving smear frames
     stretched behind it.
   - **The Warden** — a slab with one enormous eye in it — chalks a barrier
@@ -44,7 +46,9 @@ Open `index.html` in a browser. That's the whole install.
   name down before the payload lands.
 - Kills pay out **scribbles**. After each wave you get **three cards** — a
   cursor or an upgrade each — and you buy one of them, or skip and keep the
-  money. The cards take half a second to appear and draw themselves in; the
+  money. You can also **reroll** the hand: it costs the three cards' prices
+  added up and divided by 2.5, so throwing away a good hand costs more than
+  throwing away a bad one, and the new hand draws itself in from scratch. The cards take half a second to appear and draw themselves in; the
   animation doesn't skip.
 
 | | enemy HP | enemies per wave | speed | spawn rate |
@@ -71,7 +75,7 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Eraser Cursor** | 2.5 | 12 clicks | Rubs a 1.5 block hole in the drawing: enemies caught lose 20% of max HP outright and crawl 25% slower for 2s. Best against fat targets. |
 | **Buzz Cursor** | 2.5 | 8 clicks | Arcs static to the 3 nearest enemies within 4 blocks: 3 damage each, frozen for 0.35s. |
 | **Compass Cursor** | 2 | 10 clicks | Softest click, widest hit: sweeps an ink ring out to 3 blocks over a second, carving 5 damage into **everything the circle swallows**, each enemy once. |
-| **Storm Caller** | 1.5 | 15 clicks | Softest click in the game. A cloud gathers over a random enemy; half a second later the bolt lands for 50% of your click damage and splashes 4 into everything within a block of it. |
+| **Storm Caller** | 2 | 15 clicks | A cloud gathers over a random enemy; half a second later the bolt lands for 50% of your click damage and splashes 4 into everything within a block of it. The Thunder Eagle is immune to all of it. |
 | **Scissor Cursor** | 4 | — | Hardest click, no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Useless against a crowd. |
 
 ### Skills
@@ -113,6 +117,7 @@ themselves around the castle, so they leave the cursor alone.
 | **Thick Lead** | +0.5 click damage per level. |
 | **Sharp Nib** | +3% crit chance per level. |
 | **Fat Crayon** | +12% size and +10% damage on every blast, puddle and pop. |
+| **Extra Credit** | +5% scribbles from every kill, per level. |
 | **Deep Ink** | +0.3s on every status you inflict, per level: burns, slows, stains, stuns. |
 | **Tape Patch** | Tapes one castle segment back together. Only offered while damaged. |
 
