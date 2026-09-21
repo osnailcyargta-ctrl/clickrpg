@@ -19,8 +19,15 @@ Open `index.html` in a browser. That's the whole install.
 - **10 waves.** Wave 5 brings the Blot, wave 10 brings the Warden. Both boss
   waves hold a smaller crowd than the ones around them, because the bosses
   keep adding to it themselves. Each boss has a trick of its own:
-  - **The Blot** coughs up a fast blotling every 4.5s, and bursts into three
-    more when it dies.
+  - **Wave 5 is a coin flip.** Half the time it's **the Blot**, which coughs
+    up a fast blotling every 4.5s and bursts into three more when it dies.
+  - The other half it's **the Thunder Eagle** — a raptor cut out of lightning
+    with less than half the Blot's HP, which never closes in. It holds a
+    standoff five blocks out, looses a bolt at the castle every 3.2s that has
+    **1 HP and has to be shot down** before it lands, and swoops in and back
+    out every few seconds. Killing it plays it out: it rears, tears free in a
+    clap of light and climbs off the top of the page, leaving smear frames
+    stretched behind it.
   - **The Warden** — a slab with one enormous eye in it — chalks a barrier
     around itself every 9s that eats all damage for 2.5s (its iris turns
     chalk-blue and the pupil narrows, so you can see it coming), and calls two
@@ -75,7 +82,7 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 |---|---|---|
 | **Storm Caller** | THUNDERHEAD | The sky opens. Every enemy within 5 blocks of your cursor, and every enemy standing on the castle's ground, is struck for 125% of your click damage — 105% on a boss. |
 | **Compass** | PERIMETER | A circle drawn from the castle grows until it nearly fills the page, shoving every enemy out to the edge with it. No damage, just distance. |
-| **Scissor** | GUILLOTINE | The page is cut in two. Whichever half holds more enemies is scrapped: 10 damage to everything in it. |
+| **Scissor** | GUILLOTINE | A slash tears right to left across whichever half holds more enemies, marking it, and then the blades close: 10 damage to everything in it. |
 | **Buzz** | EIGHT WAYS | Static tears out of the cursor down eight lines and earths itself through every enemy on the paper: 125% of your click damage and a 0.6s freeze. |
 | **Wet** | CLOUDBURST | The page floods — 8 damage to everything, and a 40% slow for 3s. |
 | **Pen Tool** | CROSSHATCH | The whole screen is hatched over and the lines bite: 12 damage to everything. |
@@ -84,11 +91,12 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 
 ## Upgrades
 
-**One-shot** — bought once, then gone from the offers forever. Each one also
-leaves its mark on the cursor, so your build is legible at a glance: Molten
-Leftkey wreathes it in flame, Ink Overflow stains its tip and drips, Chalk
-Ward trails a ring of chalk dust, and Stick Sentry posts an archer at your
-shoulder.
+**One-shot** — bought once, then gone from the offers forever. The two with
+nothing to show on the battlefield leave their mark on the cursor instead:
+**Molten Leftkey** sets it alight, with flames climbing off its body, heat
+pooling under it and smoke coming off the top, and **Ink Overflow** stains
+its tip and drips from the point. Chalk Ward and Stick Sentry already draw
+themselves around the castle, so they leave the cursor alone.
 
 | | What it does |
 |---|---|

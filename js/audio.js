@@ -15,7 +15,8 @@ const Sfx = {
     'thunder_strike', 'thunder_roll', 'storm_cloud', 'skill_ready', 'skill_cast',
     'skill_charge', 'push_wave', 'guillotine',
     'sk_thunderhead', 'sk_perimeter', 'sk_guillotine', 'sk_eightways',
-    'sk_cloudburst', 'sk_crosshatch', 'sk_blankslate', 'sk_exclamation'
+    'sk_cloudburst', 'sk_crosshatch', 'sk_blankslate', 'sk_exclamation',
+    'eagle_screech', 'eagle_dash', 'bolt_shot', 'eagle_death'
   ],
   path: 'assets/sfx/',
   ver: (typeof window !== 'undefined' && window.BUILD_V) ? '?v=' + window.BUILD_V : '',

@@ -31,6 +31,7 @@ const Game = {
   skillCd: 0,               // seconds until it can be cast again
   skillAnnounced: false,
   cinematic: null,          // the cast playing out, if any
+  slowT: 0, slowScale: 1,   // a short drag on time, for moments like a boss dying
   touchMode: false,         // a touch was seen, so show the skill button
   pointer: { x: 0, y: 0, down: 0, inside: false },
   spawnLeft: 0, spawnTimer: 0, waveSpec: null,
@@ -194,6 +195,7 @@ const Game = {
     this.skillCd = 0;
     this.skillAnnounced = false;
     this.cinematic = null;
+    this.slowT = 0;
     UI.hideAll();
     this.startWave();
   },
@@ -385,6 +387,11 @@ const Game = {
 
   shake(amount) { this.shakeAmt = Math.min(24, this.shakeAmt + amount); },
 
+  slowmo(seconds, scale) {
+    this.slowT = Math.max(this.slowT, seconds);
+    this.slowScale = scale;
+  },
+
   /* Effects can spawn other effects while they update - a cloud drops its
      bolt, a drop pops into a splash. A filter() would build its new array
      from the old one and quietly lose those, so walk the live array by index
@@ -406,7 +413,9 @@ const Game = {
         stage === 3 ? ['blob', 'dart', 'brick'] :
           ['blob', 'dart', 'dart', 'brick', 'brick'];
     let kind = pool[Math.floor(Math.random() * pool.length)];
-    if (w.boss && this.spawnLeft === w.count - 2) kind = w.boss;
+    if (w.boss && this.spawnLeft === w.count - 2) {
+      kind = w.boss === 'boss' && Math.random() < 0.5 ? 'eagle' : w.boss;
+    }
 
     // just outside the visible paper, so they walk on screen right away
     const mx = this.w / 2 + 60, my = this.h / 2 + 60;
@@ -419,9 +428,9 @@ const Game = {
       sy = (Math.random() * 2 - 1) * my;
     }
     const k = ENEMY_KINDS[kind];
-    const hp = Math.max(2, Math.round(w.hp * k.hpMul));
+    const hp = kind === 'boltshot' ? 1 : Math.max(2, Math.round(w.hp * k.hpMul));
     this.enemies.push(new Enemy(kind, hp, w.speed * k.speedMul, sx, sy));
-    if (kind === 'boss' || kind === 'warden') {
+    if (kind === 'boss' || kind === 'warden' || kind === 'eagle') {
       this.shake(10);
       Sfx.play('boss_spawn', { volume: 1, rateVar: 0.02 });
       this.effects.push(new SpawnMark(sx, sy, k.r * 1.6));
@@ -431,7 +440,8 @@ const Game = {
   /* Summoned mid-fight by a boss skill, rather than by the wave spawner. */
   spawnMinion(kind, x, y, hp, speed) {
     const k = ENEMY_KINDS[kind];
-    const e = new Enemy(kind, Math.max(2, Math.round(hp * k.hpMul)), speed * k.speedMul, x, y);
+    const rolled = kind === 'boltshot' ? 1 : Math.max(2, Math.round(hp * k.hpMul));
+    const e = new Enemy(kind, rolled, speed * k.speedMul, x, y);
     this.enemies.push(e);
     return e;
   },
@@ -471,11 +481,15 @@ const Game = {
       UI.syncHud(this);
     }
 
-    // a cast drags the world into slow motion while it plays
+    // a cast, or a boss going down, drags the world into slow motion
     let scale = 1;
     if (this.cinematic) {
       scale = this.cinematic.timeScale;
       if (!this.cinematic.update(dt, this)) this.cinematic = null;
+    }
+    if (this.slowT > 0) {
+      this.slowT = Math.max(0, this.slowT - dt);
+      scale = Math.min(scale, this.slowScale + (1 - this.slowScale) * (1 - Math.min(1, this.slowT / 0.45)));
     }
     dt *= scale;
 

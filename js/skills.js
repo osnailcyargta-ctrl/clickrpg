@@ -23,24 +23,11 @@ class SkillCinematic {
     for (let i = 0; i < 34; i++) {
       this.rays.push({ a: Math.random() * Math.PI * 2, d: 0.55 + Math.random() * 0.8, w: 1 + Math.random() * 3.2 });
     }
-    this.glyph = this.buildGlyph();
     this.shock = [];               // rings thrown off the moment it lands
     this.motes = [];               // paper flecks sucked into the charge
     for (let i = 0; i < 30; i++) {
       this.motes.push({ a: Math.random() * Math.PI * 2, d: 0.3 + Math.random() * 0.9, spin: Math.random() * 6, size: 2 + Math.random() * 4 });
     }
-  }
-
-  buildGlyph() {
-    const size = 260;
-    const c = document.createElement('canvas');
-    c.width = c.height = size;
-    const g = c.getContext('2d');
-    g.translate(size / 2 - 60, size / 2 - 66);
-    g.scale(4.4, 4.4);
-    Rough.boil(this.id + 77, 0);
-    (CursorSprites[this.cursorId] || CursorSprites.plain)(g, 0, 0, 1, this.cursor.color, 0.3, 0);
-    return c;
   }
 
   /* How much the world is slowed while this plays. */
@@ -56,7 +43,7 @@ class SkillCinematic {
     if (!this.payloadFired && this.t >= this.windup) {
       this.payloadFired = true;
       this.flash = 1;
-      for (let i = 0; i < 3; i++) this.shock.push({ born: this.t + i * 0.07 });
+      for (let i = 0; i < 2; i++) this.shock.push({ born: this.t + i * 0.09 });
       const fire = SkillPayloads[this.cursorId] || SkillPayloads.plain;
       const extra = fire(game, this);
       if (extra) this.dur = Math.max(this.dur, this.windup + extra);
@@ -92,7 +79,7 @@ class SkillCinematic {
     }
 
     // a wash in the cursor's own colour, so each skill tints the page
-    const wash = p < this.windup ? wind * 0.3 : Math.max(0, 0.3 - (p - this.windup) * 0.5);
+    const wash = p < this.windup ? wind * 0.17 : Math.max(0, 0.17 - (p - this.windup) * 0.4);
     if (wash > 0.01) {
       ctx.save();
       ctx.globalAlpha = wash;
@@ -114,20 +101,6 @@ class SkillCinematic {
       Rough.boil(this.id + 9, Math.floor(time * 4));
       Rough.line(ctx, 0, bh, w, bh, { color: col, width: 2.4, jitter: 2.2, passes: 1 });
       Rough.line(ctx, 0, h - bh, w, h - bh, { color: col, width: 2.4, jitter: 2.2, passes: 1 });
-      ctx.restore();
-    }
-
-    // the cursor's own shape, blown up huge and ghosted behind everything
-    if (p < this.windup + 1.1 && this.glyph) {
-      const gk = E.clamp01(p / (this.windup * 0.8));
-      const gone = E.clamp01((p - this.windup - 0.3) / 0.8);
-      const gs = (1.1 + gk * 0.5 + gone * 0.7) * Math.min(w, h) / 260;
-      ctx.save();
-      ctx.globalAlpha = (0.10 + gk * 0.10) * (1 - gone);
-      ctx.translate(cx, cy + h * 0.05);
-      ctx.rotate(-0.1 + gone * 0.18);
-      ctx.scale(gs, gs);
-      ctx.drawImage(this.glyph, -130, -130);
       ctx.restore();
     }
 
@@ -170,9 +143,10 @@ class SkillCinematic {
       if (age < 0 || age > 0.75) continue;
       const k = E.out(age / 0.75);
       ctx.save();
-      ctx.globalAlpha = (1 - k) * 0.8;
+      ctx.globalAlpha = (1 - k) * 0.45;
       Rough.boil(this.id + Math.floor(ring.born * 100), Math.floor(time * 12));
-      Rough.circle(ctx, cx, cy, 30 + k * Math.max(w, h) * 0.72, { color: col, width: 5 * (1 - k) + 1, jitter: 5 });
+      Rough.circle(ctx, cx, cy, 30 + k * Math.max(w, h) * 0.5,
+        { color: col, width: 4 * (1 - k) + 1, jitter: 3, wobble: 6 });
       ctx.restore();
     }
 
@@ -568,11 +542,11 @@ class PushRing {
     ctx.save();
     Rough.boil(this.id, time * 3);
     ctx.globalAlpha = Math.max(0, 1 - p * p) * 0.95;
-    Rough.circle(ctx, 0, 0, r, { color: '#8a5cc4', width: 6, jitter: 3.5 });
-    Rough.circle(ctx, 0, 0, r * 0.97, { color: '#d9c8f2', width: 3, jitter: 3 });
+    Rough.circle(ctx, 0, 0, r, { color: '#8a5cc4', width: 6, jitter: 3.5, wobble: 9 });
+    Rough.circle(ctx, 0, 0, r * 0.97, { color: '#d9c8f2', width: 3, jitter: 3, wobble: 7 });
     ctx.globalAlpha = Math.max(0, 1 - p) * 0.4;
-    Rough.circle(ctx, 0, 0, r * 0.82, { color: '#8a5cc4', width: 2.4, jitter: 4 });
-    Rough.circle(ctx, 0, 0, r * 0.64, { color: '#8a5cc4', width: 1.8, jitter: 4 });
+    Rough.circle(ctx, 0, 0, r * 0.82, { color: '#8a5cc4', width: 2.4, jitter: 4, wobble: 8 });
+    Rough.circle(ctx, 0, 0, r * 0.64, { color: '#8a5cc4', width: 1.8, jitter: 4, wobble: 7 });
     // the compass arm sweeping it round
     ctx.globalAlpha = Math.max(0, 1 - p);
     const a = p * Math.PI * 2.5;
@@ -599,13 +573,21 @@ class Guillotine {
     this.id = nextId();
     this.half = half;                 // +1 bottom, -1 top
     this.damage = damage;
-    this.t = 0; this.dur = 1.5;
+    this.t = 0; this.dur = 1.9;
+    this.mark = 0.34;                 // the slash that picks a side lands here
+    this.close = 0.5;                 // blades start closing
+    this.cutAt = 0.95;
     this.cut = false;
     this.w = game.w; this.h = game.h;
   }
   update(dt, game) {
+    const was = this.t;
     this.t += dt;
-    if (!this.cut && this.t >= 0.45) {
+    if (was < this.mark && this.t >= this.mark) {
+      Sfx.play('snip', { volume: 0.9, throttle: 0 });
+      game.shake(7);
+    }
+    if (!this.cut && this.t >= this.cutAt) {
       this.cut = true;
       for (let i = 0; i < 26; i++) {
         const c = new Crumb((Math.random() - 0.5) * this.w, Rough.jit(10), '#e8e2d0');
@@ -623,14 +605,46 @@ class Guillotine {
     return this.t < this.dur;
   }
   draw(ctx, time) {
-    const close = E.out(E.clamp01(this.t / 0.45));
-    const after = E.clamp01((this.t - 0.45) / (this.dur - 0.45));
+    const close = E.out(E.clamp01((this.t - this.close) / (this.cutAt - this.close)));
+    const after = E.clamp01((this.t - this.cutAt) / (this.dur - this.cutAt));
     const halfW = this.w * 0.62;
+    const top = this.half > 0 ? 0 : -this.h;
 
     ctx.save();
     Rough.boil(this.id, time);
+
+    // the slash that calls the shot: one fast stroke, right to left, across
+    // the half that is about to go
+    const sw = E.clamp01(this.t / this.mark);
+    if (this.t < this.mark + 0.5) {
+      const y = this.half * this.h * 0.24;
+      const headX = this.w * 0.6 - E.outQuint(sw) * this.w * 1.2;
+      ctx.save();
+      // the stroke itself
+      ctx.globalAlpha = Math.min(1, 1 - (this.t - this.mark) / 0.5);
+      Rough.line(ctx, Math.max(headX, -this.w * 0.6), y + this.h * 0.06,
+        this.w * 0.6, y - this.h * 0.06, { color: '#c8433a', width: 7, jitter: 4, passes: 2 });
+      // the head of it, still travelling
+      if (sw < 1) {
+        Rough.circle(ctx, headX, y + this.h * 0.06, 12, { color: '#ffffff', width: 4, jitter: 3 });
+        Rough.circle(ctx, headX, y + this.h * 0.06, 22, { color: '#c8433a', width: 3, jitter: 4 });
+      }
+      // and the half it has claimed, tinted and hatched
+      ctx.globalAlpha = Math.min(0.22, sw * 0.22) * Math.max(0, 1 - (this.t - this.mark) / 0.5);
+      ctx.fillStyle = '#c8433a';
+      ctx.fillRect(-this.w, top, this.w * 2, this.h);
+      ctx.globalAlpha = Math.min(0.5, sw * 0.5) * Math.max(0, 1 - (this.t - this.mark) / 0.5);
+      for (let i = 0; i < 9; i++) {
+        const hy = top + (i + 0.5) * (this.h / 9);
+        const reach = E.clamp01(sw * 1.6 - i * 0.05);
+        Rough.line(ctx, this.w * 0.6, hy, this.w * 0.6 - reach * this.w * 1.2, hy + 14,
+          { color: '#c8433a', width: 2, jitter: 3, passes: 1 });
+      }
+      ctx.restore();
+    }
+
     // the blades sweeping in from both sides to meet on the centre line
-    if (this.t < 0.75) {
+    if (this.t > this.close && this.t < this.cutAt + 0.3) {
       const gap = (1 - close) * halfW;
       ctx.globalAlpha = Math.min(1, 1 - after * 1.4);
       for (const s of [-1, 1]) {

@@ -24,7 +24,7 @@ const WAVE_TABLE = [
   { count: 8,  hp: 11, speed: 37, interval: 1.60 },
   { count: 10, hp: 15, speed: 40, interval: 1.50 },
   { count: 12, hp: 19, speed: 43, interval: 1.40 },
-  { count: 9,  hp: 23, speed: 45, interval: 1.60, boss: 'boss' },    // the Blot brings its own
+  { count: 9,  hp: 23, speed: 45, interval: 1.60, boss: 'boss' },    // or the Eagle, 50/50
   { count: 13, hp: 28, speed: 47, interval: 1.40 },
   { count: 13, hp: 33, speed: 49, interval: 1.35 },
   { count: 13, hp: 38, speed: 51, interval: 1.30 },
@@ -38,7 +38,11 @@ const ENEMY_KINDS = {
   brick:  { r: 22, hpMul: 1.7,  speedMul: 0.65, fill: '#b5623a' },
   boss:   { r: 40, hpMul: 5.0,  speedMul: 0.45, fill: '#2f2f3f' },   // splits, and spits blotlings
   warden: { r: 52, hpMul: 7.0,  speedMul: 0.38, fill: '#5c1f3a' },  // shields itself, and calls guards
-  blotling: { r: 11, hpMul: 1.0, speedMul: 1.35, fill: '#6b4fb0' }
+  blotling: { r: 11, hpMul: 1.0,  speedMul: 1.35, fill: '#6b4fb0' },
+  // wave 5 is a coin flip between the Blot and this: far less HP, but it
+  // keeps its distance and shoots, and the shots have to be cleared
+  eagle:    { r: 34, hpMul: 2.2,  speedMul: 0.85, fill: '#4a5b8f' },
+  boltshot: { r: 12, hpMul: 0.0,  speedMul: 3.2,  fill: '#8ea6ff' }   // always 1 HP
 };
 
 /* ---- CURSORS -------------------------------------------------------------

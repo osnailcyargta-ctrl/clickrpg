@@ -448,6 +448,40 @@ def s_skill_charge():
     return mix(pull, shimmer * 0.5)
 
 
+
+# ---- the Thunder Eagle ------------------------------------------------
+def s_eagle_screech():
+    # a raptor cry: two harsh bands sliding down together
+    base = noise(0.55) * swell(0.55, 0.12, 2.6)
+    cry = mix(sweep(base, 2600, 1300, 9.0), sweep(base, 3900, 2000, 7.0) * 0.7)
+    rasp = am(bp(noise(0.55), 2200, 1.4) * swell(0.55, 0.15, 2.4), 48, 0.7)
+    return mix(cry * 1.2, rasp * 0.5)
+
+
+def s_eagle_dash():
+    # a body tearing past, trailing static
+    whoosh = sweep(noise(0.42) * swell(0.42, 0.42, 2.8), 500, 2800, 1.2)
+    crackle = grains(0.45, 16, spread=0.35, length=0.008, band=(2400, 7000), decay=2.2)
+    return mix(whoosh * 1.1, crackle * 0.6)
+
+
+def s_bolt_shot():
+    # a thin bolt loosed at the castle
+    zip_ = sweep(noise(0.2) * env(0.2, 0.0006, curve=6), 1400, 4200, 3.0)
+    tick = hp(noise(0.06), 3600) * env(0.06, 0.0004, curve=10)
+    return mix(zip_, tick * 0.8)
+
+
+def s_eagle_death():
+    # the cry, the thunderclap, and the climb away
+    cry = s_eagle_screech() * 1.0
+    clap = np.pad(mix(hp(noise(0.16), 2400) * env(0.16, 0.0003, curve=8),
+                      bp(noise(0.8), 95, 1.2) * env(0.8, 0.003, curve=3)),
+                  (int(SR * 0.3), 0))
+    climb = np.pad(sweep(noise(0.9) * swell(0.9, 0.3, 2.0), 600, 3400, 1.3), (int(SR * 0.45), 0))
+    return mix(cry * 0.9, clap * 1.2, climb * 0.8)
+
+
 SOUNDS = {
     'click_hit': s_click_hit, 'click_miss': s_click_miss, 'crit': s_crit,
     'kill': s_kill, 'kill_big': s_kill_big, 'castle_hit': s_castle_hit,
@@ -466,6 +500,8 @@ SOUNDS = {
     'sk_guillotine': s_sk_guillotine, 'sk_eightways': s_sk_eightways,
     'sk_cloudburst': s_sk_cloudburst, 'sk_crosshatch': s_sk_crosshatch,
     'sk_blankslate': s_sk_blankslate, 'sk_exclamation': s_sk_exclamation,
+    'eagle_screech': s_eagle_screech, 'eagle_dash': s_eagle_dash,
+    'bolt_shot': s_bolt_shot, 'eagle_death': s_eagle_death,
 }
 
 if __name__ == '__main__':

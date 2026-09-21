@@ -26,8 +26,12 @@ class Enemy {
     this.faded = 0;
     this.hpShown = 1;         // HP bar eases toward the real value
     this.wobblePhase = Math.random() * 10;
-    this.boss = kind === 'boss' || kind === 'warden';
-    this.skillT = kind === 'boss' ? 4.5 : 7;   // boss skill cooldown
+    this.boss = kind === 'boss' || kind === 'warden' || kind === 'eagle';
+    this.skillT = kind === 'boss' ? 4.5 : (kind === 'eagle' ? 2.2 : 7);
+    this.dash = null;                          // the Eagle's swoop, while it lasts
+    this.dashT = kind === 'eagle' ? 3.4 : 0;
+    this.flap = Math.random() * 6;
+    this.smear = [];                           // recent positions, for the swoop blur
     this.immuneT = 0;                          // the warden's chalk barrier
     this.barrierT = 0;                         // barrier flare when it blocks
     this.calledGuards = false;
@@ -74,6 +78,12 @@ class Enemy {
   die(game) {
     if (this.dead) return;
     this.dead = true;
+    if (this.kind === 'eagle') {
+      game.effects.push(new EagleAscend(this.x, this.y, this.r, game));
+      game.slowmo(0.45, 0.32);
+      game.shake(18);
+      Sfx.play('eagle_death', { volume: 1, rateVar: 0 });
+    }
     if (this.kind === 'boss') {                // bursts into three blotlings
       for (let i = 0; i < 3; i++) {
         const a = (i / 3) * Math.PI * 2 + Math.random();
@@ -110,6 +120,9 @@ class Enemy {
     if (this.stun > 0) { this.stun -= dt; return; }
 
     const d = Math.hypot(this.x, this.y) || 1;
+
+    if (this.kind === 'eagle') { this.flyLikeAnEagle(dt, game, d); return; }
+
     const step = this.speed * dt;
     this.x -= (this.x / d) * step;
     this.y -= (this.y / d) * step;
@@ -121,9 +134,66 @@ class Enemy {
     }
   }
 
+  /* The Eagle holds a standoff, swoops in and pulls back out, and looses
+     bolts at the castle that have to be shot down. */
+  flyLikeAnEagle(dt, game, d) {
+    const standoff = BLOCK * 5;
+
+    this.smear.unshift([this.x, this.y]);
+    if (this.smear.length > 7) this.smear.pop();
+
+    if (this.dash) {
+      this.dash.t += dt;
+      const k = E.clamp01(this.dash.t / this.dash.dur);
+      // out fast, back slower, never far enough in to touch the castle
+      const swing = k < 0.45 ? E.out(k / 0.45) : 1 - E.inOut((k - 0.45) / 0.55);
+      this.x = this.dash.fromX + (this.dash.toX - this.dash.fromX) * swing;
+      this.y = this.dash.fromY + (this.dash.toY - this.dash.fromY) * swing;
+      if (k >= 1) this.dash = null;
+      return;
+    }
+
+    if (d > standoff) {                      // glide in until it is in range
+      const step = this.speed * dt;
+      this.x -= (this.x / d) * step;
+      this.y -= (this.y / d) * step;
+    } else {                                 // then hang there, circling a little
+      const a = Math.atan2(this.y, this.x) + dt * 0.25;
+      const hold = standoff + Math.sin(this.wobblePhase + game.time * 1.2) * 14;
+      this.x = Math.cos(a) * hold;
+      this.y = Math.sin(a) * hold;
+    }
+  }
+
   /* Each boss has one trick of its own. */
   bossSkill(dt, game) {
     this.skillT -= dt;
+
+    if (this.kind === 'eagle') {
+      // THE THUNDER EAGLE: looses bolts at the castle, and swoops.
+      if (this.skillT <= 0) {
+        this.skillT = 3.2;                 // enough air to see it and shoot it down
+        const d = Math.hypot(this.x, this.y) || 1;
+        const shot = game.spawnMinion('boltshot', this.x - (this.x / d) * 26, this.y - (this.y / d) * 26,
+          1, game.waveSpec ? game.waveSpec.speed : 50);
+        shot.spawnT = 0.6;
+        game.effects.push(new FloatText(this.x, this.y - this.r - 12, 'loose!', '#8ea6ff', 17, false));
+        Sfx.play('bolt_shot', { volume: 0.7 });
+      }
+      this.dashT -= dt;
+      if (this.dashT <= 0 && !this.dash) {
+        this.dashT = 5.5;
+        const d = Math.hypot(this.x, this.y) || 1;
+        const stop = game.castleRadius + BLOCK * 2.2;   // a swoop, not a suicide
+        this.dash = {
+          t: 0, dur: 1.1,
+          fromX: this.x, fromY: this.y,
+          toX: (this.x / d) * stop, toY: (this.y / d) * stop
+        };
+        Sfx.play('eagle_dash', { volume: 0.8 });
+      }
+      return;
+    }
 
     if (this.kind === 'boss') {
       // THE BLOT: coughs up a blotling every few seconds, and bursts into
@@ -203,6 +273,8 @@ class Enemy {
       case 'boss': this.drawBlot(ctx, x, y, rx, ry, fill, t); break;
       case 'warden': this.drawWarden(ctx, x, y, rx, ry, fill, t); break;
       case 'blotling': this.drawBlotling(ctx, x, y, rx, ry, fill, t); break;
+      case 'eagle': this.drawEagle(ctx, x, y, rx, ry, fill, t, facing); break;
+      case 'boltshot': this.drawBoltshot(ctx, x, y, rx, ry, fill, facing); break;
       default: this.drawBlob(ctx, x, y, rx, ry, fill, t); break;
     }
 
@@ -381,6 +453,96 @@ class Enemy {
     ctx.save();
     ctx.globalAlpha = 0.35;
     Rough.circle(ctx, x - r * 0.3, y - r * 0.32, r * 0.2, { color: '#fffdf4', width: 1.8, jitter: 1 });
+    ctx.restore();
+  }
+
+  /* THE THUNDER EAGLE - a raptor cut out of lightning. Wings are forked
+     bolts, and it smears when it swoops. */
+  drawEagle(ctx, x, y, rx, ry, fill, t, facing) {
+    const r = (rx + ry) / 2;
+    const beat = Math.sin(t * (this.dash ? 16 : 5) + this.flap);
+    const lean = Math.atan2(-this.y, -this.x) + Math.PI / 2;
+
+    // the swoop leaves the air behind it torn
+    if (this.dash && this.smear.length > 1) {
+      ctx.save();
+      for (let i = 1; i < this.smear.length; i++) {
+        const a = this.smear[i - 1], b = this.smear[i];
+        ctx.globalAlpha = (1 - i / this.smear.length) * 0.5;
+        Rough.line(ctx, a[0], a[1], b[0], b[1],
+          { color: '#8ea6ff', width: r * 0.5 * (1 - i / this.smear.length), jitter: 4, passes: 1 });
+      }
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(lean);
+
+    // wings: forked bolts, thrown wide on the downbeat
+    for (const s of [-1, 1]) {
+      const spread = 1 + beat * 0.32;
+      const wing = [
+        [0, -r * 0.1],
+        [s * r * 0.75, -r * 0.55 * spread],
+        [s * r * 0.62, -r * 0.18 * spread],
+        [s * r * 1.5, -r * 0.42 * spread],
+        [s * r * 1.15, r * 0.05],
+        [s * r * 1.45, r * 0.3 * spread],
+        [s * r * 0.5, r * 0.22]
+      ];
+      Rough.scribble(ctx, wing, { color: fill, spacing: 7, width: 6, overflow: 1.12, alpha: 0.85 });
+      Rough.poly(ctx, wing, { color: '#2b2b2b', width: 2.8, jitter: 1.8 });
+      ctx.save();
+      ctx.globalAlpha = 0.55 + Math.abs(beat) * 0.4;
+      Rough.poly(ctx, wing.map(p => [p[0] * 0.8, p[1] * 0.8]),
+        { color: '#dfe6ff', width: 2, jitter: 3, closed: false });
+      ctx.restore();
+    }
+
+    // body and tail
+    const body = [[0, -r * 0.85], [r * 0.34, -r * 0.1], [r * 0.2, r * 0.75],
+    [0, r * 1.05], [-r * 0.2, r * 0.75], [-r * 0.34, -r * 0.1]];
+    Rough.scribble(ctx, body, { color: '#2f3a5c', spacing: 6, width: 6, overflow: 1.1 });
+    Rough.poly(ctx, body, { color: '#2b2b2b', width: 3, jitter: 1.4 });
+    const tail = [[-r * 0.22, r * 0.7], [0, r * 1.45], [r * 0.22, r * 0.7]];
+    Rough.poly(ctx, tail, { color: '#2b2b2b', width: 2.6, jitter: 2 });
+
+    // hooked beak
+    const beak = [[0, -r * 0.8], [r * 0.16, -r * 1.15], [-r * 0.04, -r * 1.06]];
+    Rough.scribble(ctx, beak, { color: '#e8c33a', spacing: 4, width: 4, overflow: 1.16 });
+    Rough.poly(ctx, beak, { color: '#2b2b2b', width: 2, jitter: 1 });
+    ctx.restore();
+
+    // eyes, lit from inside
+    this.eyes(ctx, x, y - r * 0.15, r * 0.7, 2, t, '#dfe6ff');
+
+    // the charge it carries
+    ctx.save();
+    ctx.globalAlpha = 0.35 + Math.abs(Math.sin(t * 11)) * 0.4;
+    for (let i = 0; i < 3; i++) {
+      const a = t * 2 + i * 2.1;
+      Rough.line(ctx, x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9,
+        x + Math.cos(a + 0.5) * r * 1.25, y + Math.sin(a + 0.5) * r * 1.25,
+        { color: '#dfe6ff', width: 2, jitter: 4, passes: 1 });
+    }
+    ctx.restore();
+  }
+
+  /* One of the Eagle's bolts, running at the castle. Shoot it down. */
+  drawBoltshot(ctx, x, y, rx, ry, fill, facing) {
+    const r = (rx + ry) / 2;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(facing + Math.PI / 2);
+    const bolt = [[0, -r * 1.5], [r * 0.6, -r * 0.1], [r * 0.16, -r * 0.1],
+    [r * 0.5, r * 1.5], [-r * 0.5, 0], [-r * 0.1, 0], [-r * 0.5, -r * 0.7]];
+    Rough.scribble(ctx, bolt, { color: '#e8c33a', spacing: 4, width: 4, overflow: 1.2 });
+    Rough.poly(ctx, bolt, { color: '#2b2b2b', width: 2.2, jitter: 1.4 });
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    Rough.line(ctx, 0, r * 1.2, 0, r * 2.6, { color: '#8ea6ff', width: 2.4, jitter: 3, passes: 1 });
+    ctx.restore();
     ctx.restore();
   }
 
@@ -1055,6 +1217,105 @@ class ScissorCut {
         { color: '#c8433a', width: 3, jitter: 1.6, passes: 1 });
     }
     ctx.restore();
+  }
+}
+
+/* The Thunder Eagle's exit: it rears, then climbs out of the page, leaving
+   smear frames stretched behind it the whole way up. */
+class EagleAscend {
+  constructor(x, y, r, game) {
+    this.id = nextId();
+    this.x = x; this.y = y; this.r = r;
+    this.t = 0; this.rear = 0.55; this.dur = 1.9;
+    this.top = -(game.h / 2) - r * 4;
+    this.trail = [];
+    this.flash = 0;
+  }
+  update(dt, game) {
+    this.t += dt;
+    const k = E.clamp01((this.t - this.rear) / (this.dur - this.rear));
+    if (this.t > this.rear) {
+      const prevY = this.cy;
+      this.cy = this.y + (this.top - this.y) * Math.pow(E.clamp01(k), 1.45);
+      if (prevY != null && Math.abs(this.cy - prevY) > 1) {
+        this.trail.unshift({ y: prevY, stretch: Math.abs(this.cy - prevY) });
+        if (this.trail.length > 10) this.trail.pop();
+      }
+      if (this.flash === 0) {
+        this.flash = 1;
+        for (let i = 0; i < 18; i++) game.effects.push(new Crumb(this.x, this.y, '#8ea6ff'));
+      }
+    } else {
+      this.cy = this.y - E.out(this.t / this.rear) * this.r * 0.5;   // the rear-up
+    }
+    return this.t < this.dur;
+  }
+  draw(ctx, time) {
+    const k = E.clamp01((this.t - this.rear) / (this.dur - this.rear));
+    const fade = this.t > this.dur - 0.6 ? E.clamp01((this.dur - this.t) / 0.6) : 1;
+    Rough.boil(this.id, Math.floor(time * 20));
+
+    // the column of air it leaves on the way out
+    if (this.t > this.rear) {
+      ctx.save();
+      ctx.globalAlpha = fade * 0.5;
+      for (let i = 0; i < 4; i++) {
+        const off = (i - 1.5) * this.r * 0.45;
+        Rough.line(ctx, this.x + off, this.cy, this.x + off + Rough.jit(8), this.y + this.r,
+          { color: '#8ea6ff', width: 3 - i * 0.4, jitter: 6, passes: 1 });
+      }
+      ctx.restore();
+    }
+
+    // smear frames: each one stretched along the direction of travel, but
+    // never so far that it stops reading as a bird
+    for (let i = 0; i < this.trail.length; i++) {
+      const s = this.trail[i];
+      const a = (1 - i / this.trail.length) * 0.75 * fade;
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.translate(this.x, s.y);
+      ctx.scale(1 - i * 0.04, 1 + Math.min(2.2, s.stretch / (this.r * 0.8)));
+      this.eagleGhost(ctx, this.r * (1 - i * 0.03), false, a);
+      ctx.restore();
+    }
+
+    // the bird itself, stretched thin as it goes
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.translate(this.x, this.cy);
+    const stretch = this.t > this.rear ? 1 + E.out(k) * 1.6 : 1;
+    ctx.scale(1 / Math.sqrt(stretch), stretch);
+    this.eagleGhost(ctx, this.r, true);
+    ctx.restore();
+
+    // the clap of light where it tore free
+    if (this.t > this.rear && this.t < this.rear + 0.4) {
+      const f = 1 - (this.t - this.rear) / 0.4;
+      ctx.save();
+      ctx.globalAlpha = f * 0.85;
+      Rough.circle(ctx, this.x, this.y, this.r * (1 + (1 - f) * 3), { color: '#dfe6ff', width: 5, jitter: 5 });
+      ctx.restore();
+    }
+  }
+  /* A flattened silhouette - smears want shape, not detail. */
+  eagleGhost(ctx, r, solid, alpha) {
+    const wing = [[0, -r * 0.2], [-r * 1.5, -r * 0.5], [-r * 0.5, r * 0.1],
+    [0, r * 0.9], [r * 0.5, r * 0.1], [r * 1.5, -r * 0.5]];
+    if (solid) {
+      Rough.scribble(ctx, wing, { color: '#4a5b8f', spacing: 7, width: 6, overflow: 1.1, alpha: 0.85 });
+      Rough.poly(ctx, wing, { color: '#2b2b2b', width: 3, jitter: 2 });
+      return;
+    }
+    // a ghost gets a solid body, or it vanishes once it is stretched
+    ctx.save();
+    ctx.globalAlpha = (alpha == null ? 0.5 : alpha) * 0.55;
+    ctx.fillStyle = '#8ea6ff';
+    ctx.beginPath();
+    wing.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+    Rough.poly(ctx, wing, { color: '#6d84d6', width: 2.6, jitter: 2 });
   }
 }
 
