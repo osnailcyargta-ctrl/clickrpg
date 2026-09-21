@@ -685,6 +685,74 @@ class WaveBanner {
   }
 }
 
+/* Compass Cursor: an ink ring swept out from the click point. Each enemy is
+   caught once, as the line passes over it. */
+class CompassRing {
+  constructor(x, y, radius, damage) {
+    this.id = nextId();
+    this.x = x; this.y = y; this.radius = radius; this.damage = damage;
+    this.t = 0; this.dur = 1.0;
+    this.hit = new Set();
+    this.spin = Math.random() * 6;
+  }
+  get r() { return this.radius * E.out(Math.min(1, this.t / this.dur)); }
+  update(dt, game) {
+    this.t += dt;
+    const r = this.r;
+    for (const e of game.enemies) {
+      if (e.dead || this.hit.has(e.id)) continue;
+      const d = Math.hypot(e.x - this.x, e.y - this.y);
+      if (d <= r + e.r && d >= r - e.r - 14) {      // the line itself, not the disc
+        this.hit.add(e.id);
+        e.hurt(this.damage, game, { color: '#8a5cc4' });
+      }
+    }
+    return this.t < this.dur + 0.15;
+  }
+  draw(ctx, t) {
+    const p = Math.min(1, this.t / this.dur);
+    const r = this.r;
+    Rough.boil(this.id, t * 2);
+    ctx.save();
+    ctx.globalAlpha = 1 - p * p;
+    Rough.circle(ctx, this.x, this.y, r, { color: '#8a5cc4', width: 3.4, jitter: 2.6 });
+    ctx.globalAlpha = (1 - p) * 0.5;
+    Rough.circle(ctx, this.x, this.y, r * 0.93, { color: '#b79ae0', width: 1.8, jitter: 2.2 });
+    // the compass itself: spike in the middle, arm sweeping the line round
+    ctx.globalAlpha = 1 - p;
+    const a = this.spin + p * Math.PI * 2.2;
+    Rough.line(ctx, this.x, this.y, this.x + Math.cos(a) * r, this.y + Math.sin(a) * r,
+      { color: '#8a5cc4', width: 2.2, jitter: 1.2, passes: 1 });
+    Rough.circle(ctx, this.x, this.y, 3, { color: '#8a5cc4', width: 2, jitter: 0.8 });
+    ctx.restore();
+  }
+}
+
+/* Scissor Cursor: the cut that finishes something off. */
+class ScissorCut {
+  constructor(x, y, r) {
+    this.id = nextId(); this.x = x; this.y = y; this.r = Math.max(14, r);
+    this.life = 0.4; this.max = this.life; this.a = Math.random() * Math.PI;
+  }
+  update(dt) { this.life -= dt; return this.life > 0; }
+  draw(ctx, t) {
+    const p = E.out(1 - this.life / this.max);
+    Rough.boil(this.id, 0);
+    ctx.save();
+    ctx.globalAlpha = 1 - p;
+    // two halves of the cut sliding apart
+    for (const s of [-1, 1]) {
+      const ox = Math.cos(this.a + Math.PI / 2) * p * 9 * s;
+      const oy = Math.sin(this.a + Math.PI / 2) * p * 9 * s;
+      Rough.line(ctx,
+        this.x - Math.cos(this.a) * this.r + ox, this.y - Math.sin(this.a) * this.r + oy,
+        this.x + Math.cos(this.a) * this.r + ox, this.y + Math.sin(this.a) * this.r + oy,
+        { color: '#c8433a', width: 3, jitter: 1.6, passes: 1 });
+    }
+    ctx.restore();
+  }
+}
+
 /* Red ring that marks where something big is about to walk in. */
 class SpawnMark {
   constructor(x, y, r) { this.id = nextId(); this.x = x; this.y = y; this.r = r; this.life = 1.1; this.max = this.life; }

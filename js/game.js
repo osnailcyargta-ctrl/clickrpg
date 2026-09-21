@@ -200,7 +200,7 @@ const Game = {
   },
 
   /* --------------------------------------------------------------- stats */
-  clickDamage() { return BASE_CLICK_DAMAGE + 0.5 * (this.stacking.lead || 0); },
+  clickDamage() { return cursorById(this.cursorId).dmg + 0.5 * (this.stacking.lead || 0); },
   critChance() { return BASE_CRIT_CHANCE + 0.03 * (this.stacking.nib || 0); },
   aoeScale() { return 1 + 0.12 * (this.stacking.wax || 0); },
   aoeDamage(base) { return base * (1 + 0.10 * (this.stacking.wax || 0)); },
@@ -263,6 +263,8 @@ const Game = {
       const crit = Math.random() < this.critChance();
       target.hurt(this.clickDamage() * (crit ? CRIT_MULT : 1), this, { crit });
       this.effects.push(new ClickRipple(x, y, crit ? '#e0562d' : cursor.color, crit));
+      const onHit = CursorOnHit[cursor.id];
+      if (onHit) onHit(this, target);
       if (crit) {
         this.shake(3);
         if (this.oneshot.ink) {

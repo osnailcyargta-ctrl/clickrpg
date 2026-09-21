@@ -9,7 +9,7 @@ function buildOffers(game) {
 
   for (const c of CURSORS) {
     if (c.id === 'plain' || c.id === game.cursorId) continue;
-    pool.push({ kind: 'cursor', id: c.id, name: c.name, color: c.color, cost: offerCost(c.cost, game.wave), desc: c.desc, detail: c.detail, tag: 'CURSOR' });
+    pool.push({ kind: 'cursor', id: c.id, name: c.name, color: c.color, cost: offerCost(c.cost, game.wave), desc: c.desc, detail: c.detail, tag: c.dmg + ' DMG CURSOR' });
   }
   for (const u of ONESHOT) {
     if (game.oneshot[u.id]) continue;

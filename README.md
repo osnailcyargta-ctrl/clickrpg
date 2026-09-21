@@ -11,7 +11,7 @@ Open `index.html` in a browser. That's the whole install.
 
 ## Rules
 
-- **Click an enemy = 3 damage.** 10% of clicks crit for 50% more.
+- **Click an enemy.** The damage depends on the cursor you hold (2 to 4); 10% of clicks crit for 50% more.
 - Touch works exactly like a click, so it plays fine on a phone.
 - **5 castle HP**, drawn as five even 20% segments. Every leak costs one.
 - **10 waves.** Wave 5 brings the Blot, wave 10 brings the Warden, and each
@@ -38,13 +38,20 @@ Open `index.html` in a browser. That's the whole install.
 The cursor **is** the weapon. Buying one throws the old one away for good —
 there's no inventory, so going back means buying it again.
 
-| Cursor | Charge | What it does |
-|---|---|---|
-| **Plain Cursor** | — | The arrow you start with. 3 damage a click. |
-| **Wet Cursor** | 15 clicks | Spits 6 water drops. Each swells, hops one block in one of 9 random directions, shrinks as gravity grabs it, then pops for 2 damage. |
-| **Pen Tool** | drag | A pencil that never stops drawing. Leaves a live ink trail wherever you drag it; the trail lingers 1.4s and grinds 1 damage into anything crossing it. |
-| **Eraser Cursor** | 12 clicks | Rubs a 1.5 block hole in the drawing. Enemies caught lose 20% of max HP outright and crawl 25% slower for 2s. |
-| **Buzz Cursor** | 8 clicks | Arcs static to the 3 nearest enemies within 4 blocks: 3 damage each, frozen for 0.35s. |
+Every cursor hits for its own number, and that number is the trade: the ones
+with a strong charge hit softer per click, the ones that hit hard have little
+else going on. They're balanced around a human click rate — about 5–6 a second
+on a mouse, 7–8 on a phone with two thumbs — not around spamming.
+
+| Cursor | Damage | Charge | What it does |
+|---|---|---|---|
+| **Plain Cursor** | 3 | — | The arrow you start with. Nothing else. |
+| **Wet Cursor** | 2.5 | 15 clicks | Spits 6 water drops. Each swells, hops one block in one of 9 random directions, shrinks as gravity grabs it, then pops for 3 damage. |
+| **Pen Tool** | 2 | drag | A live ink trail wherever you drag it. Lingers 1.4s and grinds 1 damage into everything crossing it, so a whole crowd walks through it. |
+| **Eraser Cursor** | 2.5 | 12 clicks | Rubs a 1.5 block hole in the drawing: enemies caught lose 20% of max HP outright and crawl 25% slower for 2s. Best against fat targets. |
+| **Buzz Cursor** | 2.5 | 8 clicks | Arcs static to the 3 nearest enemies within 4 blocks: 3 damage each, frozen for 0.35s. |
+| **Compass Cursor** | 2 | 10 clicks | Softest click, widest hit: sweeps an ink ring out to 3 blocks over a second, carving 5 damage into everything the line passes through. |
+| **Scissor Cursor** | 4 | — | Hardest click, no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Useless against a crowd. |
 
 ## Upgrades
 

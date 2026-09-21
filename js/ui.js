@@ -68,7 +68,8 @@ const UI = {
 
     const cur = cursorById(g.cursorId);
     const chip = document.getElementById('hud-cursor');
-    const chipText = cur.name + (cur.every > 0 ? '  ' + (g.cursorCharge % cur.every) + '/' + cur.every : '');
+    const chipText = cur.name + '  ' + g.clickDamage() + ' dmg'
+      + (cur.every > 0 ? '  ' + (g.cursorCharge % cur.every) + '/' + cur.every : '');
     if (chip.textContent !== chipText) chip.textContent = chipText;
     chip.style.color = cur.color;
     chip.style.borderColor = cur.color;

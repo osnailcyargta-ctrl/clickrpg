@@ -11,7 +11,7 @@ const CursorPowers = {
 
   wet(game, x, y) {
     const r = 20 * game.aoeScale();
-    const dmg = game.aoeDamage(2);
+    const dmg = game.aoeDamage(3);
     for (let i = 0; i < 6; i++) {
       const a = NINE_DIRS[Math.floor(Math.random() * NINE_DIRS.length)] + (Math.random() - 0.5) * 0.12;
       game.effects.push(new WaterDrop(x, y, a, game, r, dmg));
@@ -20,6 +20,10 @@ const CursorPowers = {
 
   eraser(game, x, y) {
     game.effects.push(new EraseBurst(x, y, BLOCK * 1.5 * game.aoeScale(), game));
+  },
+
+  compass(game, x, y) {
+    game.effects.push(new CompassRing(x, y, BLOCK * 3 * game.aoeScale(), game.aoeDamage(5)));
   },
 
   buzz(game, x, y) {
@@ -36,6 +40,17 @@ const CursorPowers = {
     }
     if (pts.length > 1) game.effects.push(new Bolt(pts));
     else game.effects.push(new Bolt([[x, y], [x + Rough.jit(34), y + Rough.jit(34)]]));
+  }
+};
+
+/* Hooks that run on a landed click, for cursors whose trick isn't a charge. */
+const CursorOnHit = {
+  scissor(game, enemy) {
+    if (enemy.dead || enemy.boss) return;               // bosses don't get snipped
+    if (enemy.hp > enemy.maxHp * 0.18) return;
+    game.effects.push(new ScissorCut(enemy.x, enemy.y, enemy.r * 1.6));
+    game.effects.push(new FloatText(enemy.x, enemy.y - enemy.r - 8, 'snip', '#c8433a', 20, false));
+    enemy.hurt(enemy.hp, game, { silent: true });
   }
 };
 
@@ -85,6 +100,47 @@ const CursorSprites = {
     Rough.line(ctx, x + 4 * s, y + 9 * s, x + 18 * s, y + 4 * s, { color: '#2b2b2b', width: 1.4, jitter: 1, passes: 1 });
   },
 
+  /* A pair of compasses: spike on the hotspot, hinge up top, pencil leg out
+     to the side, opening and closing a little as it idles. */
+  compass(ctx, x, y, s, color, t) {
+    const open = 0.34 + Math.sin(t * 1.6) * 0.07;
+    const L = 26 * s;
+    const hx = x + 5 * s, hy = y - L;                    // hinge
+    Rough.line(ctx, hx, hy, x, y, { color, width: 2.6, jitter: 0.8 });
+    const px = hx + Math.sin(open) * L, py = hy + Math.cos(open) * L;
+    Rough.line(ctx, hx, hy, px, py, { color, width: 2.6, jitter: 0.8 });
+    Rough.circle(ctx, hx, hy, 3.2 * s, { color: '#2b2b2b', width: 2, jitter: 0.7 });
+    // pencil stub on the swinging leg
+    Rough.line(ctx, px, py, px + Math.sin(open) * 6 * s, py + Math.cos(open) * 6 * s,
+      { color: '#e8cf9a', width: 3.4, jitter: 0.6, passes: 1 });
+    Rough.line(ctx, x, y, x + 2 * s, y - 5 * s, { color: '#2b2b2b', width: 2, jitter: 0.5, passes: 1 });
+  },
+
+  /* Scissors: blade tips on the hotspot, pivot behind them, handle loops at
+     the back. They close while you hold the button. */
+  scissor(ctx, x, y, s, color, t, pressed) {
+    const open = (pressed ? 0.42 : 1) * (1 + Math.sin(t * 2.2) * 0.06);
+    const th = 0.92;                                  // pointing down-right
+    const cos = Math.cos(th), sin = Math.sin(th);
+    const at = (u, v) => [x + (cos * u - sin * v) * s, y + (sin * u + cos * v) * s];
+
+    for (const side of [-1, 1]) {
+      const o = side * open;
+      const blade = [at(0, side * 0.6), at(13, o * 6), at(21, o * 3.4), at(20, side * 0.4)];
+      Rough.scribble(ctx, blade, { color: '#ccd2d8', spacing: 3.5, width: 3.5, overflow: 1.1 });
+      Rough.poly(ctx, blade, { color: '#2b2b2b', width: 1.9, jitter: 0.6 });
+
+      // handle: leg out the back, ending in a finger loop
+      const legEnd = at(31, o * 9);
+      const loop = at(37, o * 12);
+      Rough.line(ctx, at(20, side * 0.4)[0], at(20, side * 0.4)[1], legEnd[0], legEnd[1],
+        { color, width: 2.8, jitter: 0.7, passes: 1 });
+      Rough.circle(ctx, loop[0], loop[1], 5.5 * s, { color, width: 2.4, jitter: 1 });
+    }
+    const pivot = at(19, 0);
+    Rough.circle(ctx, pivot[0], pivot[1], 2.6 * s, { color: '#2b2b2b', width: 1.8, jitter: 0.5 });
+  },
+
   buzz(ctx, x, y, s, color, t) {
     CursorSprites.plain(ctx, x, y, s, color);
     const f = Math.sin(t * 9) * 0.5 + 0.5;
@@ -101,7 +157,7 @@ function drawCursor(ctx, cursor, x, y, charge, pressed, t) {
   Rough.boil(999, t * 1.5);
   ctx.save();
   ctx.globalAlpha = 1;
-  (CursorSprites[cursor.id] || CursorSprites.plain)(ctx, x, y, s, cursor.color, t);
+  (CursorSprites[cursor.id] || CursorSprites.plain)(ctx, x, y, s, cursor.color, t, pressed);
   ctx.restore();
 
   // charge ring, filling as the weapon gets closer to firing
