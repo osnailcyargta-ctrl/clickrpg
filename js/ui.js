@@ -11,10 +11,21 @@ const UI = {
     this.end = document.getElementById('end');
 
     document.querySelectorAll('[data-diff]').forEach(btn => {
-      btn.addEventListener('click', () => game.start(btn.dataset.diff));
+      btn.addEventListener('click', () => { Sfx.play('button', { volume: 0.7 }); game.start(btn.dataset.diff); });
     });
+    const mute = document.getElementById('hud-mute');
+    const paint = () => {
+      mute.textContent = Sfx.muted ? 'SOUND OFF' : 'SOUND ON';
+      mute.classList.toggle('off', Sfx.muted);
+    };
+    mute.addEventListener('click', e => { e.stopPropagation(); Sfx.toggleMute(); paint(); });
+    window.addEventListener('keydown', e => {
+      if (e.key === 'm' || e.key === 'M') { Sfx.toggleMute(); paint(); }
+    });
+    paint();
+
     document.querySelectorAll('[data-action="menu"]').forEach(btn => {
-      btn.addEventListener('click', () => this.showMenu());
+      btn.addEventListener('click', () => { Sfx.play('button', { volume: 0.7 }); this.showMenu(); });
     });
     this.showMenu();
   },
@@ -93,6 +104,7 @@ const UI = {
     this.end.classList.remove('hidden');
     this.hud.classList.add('hidden');
     const title = document.getElementById('end-title');
+    if (won) Sfx.play('victory', { volume: 1, rateVar: 0 });   // the loss plays with the collapse
     title.textContent = won ? 'FANDHARN HOLDS' : 'THE CASTLE FELL';
     title.style.color = won ? '#4c9f70' : '#c8433a';
     const stacks = STACKING

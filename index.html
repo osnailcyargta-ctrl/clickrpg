@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>FANDHARN</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23fffdf4'/%3E%3Cpath d='M6 26 L6 13 L9 13 L9 10 L12 10 L12 13 L15 13 L15 10 L18 10 L18 13 L21 13 L21 10 L24 10 L24 13 L26 13 L26 26 Z' fill='%23c9a36b' stroke='%232b2b2b' stroke-width='2' stroke-linejoin='round'/%3E%3Crect x='13' y='19' width='6' height='7' fill='%237a5a38' stroke='%232b2b2b' stroke-width='1.6'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Patrick+Hand&display=swap">
@@ -23,6 +24,7 @@
   <div class="hud-right">
     <div id="hud-scribbles" class="purse-chip">0</div>
     <div id="hud-diff" class="diff-chip">NORMAL</div>
+    <button id="hud-mute" class="mute-chip" title="mute (M)">SOUND ON</button>
   </div>
 </div>
 
@@ -49,6 +51,7 @@
   <button data-action="menu">BACK TO THE TITLE</button>
 </div>
 
+<script src="js/audio.js"></script>
 <script src="js/rough.js"></script>
 <script src="js/config.js"></script>
 <script src="js/entities.js"></script>

@@ -13,13 +13,17 @@ Open `index.html` in a browser. That's the whole install.
 
 - **Click an enemy.** The damage depends on the cursor you hold (2 to 4); 10% of clicks crit for 50% more.
 - Touch works exactly like a click, so it plays fine on a phone.
-- **5 castle HP**, drawn as five even 20% segments. Every leak costs one.
+- **5 castle HP**, drawn as five even 20% segments. Every leak costs one, and
+  the castle is redrawn for each one it loses: cracks, then broken merlons,
+  then a hole in the wall and smoke, then it collapses.
 - **10 waves.** Wave 5 brings the Blot, wave 10 brings the Warden, and each
   boss has a trick of its own:
   - **The Blot** coughs up a fast blotling every 4.5s, and bursts into three
     more when it dies.
-  - **The Warden** chalks a barrier around itself every 9s that eats all damage
-    for 2.5s, and calls two bricks the first time it drops to half HP.
+  - **The Warden** — a slab with one enormous eye in it — chalks a barrier
+    around itself every 9s that eats all damage for 2.5s (its iris turns
+    chalk-blue and the pupil narrows, so you can see it coming), and calls two
+    bricks the first time it drops to half HP.
 - Enemy **counts stop growing once you've beaten a boss** — after that the
   waves get meaner through HP and speed, not bigger crowds.
 - Kills pay out **scribbles**. After each wave you get **three cards** — a
@@ -73,6 +77,23 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Fat Crayon** | +12% size and +10% damage on every blast, puddle and pop. |
 | **Tape Patch** | Tapes one castle segment back together. Only offered while damaged. |
 
+## Sound
+
+Every effect is a pre-rendered mp3 in `assets/sfx/` — paper-and-pencil foley
+built out of shaped noise (taps, scratches, crumples, tears, scrubs), so
+nothing beeps like a synthesiser. Nothing is generated at runtime: the game
+just plays the files.
+
+- Rebuild them with `python3 tools/make_sfx.py` (needs `numpy`, `scipy`,
+  `lameenc`). Each sound is one function in that script.
+- To use your own recording instead, drop an mp3 with the same name into
+  `assets/sfx/` — the game only looks sounds up by file name.
+- Web Audio is used when available; opening `index.html` straight off the disk
+  blocks `fetch()` on `file://` URLs, so it falls back to `<audio>` elements
+  there. Both paths work.
+- **M** toggles sound, or use the chip in the top-right. The setting is
+  remembered.
+
 ## Files
 
 ```
@@ -80,11 +101,13 @@ index.html        markup, HUD and screens
 style.css         paper-and-ink styling
 js/rough.js       crayon renderer: wobbly strokes, scribble fills, noise, easings
 js/config.js      difficulties, wave table, cursor and upgrade tables
-js/entities.js    enemies, status effects, sentry, every flying doodle
+js/audio.js       mp3 playback: Web Audio with an <audio> fallback
+js/entities.js    enemies, bosses, status effects, sentry, every flying doodle
 js/offers.js      the three-card between-wave screen
 js/cursors.js     cursor powers and the drawn pointer sprites
 js/ui.js          menu, HUD, end screen
-js/game.js        loop, input, waves, castle, ground
+js/game.js        loop, input, waves, castle (per-HP art + collapse), ground
+tools/make_sfx.py renders assets/sfx/*.mp3
 ```
 
 No build step, no dependencies. The handwriting fonts load from Google Fonts and

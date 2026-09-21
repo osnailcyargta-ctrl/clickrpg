@@ -133,6 +133,7 @@ class Enemy {
         game.spawnMinion('blotling', this.x, this.y, this.maxHp * 0.09, this.baseSpeed * 2.6);
         game.effects.push(new FloatText(this.x, this.y - this.r - 10, 'split!', '#7a5cc4', 19, false));
         game.effects.push(new Splash(this.x, this.y, this.r * 0.9));
+        Sfx.play('ink_splat', { volume: 0.7 });
       }
       return;
     }
@@ -157,68 +158,60 @@ class Enemy {
       this.immuneT = 2.5;
       game.effects.push(new FloatText(this.x, this.y - this.r - 10, 'shielded!', '#8ec5e8', 19, false));
       game.effects.push(new ShieldPop(this.r + 16));
+      Sfx.play('warden_shield', { volume: 0.85 });
     }
   }
 
   draw(ctx, t) {
     Rough.boil(this.id, t + this.wobblePhase);
-    // scale-in on spawn, squash on hit
+    // scale-in on spawn, squash on hit, and a walk bob of its own
     const grow = this.spawnT < 1 ? E.back(this.spawnT) : 1;
     const squash = 1 + E.pop(this.hitT) * 0.18;
+    const bob = this.stun > 0 ? 0 : Math.sin(t * (this.boss ? 3 : 7) + this.wobblePhase) * (this.boss ? 2 : 1.6);
     const rx = this.r * grow * squash;
     const ry = this.r * grow * (2 - squash);
-    const x = this.x + (this.flash > 0 ? Rough.jit(3) : 0), y = this.y;
+    const x = this.x + (this.flash > 0 ? Rough.jit(3) : 0), y = this.y + bob;
     const fill = this.flash > 0 ? '#ffffff' : this.fill;
+    const facing = Math.atan2(-this.y, -this.x);     // they all walk at the castle
 
     ctx.save();
     if (this.spawnT < 1) ctx.globalAlpha = E.out(this.spawnT);
 
     if (this.burn > 0) {
-      Rough.blob(ctx, x, y, rx + 8, '#e0562d', 'rgba(0,0,0,0)',
-        { spacing: 9, fillAlpha: 0.32, fillWidth: 4, overflow: 1.2 });
-    }
-
-    let pts;
-    if (this.kind === 'brick') {
-      pts = Rough.rectPts(x - rx, y - ry, rx * 2, ry * 2).map(p => [p[0] + Rough.jit(2), p[1] + Rough.jit(2)]);
-    } else if (this.kind === 'dart') {
-      pts = [[x, y - ry], [x + rx, y + ry], [x - rx, y + ry]].map(p => [p[0] + Rough.jit(2), p[1] + Rough.jit(2)]);
-    } else if (this.kind === 'boss' || this.kind === 'warden') {
-      // spiky crown of a shape, so bosses read instantly
-      pts = [];
-      const spikes = this.kind === 'warden' ? 13 : 9;
-      for (let i = 0; i < spikes * 2; i++) {
-        const a = (i / (spikes * 2)) * Math.PI * 2;
-        const rr = (i % 2 ? 0.76 : 1.06) * ((rx + ry) / 2);
-        pts.push([x + Math.cos(a) * rr + Rough.jit(2), y + Math.sin(a) * rr + Rough.jit(2)]);
+      // the body's own outline, licked outward by an uneven amount so it
+      // reads as flame instead of a hard border around the shape
+      const base = this.silhouette(x, y, rx, ry, 5, facing);
+      const aura = [];
+      for (let i = 0; i < base.length; i++) {
+        const a = base[i], b = base[(i + 1) % base.length];
+        for (const q of [a, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]]) {
+          const ang = Math.atan2(q[1] - y, q[0] - x);
+          const lick = 3 + Math.abs(Rough.jit(9));
+          aura.push([q[0] + Math.cos(ang) * lick, q[1] + Math.sin(ang) * lick]);
+        }
       }
-    } else {
-      pts = Rough.circlePts(x, y, (rx + ry) / 2, this.r * 0.13, 11)
-        .map((p, i) => [p[0] + (p[0] - x) * (squash - 1) * 0.6, p[1] - (p[1] - y) * (squash - 1) * 0.6]);
+      Rough.scribble(ctx, aura, { color: '#e0562d', spacing: 8, width: 4, overflow: 1.12, alpha: 0.3 });
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      Rough.poly(ctx, aura, { color: '#e8c33a', width: 2, jitter: 2.2, passes: 1 });
+      ctx.restore();
     }
 
-    Rough.scribble(ctx, pts, { color: fill, spacing: this.boss ? 7 : 6, width: this.boss ? 7 : 5, overflow: 1.12 });
-    Rough.grain(ctx, pts, '#2b2b2b', 0.002, this.id);
-    Rough.poly(ctx, pts, { color: '#2b2b2b', width: this.boss ? 3.4 : 2.4, jitter: 1.2 });
-
-    // face
-    const eye = ((rx + ry) / 2) * 0.28;
-    ctx.fillStyle = '#2b2b2b';
-    ctx.globalAlpha *= 0.9;
-    const blink = (Math.sin(t * 1.7 + this.wobblePhase) > 0.985) ? 0.25 : 1;
-    ctx.beginPath(); ctx.ellipse(x - eye - 1, y - eye * 0.4, Math.max(1.6, this.r * 0.11), Math.max(1.6, this.r * 0.11) * blink, 0, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(x + eye + 1, y - eye * 0.4, Math.max(1.6, this.r * 0.11), Math.max(1.6, this.r * 0.11) * blink, 0, 0, 7); ctx.fill();
-    ctx.globalAlpha /= 0.9;
-    const mouth = this.burn > 0 ? 0.55 : 0.35;
-    Rough.line(ctx, x - eye, y + ry * mouth, x + eye, y + ry * mouth,
-      { color: '#2b2b2b', width: this.boss ? 2.6 : 1.8, jitter: 1.4, passes: 1 });
+    switch (this.kind) {
+      case 'brick': this.drawBrick(ctx, x, y, rx, ry, fill, t); break;
+      case 'dart': this.drawDart(ctx, x, y, rx, ry, fill, facing); break;
+      case 'boss': this.drawBlot(ctx, x, y, rx, ry, fill, t); break;
+      case 'warden': this.drawWarden(ctx, x, y, rx, ry, fill, t); break;
+      case 'blotling': this.drawBlotling(ctx, x, y, rx, ry, fill, t); break;
+      default: this.drawBlob(ctx, x, y, rx, ry, fill, t); break;
+    }
 
     if (this.immuneT > 0) {
       const flare = E.pop(this.barrierT) * 5;
       ctx.save();
       ctx.globalAlpha = 0.55 + Math.sin(t * 9) * 0.2 + this.barrierT * 0.3;
-      Rough.circle(ctx, x, y, this.r + 13 + flare, { color: '#8ec5e8', width: 4, jitter: 4 });
-      Rough.circle(ctx, x, y, this.r + 19 + flare, { color: '#bcdcf2', width: 2.5, jitter: 5 });
+      Rough.poly(ctx, this.silhouette(x, y, rx, ry, 13 + flare, facing), { color: '#8ec5e8', width: 4, jitter: 4 });
+      Rough.poly(ctx, this.silhouette(x, y, rx, ry, 20 + flare, facing), { color: '#bcdcf2', width: 2.5, jitter: 5 });
       ctx.restore();
     }
 
@@ -231,13 +224,323 @@ class Enemy {
 
     // crayon HP bar, eased so chunks drain instead of jumping
     if (this.hpShown < 0.999) {
-      const w = Math.max(this.r * 2.1, 26), bx = x - w / 2, by = y - ry - 13;
+      const w = Math.max(this.r * 2.1, 26), bx = x - w / 2;
+      const by = y - (this.boss ? ry * 1.95 + 12 : ry + 13);   // clear of horns and drips
       const p = this.hpShown;
-      Rough.line(ctx, bx, by, bx + w, by, { color: 'rgba(43,43,43,0.2)', width: 6, jitter: 0.8, passes: 1 });
+      Rough.line(ctx, bx, by, bx + w, by, { color: 'rgba(43,43,43,0.2)', width: this.boss ? 8 : 6, jitter: 0.8, passes: 1 });
       Rough.line(ctx, bx, by, bx + w * p, by,
-        { color: p > 0.5 ? '#4c9f70' : (p > 0.25 ? '#d99a26' : '#c8433a'), width: 6, jitter: 1, passes: 1 });
+        { color: p > 0.5 ? '#4c9f70' : (p > 0.25 ? '#d99a26' : '#c8433a'), width: this.boss ? 8 : 6, jitter: 1, passes: 1 });
+      if (this.boss) {
+        Rough.text(ctx, this.kind === 'warden' ? 'THE WARDEN' : 'THE BLOT', x, by - 13, 13, '#2b2b2b');
+      }
     }
   }
+
+  /* This enemy's own outline, pushed outward by `pad`. Auras and barriers are
+     drawn from it so they hug the body instead of ringing everything with the
+     same circle. */
+  silhouette(x, y, rx, ry, pad, facing) {
+    if (this.kind === 'warden') {
+      const w = rx * 1.55 + pad, h = ry * 1.15 + pad;
+      return [[x - w, y - h * 0.8], [x - w * 0.82, y - h], [x + w * 0.82, y - h],
+      [x + w, y - h * 0.8], [x + w * 0.9, y + h], [x - w * 0.9, y + h]];
+    }
+    if (this.kind === 'brick') {
+      return Rough.rectPts(x - rx - pad, y - ry - pad, (rx + pad) * 2, (ry + pad) * 2);
+    }
+    if (this.kind === 'dart') {
+      const r = (rx + ry) / 2 + pad, a = (facing || 0) + Math.PI / 2;
+      const c = Math.cos(a), s = Math.sin(a);
+      return [[0, -r * 1.25], [r * 0.85, r * 0.85], [0, r * 0.4], [-r * 0.85, r * 0.85]]
+        .map(p => [x + p[0] * c - p[1] * s, y + p[0] * s + p[1] * c]);
+    }
+    return Rough.circlePts(x, y, (rx + ry) / 2 + pad, (rx + ry) / 2 * 0.1, 14);
+  }
+
+  /* --- eyes, for the bosses only --- */
+  eyes(ctx, x, y, r, count, t, pupilColor) {
+    const look = Math.atan2(-this.y, -this.x);
+    const lx = Math.cos(look) * r * 0.09, ly = Math.sin(look) * r * 0.09;
+    const blink = (Math.sin(t * 1.7 + this.wobblePhase) > 0.985) ? 0.18 : 1;
+    const spread = r * (count > 2 ? 0.34 : 0.28);
+    for (let i = 0; i < count; i++) {
+      const off = count === 1 ? 0 : (i - (count - 1) / 2) * spread;
+      const ex = x + off, ey = y - r * 0.1 + (count > 2 ? Math.abs(off) * 0.12 : 0);
+      const er = r * (count > 2 ? 0.14 : 0.17);
+      ctx.save();
+      ctx.fillStyle = '#fffdf4';
+      ctx.beginPath(); ctx.ellipse(ex, ey, er, er * blink, 0, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#2b2b2b'; ctx.lineWidth = Math.max(1, r * 0.05);
+      ctx.beginPath(); ctx.ellipse(ex, ey, er, er * blink, 0, 0, 7); ctx.stroke();
+      ctx.fillStyle = pupilColor || '#2b2b2b';
+      ctx.beginPath(); ctx.ellipse(ex + lx, ey + ly, er * 0.45, er * 0.45 * blink, 0, 0, 7); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  drawBlob(ctx, x, y, rx, ry, fill, t) {
+    const r = (rx + ry) / 2;
+    const pts = Rough.circlePts(x, y, r, r * 0.13, 11);
+    Rough.scribble(ctx, pts, { color: fill, spacing: 6, width: 5, overflow: 1.12 });
+    Rough.grain(ctx, pts, '#2b2b2b', 0.002, this.id);
+    Rough.poly(ctx, pts, { color: '#2b2b2b', width: 2.4, jitter: 1.2 });
+    // an inner ring and a highlight, so it reads as round rather than flat
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    Rough.circle(ctx, x, y, r * 0.52, { color: '#2b2b2b', width: 1.6, jitter: 1.8 });
+    ctx.globalAlpha = 0.35;
+    Rough.circle(ctx, x - r * 0.35, y - r * 0.38, r * 0.18, { color: '#fffdf4', width: 2, jitter: 1 });
+    ctx.restore();
+  }
+
+  /* A folded paper dart, tipped the way it is flying. */
+  drawDart(ctx, x, y, rx, ry, fill, facing) {
+    const r = (rx + ry) / 2;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(facing + Math.PI / 2);
+    const nose = [[0, -r * 1.25], [r * 0.85, r * 0.85], [0, r * 0.4], [-r * 0.85, r * 0.85]]
+      .map(p => [p[0] + Rough.jit(1.6), p[1] + Rough.jit(1.6)]);
+    Rough.scribble(ctx, nose, { color: fill, spacing: 6, width: 5, overflow: 1.14 });
+    Rough.poly(ctx, nose, { color: '#2b2b2b', width: 2.4, jitter: 1.1 });
+    // the crease down the fold, and the wash of speed behind it
+    Rough.line(ctx, 0, -r * 1.15, 0, r * 0.35, { color: '#2b2b2b', width: 1.6, jitter: 1, passes: 1 });
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    for (const s of [-1, 1]) {
+      Rough.line(ctx, s * r * 0.5, r * 1.0, s * r * 0.62, r * 1.75,
+        { color: '#2b2b2b', width: 1.6, jitter: 1.4, passes: 1 });
+    }
+    Rough.line(ctx, 0, r * 0.7, 0, r * 1.5, { color: '#2b2b2b', width: 1.4, jitter: 1.4, passes: 1 });
+    ctx.restore();
+    ctx.restore();
+  }
+
+  /* An actual brick: courses of mortar and a chipped corner. */
+  drawBrick(ctx, x, y, rx, ry, fill, t) {
+    const pts = Rough.rectPts(x - rx, y - ry, rx * 2, ry * 2).map(p => [p[0] + Rough.jit(2), p[1] + Rough.jit(2)]);
+    Rough.scribble(ctx, pts, { color: fill, spacing: 6, width: 5, overflow: 1.12 });
+    Rough.grain(ctx, pts, '#5c3a22', 0.004, this.id);
+    Rough.poly(ctx, pts, { color: '#2b2b2b', width: 2.8, jitter: 1.2 });
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    Rough.line(ctx, x - rx, y - ry * 0.25, x + rx, y - ry * 0.25, { color: '#5c3a22', width: 1.8, jitter: 1.2, passes: 1 });
+    Rough.line(ctx, x - rx, y + ry * 0.45, x + rx, y + ry * 0.45, { color: '#5c3a22', width: 1.8, jitter: 1.2, passes: 1 });
+    Rough.line(ctx, x, y - ry, x, y - ry * 0.25, { color: '#5c3a22', width: 1.8, jitter: 1.2, passes: 1 });
+    Rough.line(ctx, x - rx * 0.45, y - ry * 0.25, x - rx * 0.45, y + ry * 0.45, { color: '#5c3a22', width: 1.8, jitter: 1.2, passes: 1 });
+    Rough.line(ctx, x + rx * 0.4, y + ry * 0.45, x + rx * 0.4, y + ry, { color: '#5c3a22', width: 1.8, jitter: 1.2, passes: 1 });
+    ctx.restore();
+    // a corner knocked off
+    Rough.poly(ctx, [[x + rx * 0.55, y - ry], [x + rx, y - ry * 0.45], [x + rx * 0.82, y - ry * 0.9]],
+      { color: '#2b2b2b', width: 1.8, jitter: 1.4, closed: false });
+  }
+
+  /* THE BLOT - a fat ink amoeba with a seam it splits along, and drips. */
+  drawBlot(ctx, x, y, rx, ry, fill, t) {
+    const r = (rx + ry) / 2;
+    const pts = [];
+    const lobes = 9;
+    for (let i = 0; i < 46; i++) {
+      const a = (i / 46) * Math.PI * 2;
+      const wob = 1 + Math.sin(a * 3 + t * 1.3) * 0.08 + Math.sin(a * lobes + t * 0.7) * 0.06;
+      pts.push([x + Math.cos(a) * r * wob + Rough.jit(1.6), y + Math.sin(a) * r * wob * 0.92 + Rough.jit(1.6)]);
+    }
+    // drips hanging off the bottom
+    for (let i = -1; i <= 1; i++) {
+      const dx = x + i * r * 0.5, len = r * (0.3 + 0.16 * Math.sin(t * 1.6 + i));
+      Rough.blob(ctx, dx, y + r * 0.85 + len, r * 0.15, fill, '#2b2b2b', { spacing: 5, fillWidth: 4, sides: 8 });
+    }
+    Rough.scribble(ctx, pts, { color: fill, spacing: 7, width: 7, overflow: 1.1 });
+    Rough.grain(ctx, pts, '#000000', 0.003, this.id);
+    Rough.poly(ctx, pts, { color: '#2b2b2b', width: 3.4, jitter: 1.6 });
+
+    // the seam it tears along when it splits, widening as it gets hurt
+    const open = (1 - this.hpShown) * r * 0.22 + Math.sin(t * 2) * 1.5;
+    const seam = [];
+    for (let i = 0; i <= 6; i++) {
+      seam.push([x + (i % 2 ? open : -open), y - r * 0.85 + (i / 6) * r * 1.7]);
+    }
+    Rough.poly(ctx, seam, { color: '#c8b6e8', width: 2.6, jitter: 1.2, closed: false });
+
+    this.eyes(ctx, x, y - r * 0.18, r * 0.95, 3, t, '#e8e0ff');
+    // wide jagged grin
+    const grin = [];
+    for (let i = 0; i <= 8; i++) {
+      grin.push([x - r * 0.45 + (i / 8) * r * 0.9, y + r * 0.42 + (i % 2 ? r * 0.1 : 0)]);
+    }
+    Rough.poly(ctx, grin, { color: '#2b2b2b', width: 2.2, jitter: 1, closed: false });
+  }
+
+  /* A little one, spat out by the Blot. */
+  drawBlotling(ctx, x, y, rx, ry, fill, t) {
+    const r = (rx + ry) / 2;
+    const pts = Rough.circlePts(x, y, r, r * 0.22, 9);
+    Rough.scribble(ctx, pts, { color: fill, spacing: 5, width: 4, overflow: 1.16 });
+    Rough.poly(ctx, pts, { color: '#2b2b2b', width: 2.2, jitter: 1.3 });
+    Rough.blob(ctx, x, y + r * 0.95 + Math.sin(t * 5) * 2, r * 0.22, fill, '#2b2b2b', { spacing: 4, fillWidth: 3, sides: 7 });
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    Rough.circle(ctx, x - r * 0.3, y - r * 0.32, r * 0.2, { color: '#fffdf4', width: 1.8, jitter: 1 });
+    ctx.restore();
+  }
+
+  /* THE WARDEN - a slab with one enormous eye set in it. No cartoon face, no
+     white filler: the body is solid and dark so the eye is the only thing to
+     look at, and it looks back. */
+  drawWarden(ctx, x, y, rx, ry, fill, t) {
+    const w = rx * 1.55, h = ry * 1.15;
+
+    // chains swinging off the shoulders
+    for (const s of [-1, 1]) {
+      for (let i = 0; i < 3; i++) {
+        const cy = y - h * 0.35 + i * rx * 0.3;
+        const cx = x + s * (w + rx * 0.2) + Math.sin(t * 2 + i * 0.6) * 3 * s;
+        Rough.circle(ctx, cx, cy, rx * 0.13, { color: '#6b6b6b', width: 2.2, jitter: 1.2 });
+      }
+    }
+
+    const body = [[x - w, y - h * 0.8], [x - w * 0.82, y - h], [x + w * 0.82, y - h],
+    [x + w, y - h * 0.8], [x + w * 0.9, y + h], [x - w * 0.9, y + h]]
+      .map(p => [p[0] + Rough.jit(2.2), p[1] + Rough.jit(2.2)]);
+
+    // solid base coat first, so the paper never shows through as white stripes
+    ctx.save();
+    ctx.fillStyle = this.flash > 0 ? '#ffffff' : '#3d1526';
+    ctx.beginPath();
+    body.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    Rough.scribble(ctx, body, { color: fill, spacing: 4.5, width: 7, overflow: 1.08, alpha: 0.9 });
+    Rough.grain(ctx, body, '#000000', 0.005, this.id);
+    Rough.poly(ctx, body, { color: '#2b2b2b', width: 3.6, jitter: 1.6 });
+
+    // iron grille across the gut
+    ctx.save();
+    ctx.globalAlpha = 0.8;
+    const gTop = y + h * 0.5, gBot = y + h * 0.88;
+    for (let i = -2; i <= 2; i++) {
+      const bx = x + i * w * 0.3;
+      Rough.line(ctx, bx, gTop, bx, gBot, { color: '#1a0c13', width: 3, jitter: 1, passes: 1 });
+    }
+    Rough.line(ctx, x - w * 0.7, gTop, x + w * 0.7, gTop, { color: '#1a0c13', width: 2.6, jitter: 1, passes: 1 });
+    Rough.line(ctx, x - w * 0.7, gBot, x + w * 0.7, gBot, { color: '#1a0c13', width: 2.6, jitter: 1, passes: 1 });
+    ctx.restore();
+
+    // horns of office
+    for (const s of [-1, 1]) {
+      const horn = [[x + s * w * 0.55, y - h], [x + s * w * 0.78, y - h * 1.45], [x + s * w * 0.3, y - h * 1.02]];
+      Rough.scribble(ctx, horn, { color: '#9a8f86', spacing: 5, width: 4, overflow: 1.14 });
+      Rough.poly(ctx, horn, { color: '#2b2b2b', width: 2.4, jitter: 1 });
+    }
+
+    this.drawWardenEye(ctx, x, y - h * 0.24, rx * 0.72, t);
+  }
+
+  /* The eye: sunk in a black socket, bile-yellow iris, a goat-slit pupil that
+     narrows when it is about to do something, and veins creeping in. */
+  drawWardenEye(ctx, x, y, r, t) {
+    const look = Math.atan2(-this.y - (this.y > 0 ? 0 : 0), -this.x);
+    const lx = Math.cos(look) * r * 0.12, ly = Math.sin(look) * r * 0.12;
+
+    // rare, slow blink - a heavy lid, not a cartoon snap
+    const cycle = (t * 0.28 + this.wobblePhase) % 1;
+    const blink = cycle > 0.965 ? Math.abs(Math.sin((cycle - 0.965) / 0.035 * Math.PI)) : 0;
+    const open = 1 - blink;
+
+    // socket: a torn black hole in the slab
+    const socket = [];
+    for (let i = 0; i < 20; i++) {
+      const a = (i / 20) * Math.PI * 2;
+      const rr = r * (1.28 + Math.sin(a * 4 + this.wobblePhase) * 0.09);
+      socket.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.86 + Rough.jit(1.4)]);
+    }
+    ctx.save();
+    ctx.fillStyle = '#0d0409';
+    ctx.beginPath();
+    socket.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    Rough.poly(ctx, socket, { color: '#1a0c13', width: 2.4, jitter: 2 });
+
+    if (open <= 0.02) {
+      Rough.line(ctx, x - r, y, x + r, y, { color: '#1a0c13', width: 3, jitter: 1.4, passes: 2 });
+      return;
+    }
+
+    ctx.save();
+    // the lid clips the eye as it closes
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 1.1, r * 0.92 * open, 0, 0, Math.PI * 2);
+    ctx.clip();
+
+    // eyeball - sickly, solid, no hatching
+    ctx.fillStyle = '#d8cdaa';
+    ctx.beginPath(); ctx.ellipse(x, y, r * 0.98, r * 0.86, 0, 0, Math.PI * 2); ctx.fill();
+
+    // veins crawling in from the edges
+    Rough.srand(this.id * 31 + 5);
+    ctx.save();
+    ctx.globalAlpha = 0.65;
+    for (let i = 0; i < 7; i++) {
+      const a = Rough.rnd() * Math.PI * 2;
+      let px = x + Math.cos(a) * r * 0.95, py = y + Math.sin(a) * r * 0.82;
+      for (let k = 0; k < 3; k++) {
+        const nx = px + (x - px) * 0.32 + Rough.jit(r * 0.14);
+        const ny = py + (y - py) * 0.32 + Rough.jit(r * 0.14);
+        Rough.line(ctx, px, py, nx, ny, { color: '#8f1d1d', width: 1.4 - k * 0.3, jitter: 0.8, passes: 1 });
+        px = nx; py = ny;
+      }
+    }
+    ctx.restore();
+
+    // iris: a ring of bile yellow, chalk-blue while the barrier is up
+    const irisR = r * 0.52;
+    const irisCol = this.immuneT > 0 ? '#8ec5e8' : '#c2ad3f';
+    ctx.fillStyle = this.immuneT > 0 ? '#5f93b5' : '#8f7d1e';
+    ctx.beginPath(); ctx.ellipse(x + lx, y + ly, irisR, irisR * 0.96, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = irisCol;
+    ctx.beginPath(); ctx.ellipse(x + lx, y + ly, irisR * 0.82, irisR * 0.78, 0, 0, Math.PI * 2); ctx.fill();
+    // striations
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      Rough.line(ctx, x + lx + Math.cos(a) * irisR * 0.3, y + ly + Math.sin(a) * irisR * 0.3,
+        x + lx + Math.cos(a) * irisR * 0.84, y + ly + Math.sin(a) * irisR * 0.84,
+        { color: '#4a3c0a', width: 1.2, jitter: 0.7, passes: 1 });
+    }
+    ctx.restore();
+
+    // goat-slit pupil, tight when it is winding up, wide when it is not
+    const winding = this.immuneT > 0 || this.skillT < 1.2;
+    const pw = irisR * (winding ? 0.16 : 0.3) * (1 + Math.sin(t * 0.9) * 0.08);
+    ctx.fillStyle = '#05010a';
+    ctx.beginPath();
+    ctx.ellipse(x + lx, y + ly, pw, irisR * 0.95, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // one cold glint, far off to the side so it never reads as cute
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#fffdf4';
+    ctx.beginPath(); ctx.ellipse(x + lx - irisR * 0.5, y + ly - irisR * 0.55, r * 0.07, r * 0.05, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.restore();
+
+    // lids: a heavy brow pressing down, and the lower rim
+    const lidY = y - r * 0.9 * open;
+    Rough.poly(ctx, [[x - r * 1.12, y - r * 0.2], [x - r * 0.8, lidY], [x, lidY - r * 0.12],
+    [x + r * 0.8, lidY], [x + r * 1.12, y - r * 0.2]],
+      { color: '#1a0c13', width: 3.2, jitter: 1.6, closed: false });
+    Rough.poly(ctx, [[x - r * 1.1, y + r * 0.1], [x, y + r * 0.92 * open], [x + r * 1.1, y + r * 0.1]],
+      { color: '#1a0c13', width: 2.8, jitter: 1.6, closed: false });
+    // brow, low and flat
+    Rough.line(ctx, x - r * 1.25, y - r * 1.12, x + r * 1.25, y - r * 1.26,
+      { color: '#2b2b2b', width: 3.4, jitter: 1.2, passes: 2 });
+  }
+
 }
 
 /* ------------------------------------------------------- the stick sentry */
@@ -263,6 +566,7 @@ class Sentry {
         this.cool = 1.6;
         this.recoil = 1;
         game.effects.push(new Arrow(this.x, this.y, best, 3));
+        Sfx.play('sentry_shot', { volume: 0.4 });
       }
     }
     return true;
@@ -485,6 +789,7 @@ class WaterDrop {
       this.popped = true;
       game.areaDamage(this.x, this.y, this.radius, this.damage, { color: '#2f8fd6' });
       game.effects.push(new Splash(this.x, this.y, this.radius));
+      Sfx.play('water_pop', { volume: 0.4, throttle: 35, voices: 6 });
       return false;
     }
     return p < 1;

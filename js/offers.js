@@ -80,7 +80,12 @@ class OfferScreen {
   }
 
   update(dt, w, h) {
+    const was = this.t;
     this.t += dt;
+    for (let i = 0; i < this.offers.length; i++) {
+      const at = this.outlineStart + i * this.stagger;
+      if (was < at && this.t >= at) Sfx.play('card_draw', { volume: 0.55, throttle: 0 });
+    }
     for (let i = 0; i < this.cardIn.length; i++) {
       const want = (this.hover === i && this.chosen < 0) ? 1 : 0;
       this.cardIn[i] += (want - this.cardIn[i]) * Math.min(1, dt * 12);
@@ -109,15 +114,17 @@ class OfferScreen {
     if (this.chosen >= 0) return;
     if (this.t < this.ready) return;        // the intro plays out, it can't be skipped
     this.move(x, y, w, h);
-    if (this.hoverSkip) { this.done = true; return; }
+    if (this.hoverSkip) { Sfx.play('skip', { volume: 0.6 }); this.done = true; return; }
     if (this.hover < 0) return;
     const off = this.offers[this.hover];
     if (this.game.scribbles < off.cost) {
       this.denied = this.hover;
       this.deniedT = 1;
+      Sfx.play('click_miss', { volume: 0.6 });
       return;
     }
     this.game.buyOffer(off);
+    Sfx.play('card_buy', { volume: 0.9 });
     this.chosen = this.hover;
     this.chosenT = 0;
   }

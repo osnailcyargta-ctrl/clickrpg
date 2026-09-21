@@ -54,6 +54,14 @@ html, body {
   40% { transform: scale(1.16) rotate(-1.5deg); }
   100% { transform: scale(1); }
 }
+.mute-chip {
+  pointer-events: auto; font-family: inherit; font-size: 10.5px;
+  padding: 1px 8px; border: 2px solid rgba(43, 43, 43, 0.45);
+  border-radius: 9px 6px 10px 5px; background: rgba(255, 253, 244, 0.8);
+  box-shadow: 2px 2px 0 rgba(43, 43, 43, 0.18); cursor: pointer; color: var(--ink);
+}
+.mute-chip.off { opacity: 0.5; border-style: dashed; text-decoration: line-through; }
+
 .badges { display: flex; gap: 4px; flex-wrap: wrap; }
 .badge {
   border: 2px solid; border-radius: 9px 6px 10px 5px;

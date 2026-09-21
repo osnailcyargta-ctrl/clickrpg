@@ -20,10 +20,12 @@ const CursorPowers = {
 
   eraser(game, x, y) {
     game.effects.push(new EraseBurst(x, y, BLOCK * 1.5 * game.aoeScale(), game));
+    Sfx.play('erase', { volume: 0.7 });
   },
 
   compass(game, x, y) {
     game.effects.push(new CompassRing(x, y, BLOCK * 3 * game.aoeScale(), game.aoeDamage(5)));
+    Sfx.play('compass_ring', { volume: 0.7 });
   },
 
   buzz(game, x, y) {
@@ -38,6 +40,7 @@ const CursorPowers = {
       e.hurt(game.aoeDamage(3), game, { color: '#b99a1c' });
       if (!e.dead) e.stun = Math.max(e.stun, 0.35);
     }
+    Sfx.play('zap', { volume: 0.7 });
     if (pts.length > 1) game.effects.push(new Bolt(pts));
     else game.effects.push(new Bolt([[x, y], [x + Rough.jit(34), y + Rough.jit(34)]]));
   }
@@ -49,6 +52,7 @@ const CursorOnHit = {
     if (enemy.dead || enemy.boss) return;               // bosses don't get snipped
     if (enemy.hp > enemy.maxHp * 0.18) return;
     game.effects.push(new ScissorCut(enemy.x, enemy.y, enemy.r * 1.6));
+    Sfx.play('snip', { volume: 0.8, throttle: 40 });
     game.effects.push(new FloatText(enemy.x, enemy.y - enemy.r - 8, 'snip', '#c8433a', 20, false));
     enemy.hurt(enemy.hp, game, { silent: true });
   }
