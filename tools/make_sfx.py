@@ -482,6 +482,64 @@ def s_eagle_death():
     return mix(cry * 0.9, clap * 1.2, climb * 0.8)
 
 
+
+# ---- magnet, boomerang, and the eraser's rewrite ----------------------
+def s_magnet_pull():
+    # metal dragged across a table, rising as it closes
+    drag = am(sweep(noise(0.45) * swell(0.45, 0.5, 2.4), 300, 1600, 2.0), 22, 0.5)
+    hum = bp(noise(0.45), 210, 3.0) * swell(0.45, 0.4, 2.2)
+    return mix(drag, hum * 0.8)
+
+
+def s_magnet_burst():
+    # the polarity flipping, everything thrown off at once
+    snap = hp(noise(0.1), 2600) * env(0.1, 0.0004, curve=9)
+    shove = sweep(noise(0.7) * swell(0.7, 0.12, 2.2), 1600, 300, 1.2)
+    thud = bp(noise(0.5), 105, 1.3) * env(0.5, 0.002, curve=4)
+    return mix(snap * 0.9, shove * 1.1, thud * 1.1)
+
+
+def s_boomerang():
+    # wood turning over in the air
+    turns = []
+    for i in range(7):
+        g = bp(noise(0.1), rng.uniform(700, 1900), 2.2) * env(0.1, 0.001, curve=7)
+        turns.append(np.pad(g, (int(SR * i * 0.075), 0)) * (0.5 + 0.5 * np.cos(i * 0.6)))
+    air = sweep(noise(0.62) * swell(0.62, 0.3, 2.0), 500, 1800, 1.3)
+    return mix(*turns, air * 0.7)
+
+
+def s_sk_polereversal():
+    # a long haul inward, a beat of nothing, then everything let go at once
+    haul = am(sweep(noise(0.85) * swell(0.85, 0.75, 1.5), 250, 2200, 1.6), 14, 0.55)
+    burst = np.pad(mix(hp(noise(0.2), 2200) * env(0.2, 0.0004, curve=7),
+                       bp(noise(0.9), 90, 1.2) * env(0.9, 0.002, curve=3),
+                       grains(0.7, 22, spread=0.25, length=0.012, band=(700, 4000), decay=1.8) * 0.7),
+                  (int(SR * 0.85), 0))
+    return mix(haul * 0.85, burst * 1.3)
+
+
+def s_sk_flightpath():
+    # a sky full of them, turning over and over
+    passes = []
+    for i in range(14):
+        g = bp(noise(0.12), rng.uniform(600, 2200), 2.0) * env(0.12, 0.001, curve=6)
+        passes.append(np.pad(g, (int(SR * (0.03 + i * 0.1)), 0)) * rng.uniform(0.5, 1.0))
+    air = am(sweep(noise(1.6) * swell(1.6, 0.2, 1.8), 600, 2400, 1.2), 9, 0.45)
+    return mix(*passes, air * 0.8)
+
+
+def s_sk_seconddraft():
+    # the page scrubbed back to nothing, then drawn again
+    scrub = am(bp(noise(0.9), 1500, 1.0) * swell(0.9, 0.25, 2.2), 6, 0.75)
+    crumbs = grains(1.0, 26, spread=0.7, length=0.012, band=(900, 3800), decay=1.6)
+    redraw = []
+    for i in range(6):
+        g = bp(noise(0.13), rng.uniform(1200, 3000), 1.4) * env(0.13, 0.0008, curve=6)
+        redraw.append(np.pad(g, (int(SR * (0.85 + i * 0.09)), 0)) * 0.7)
+    return mix(scrub * 1.1, crumbs * 0.5, *redraw)
+
+
 SOUNDS = {
     'click_hit': s_click_hit, 'click_miss': s_click_miss, 'crit': s_crit,
     'kill': s_kill, 'kill_big': s_kill_big, 'castle_hit': s_castle_hit,
@@ -502,6 +560,9 @@ SOUNDS = {
     'sk_blankslate': s_sk_blankslate, 'sk_exclamation': s_sk_exclamation,
     'eagle_screech': s_eagle_screech, 'eagle_dash': s_eagle_dash,
     'bolt_shot': s_bolt_shot, 'eagle_death': s_eagle_death,
+    'magnet_pull': s_magnet_pull, 'magnet_burst': s_magnet_burst,
+    'boomerang': s_boomerang, 'sk_polereversal': s_sk_polereversal,
+    'sk_flightpath': s_sk_flightpath, 'sk_seconddraft': s_sk_seconddraft,
 }
 
 if __name__ == '__main__':

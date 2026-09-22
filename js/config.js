@@ -91,6 +91,16 @@ const CURSORS = [
     detail: '2 a click. A cloud gathers over a random enemy and half a second later the bolt lands for 50% of your click damage, splashing 4 into everything within a block of it. The Thunder Eagle drinks lightning, so none of it touches her.'
   },
   {
+    id: 'magnet', name: 'Horseshoe Magnet', cost: 42, color: '#3f7d8c', every: 12, dmg: 2.5,
+    desc: 'Every 12 clicks it drags the crowd in.',
+    detail: '2.5 a click. Everything within 4 blocks is hauled to the point you clicked and takes 2 on the way, which leaves them stacked on top of each other for whatever you throw next.'
+  },
+  {
+    id: 'boomerang', name: 'Boomerang', cost: 46, color: '#8a6a3a', every: 10, dmg: 3,
+    desc: 'Every 10 clicks it throws, and it comes back.',
+    detail: '3 a click. The throw loops out five blocks and curves home again, cutting 3 into everything on the way out and 3 more into everything on the way back - line the arc up and the same enemy pays twice.'
+  },
+  {
     id: 'scissor', name: 'Scissor Cursor', cost: 44, color: '#c8433a', every: 0, dmg: 4,
     desc: 'Snips anything that is nearly gone.',
     detail: 'The hardest click at 4, with no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Nothing here helps against a crowd.'
@@ -188,8 +198,10 @@ const SKILLS = {
   buzz:    { name: 'EIGHT WAYS',  blurb: 'static fires out of your cursor down eight lines at once' },
   wet:     { name: 'CLOUDBURST',  blurb: 'the page floods, and everything standing in it is soaked and slowed' },
   pen:     { name: 'CROSSHATCH',  blurb: 'the whole screen is hatched over, and the lines bite' },
-  eraser:  { name: 'BLANK SLATE', blurb: 'a third of the drawing is rubbed out around your cursor' },
-  plain:   { name: 'EXCLAMATION', blurb: 'one enormous mark slams down where you point it' }
+  eraser:  { name: 'SECOND DRAFT', blurb: 'the page is scrubbed back and everything is redrawn worse - except the castle' },
+  plain:   { name: 'EXCLAMATION', blurb: 'one enormous mark slams down where you point it' },
+  magnet:  { name: 'POLE REVERSAL', blurb: 'the whole board is hauled into one heap, then flung apart' },
+  boomerang: { name: 'FLIGHT PATH', blurb: 'five of them criss-cross the page and none of them stop' }
 };
 
 function skillFor(cursorId) { return SKILLS[cursorId] || SKILLS.plain; }

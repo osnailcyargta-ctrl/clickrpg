@@ -16,7 +16,9 @@ const Sfx = {
     'skill_charge', 'push_wave', 'guillotine',
     'sk_thunderhead', 'sk_perimeter', 'sk_guillotine', 'sk_eightways',
     'sk_cloudburst', 'sk_crosshatch', 'sk_blankslate', 'sk_exclamation',
-    'eagle_screech', 'eagle_dash', 'bolt_shot', 'eagle_death'
+    'eagle_screech', 'eagle_dash', 'bolt_shot', 'eagle_death',
+    'magnet_pull', 'magnet_burst', 'boomerang',
+    'sk_polereversal', 'sk_flightpath', 'sk_seconddraft'
   ],
   path: 'assets/sfx/',
   ver: (typeof window !== 'undefined' && window.BUILD_V) ? '?v=' + window.BUILD_V : '',

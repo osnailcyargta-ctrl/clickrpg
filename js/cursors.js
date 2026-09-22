@@ -29,6 +29,18 @@ const CursorPowers = {
       game.aoeDamage(4)));                        // which only ever does 4
   },
 
+  magnet(game, x, y) {
+    game.effects.push(new MagnetPull(x, y, BLOCK * 4 * game.aoeScale(), game.aoeDamage(2), game, 0));
+    Sfx.play('magnet_pull', { volume: 0.75 });
+  },
+
+  boomerang(game, x, y) {
+    // thrown away from the castle, so the loop sweeps the lane they walk up
+    const a = Math.atan2(y, x) + (Math.random() - 0.5) * 0.5;
+    game.effects.push(new Boomerang(x, y, a, BLOCK * 5 * game.aoeScale(), game.aoeDamage(3), game));
+    Sfx.play('boomerang', { volume: 0.7 });
+  },
+
   eraser(game, x, y) {
     game.effects.push(new EraseBurst(x, y, BLOCK * 1.5 * game.aoeScale(), game));
     Sfx.play('erase', { volume: 0.7 });
@@ -167,6 +179,60 @@ const CursorSprites = {
     ctx.globalAlpha = flick;
     const bolt = [[x + 10 * s, y + 15 * s], [x + 6 * s, y + 23 * s], [x + 11 * s, y + 23 * s], [x + 6 * s, y + 32 * s]];
     Rough.poly(ctx, bolt, { color: '#e8c33a', width: 2.6, jitter: 1, closed: false });
+    ctx.restore();
+    Rough.line(ctx, x, y, x + 5 * s, y + 5 * s, { color: '#2b2b2b', width: 2, jitter: 0.6, passes: 1 });
+  },
+
+  /* A horseshoe magnet, poles down, humming. */
+  magnet(ctx, x, y, s, color, t) {
+    const cx = x + 11 * s, cy = y + 11 * s, R = 9.5 * s, L = 13 * s;
+    // the two legs
+    for (const side of [-1, 1]) {
+      const lx = cx + side * R;
+      const leg = [[lx - 3.4 * s, cy], [lx + 3.4 * s, cy], [lx + 3.4 * s, cy + L], [lx - 3.4 * s, cy + L]];
+      Rough.scribble(ctx, leg, { color, spacing: 4, width: 4, overflow: 1.12 });
+      Rough.poly(ctx, leg, { color: '#2b2b2b', width: 2, jitter: 0.7 });
+      // silver tips
+      const tip = [[lx - 3.4 * s, cy + L], [lx + 3.4 * s, cy + L], [lx + 3.4 * s, cy + L + 4 * s], [lx - 3.4 * s, cy + L + 4 * s]];
+      Rough.scribble(ctx, tip, { color: '#c6ccd2', spacing: 3, width: 3, overflow: 1.1 });
+      Rough.poly(ctx, tip, { color: '#2b2b2b', width: 1.8, jitter: 0.6 });
+    }
+    // the arch over the top
+    const arch = [];
+    for (let i = 0; i <= 10; i++) {
+      const a = Math.PI + (i / 10) * Math.PI;
+      arch.push([cx + Math.cos(a) * (R + 3.4 * s), cy + Math.sin(a) * (R + 3.4 * s)]);
+    }
+    for (let i = 10; i >= 0; i--) {
+      const a = Math.PI + (i / 10) * Math.PI;
+      arch.push([cx + Math.cos(a) * (R - 3.4 * s), cy + Math.sin(a) * (R - 3.4 * s)]);
+    }
+    Rough.scribble(ctx, arch, { color, spacing: 4, width: 4, overflow: 1.1 });
+    Rough.poly(ctx, arch, { color: '#2b2b2b', width: 2, jitter: 0.8 });
+    // the pull, sparking between the poles
+    ctx.save();
+    ctx.globalAlpha = 0.3 + Math.abs(Math.sin(t * 4)) * 0.45;
+    Rough.arc(ctx, cx, cy + L + 3 * s, R * 0.85, Math.PI * 0.15, Math.PI * 0.85,
+      { color: '#9fc4cc', width: 2, jitter: 2.4 });
+    ctx.restore();
+    Rough.line(ctx, x, y, cx - R * 0.6, cy - R * 0.4, { color: '#2b2b2b', width: 2, jitter: 0.6, passes: 1 });
+  },
+
+  /* A boomerang, held at the elbow, turning gently. */
+  boomerang(ctx, x, y, s, color, t) {
+    ctx.save();
+    ctx.translate(x + 13 * s, y + 14 * s);
+    ctx.rotate(Math.sin(t * 1.5) * 0.25 - 0.4);
+    const arm = [[-14 * s, 11 * s], [-4 * s, -13 * s], [3 * s, -13 * s], [2 * s, -2 * s],
+    [13 * s, 9 * s], [9 * s, 14 * s], [-9 * s, 15 * s]];
+    Rough.scribble(ctx, arm, { color: '#c9a36b', spacing: 4.5, width: 4.5, overflow: 1.14 });
+    Rough.poly(ctx, arm, { color: '#5c4326', width: 2.2, jitter: 0.9 });
+    // the grain, painted on
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    Rough.line(ctx, -2 * s, -9 * s, -6 * s, 8 * s, { color, width: 2, jitter: 1, passes: 1 });
+    Rough.line(ctx, 3 * s, 2 * s, 9 * s, 8 * s, { color, width: 2, jitter: 1, passes: 1 });
+    ctx.restore();
     ctx.restore();
     Rough.line(ctx, x, y, x + 5 * s, y + 5 * s, { color: '#2b2b2b', width: 2, jitter: 0.6, passes: 1 });
   },

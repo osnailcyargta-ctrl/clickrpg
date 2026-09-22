@@ -62,6 +62,9 @@ Open `index.html` in a browser. That's the whole install.
 The cursor **is** the weapon. Buying one throws the old one away for good —
 there's no inventory, so going back means buying it again.
 
+The crayon look is the art style, not a brief: a cursor can be anything, it
+just gets drawn like the rest of the page.
+
 Every cursor hits for its own number, and that number is the trade: the ones
 with a strong charge hit softer per click, the ones that hit hard have little
 else going on. They're balanced around a human click rate — about 5–6 a second
@@ -76,6 +79,8 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Buzz Cursor** | 2.5 | 8 clicks | Arcs static to the 3 nearest enemies within 4 blocks: 3 damage each, frozen for 0.35s. |
 | **Compass Cursor** | 2 | 10 clicks | Softest click, widest hit: sweeps an ink ring out to 3 blocks over a second, carving 5 damage into **everything the circle swallows**, each enemy once. |
 | **Storm Caller** | 2 | 15 clicks | A cloud gathers over a random enemy; half a second later the bolt lands for 50% of your click damage and splashes 4 into everything within a block of it. The Thunder Eagle is immune to all of it. |
+| **Horseshoe Magnet** | 2.5 | 12 clicks | Hauls everything within 4 blocks to the point you clicked, for 2 on the way, and leaves them stacked on top of each other for whatever you throw next. |
+| **Boomerang** | 3 | 10 clicks | The throw loops out five blocks and curves home again, cutting 3 into everything on the way out and 3 more on the way back — line the arc up and the same enemy pays twice. |
 | **Scissor Cursor** | 4 | — | Hardest click, no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Useless against a crowd. |
 
 ### Skills
@@ -90,7 +95,9 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Buzz** | EIGHT WAYS | Static tears out of the cursor down eight lines and earths itself through every enemy on the paper: 125% of your click damage and a 0.6s freeze. |
 | **Wet** | CLOUDBURST | The page floods — 8 damage to everything, and a 40% slow for 3s. |
 | **Pen Tool** | CROSSHATCH | The whole screen is hatched over and the lines bite: 12 damage to everything. |
-| **Eraser** | BLANK SLATE | Three blocks around your cursor are rubbed out: 25% of max HP off everything inside, and a heavy slow. |
+| **Eraser** | SECOND DRAFT | The page is scrubbed back band by band and drawn again. Everything on it comes back **permanently** worse — 35% off max HP (half that on a boss), smaller, and a quarter slower — and the castle comes back with a segment mended. The only skill that heals. |
+| **Magnet** | POLE REVERSAL | Hauls the whole board into one heap, holds it, then flips polarity and flings it apart. The damage scales with how many it gathered — 6, plus 2 for every enemy in the pile. |
+| **Boomerang** | FLIGHT PATH | Nine of them launch from the castle, two laps each, and the whole loop swings round as it goes so the second lap covers what the first one missed. 4 a pass, and a pass is easy to take twice. |
 | **Plain** | EXCLAMATION | One enormous mark slams down where you point, for six times your click damage in 2 blocks. The biggest single hit in the game, and the smallest area. |
 
 ## Upgrades

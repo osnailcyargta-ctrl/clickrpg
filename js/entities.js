@@ -1342,6 +1342,252 @@ class EagleAscend {
   }
 }
 
+/* The magnet's haul: everything nearby is dragged to one point. */
+class MagnetPull {
+  constructor(x, y, radius, damage, game, hold) {
+    this.id = nextId();
+    this.x = x; this.y = y; this.radius = radius;
+    this.t = 0; this.dur = 0.45 + (hold || 0);
+    this.hold = hold || 0;
+    this.caught = [];
+    for (const en of game.enemies) {
+      if (en.dead) continue;
+      if (Math.hypot(en.x - x, en.y - y) <= radius + en.r) {
+        this.caught.push({ e: en, fromX: en.x, fromY: en.y, a: Math.random() * 6 });
+        if (damage > 0) en.hurt(damage, game, { color: '#3f7d8c' });
+      }
+    }
+    this.filings = [];
+    for (let i = 0; i < 40; i++) {
+      const a = Math.random() * Math.PI * 2, d = radius * (0.3 + Math.random() * 0.8);
+      this.filings.push({ a, d, spin: Math.random() * 6 });
+    }
+  }
+  update(dt, game) {
+    this.t += dt;
+    const k = E.out(Math.min(1, this.t / 0.45));
+    for (const c of this.caught) {
+      if (c.e.dead) continue;
+      // they end up packed round the point rather than all inside each other
+      const tx = this.x + Math.cos(c.a) * c.e.r * 1.1;
+      const ty = this.y + Math.sin(c.a) * c.e.r * 1.1;
+      c.e.x = c.fromX + (tx - c.fromX) * k;
+      c.e.y = c.fromY + (ty - c.fromY) * k;
+      c.e.stun = Math.max(c.e.stun, 0.12 + this.hold);
+    }
+    return this.t < this.dur;
+  }
+  draw(ctx, time) {
+    const k = E.out(Math.min(1, this.t / 0.45));
+    const fade = this.t > this.dur - 0.3 ? E.clamp01((this.dur - this.t) / 0.3) : 1;
+    Rough.boil(this.id, Math.floor(time * 10));
+    ctx.save();
+    ctx.globalAlpha = fade * 0.7;
+    // field lines curling into the point
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 + this.t * 1.5;
+      const r1 = this.radius * (1 - k * 0.5), r2 = r1 * 0.35;
+      Rough.poly(ctx, [
+        [this.x + Math.cos(a) * r1, this.y + Math.sin(a) * r1],
+        [this.x + Math.cos(a + 0.4) * (r1 + r2) / 2, this.y + Math.sin(a + 0.4) * (r1 + r2) / 2],
+        [this.x + Math.cos(a + 0.9) * r2, this.y + Math.sin(a + 0.9) * r2]
+      ], { color: '#3f7d8c', width: 2.4, jitter: 2.4, closed: false });
+    }
+    // iron filings skidding in
+    ctx.fillStyle = '#2b2b2b';
+    for (const f of this.filings) {
+      const d = f.d * (1 - k);
+      ctx.save();
+      ctx.globalAlpha = fade * 0.5;
+      ctx.translate(this.x + Math.cos(f.a) * d, this.y + Math.sin(f.a) * d);
+      ctx.rotate(f.a + Math.PI / 2);
+      ctx.fillRect(-1, -3, 2, 6);
+      ctx.restore();
+    }
+    ctx.globalAlpha = fade * 0.9;
+    Rough.circle(ctx, this.x, this.y, 10 + (1 - k) * 8, { color: '#3f7d8c', width: 3, jitter: 2, wobble: 3 });
+    ctx.restore();
+  }
+}
+
+/* Everything the magnet gathered, thrown back out. */
+class MagnetBurst {
+  constructor(x, y, caught, damage, game) {
+    this.id = nextId(); this.x = x; this.y = y;
+    this.t = 0; this.dur = 0.8;
+    for (const c of caught) {
+      const en = c.e || c;
+      if (!en || en.dead) continue;
+      const a = Math.atan2(en.y - y, en.x - x) + (Math.random() - 0.5) * 0.6;
+      const throwTo = BLOCK * (3.5 + Math.random() * 2);
+      en.x += Math.cos(a) * throwTo;
+      en.y += Math.sin(a) * throwTo;
+      en.stun = Math.max(en.stun, 0.5 + game.statusBonus());
+      en.hurt(damage, game, { color: '#3f7d8c' });
+    }
+    game.shake(16);
+  }
+  update(dt) { this.t += dt; return this.t < this.dur; }
+  draw(ctx, time) {
+    const k = E.out(this.t / this.dur);
+    Rough.boil(this.id, Math.floor(time * 14));
+    ctx.save();
+    ctx.globalAlpha = (1 - k) * 0.9;
+    Rough.circle(ctx, this.x, this.y, 20 + k * BLOCK * 6, { color: '#3f7d8c', width: 6 * (1 - k) + 1, jitter: 4, wobble: 8 });
+    Rough.circle(ctx, this.x, this.y, 10 + k * BLOCK * 4, { color: '#9fc4cc', width: 4 * (1 - k) + 1, jitter: 3, wobble: 6 });
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      Rough.line(ctx, this.x + Math.cos(a) * 16, this.y + Math.sin(a) * 16,
+        this.x + Math.cos(a) * (16 + k * BLOCK * 5), this.y + Math.sin(a) * (16 + k * BLOCK * 5),
+        { color: '#3f7d8c', width: 3 * (1 - k) + 1, jitter: 3, passes: 1 });
+    }
+    ctx.restore();
+  }
+}
+
+/* A thrown boomerang: out along a loop, then home, cutting on both legs. */
+class Boomerang {
+  constructor(x, y, angle, reach, damage, game, dur, laps) {
+    this.id = nextId();
+    this.sx = x; this.sy = y;
+    this.a = angle; this.reach = reach; this.damage = damage;
+    this.t = 0; this.dur = dur || 1.15;
+    this.laps = laps || 1;
+    this.drift = 0;            // rad/s the whole loop swings round by
+    this.spin = 0;
+    this.hit = new Set();
+    this.leg = 0;
+    this.x = x; this.y = y;
+    this.trail = [];
+  }
+  update(dt, game) {
+    this.t += dt;
+    this.a += this.drift * dt;     // so a second lap never retraces the first
+    const ride = (this.t / this.dur) * this.laps;
+    const u = Math.min(1, this.laps > 1 ? ride % 1 : ride);
+    // out and back, with a swing to one side: a loop, not a straight line
+    const along = Math.sin(u * Math.PI) * this.reach;
+    const across = Math.sin(u * Math.PI * 2) * this.reach * 0.3;
+    const c = Math.cos(this.a), s = Math.sin(this.a);
+    this.x = this.sx + c * along - s * across;
+    this.y = this.sy + s * along + c * across;
+    this.spin += dt * 22;
+
+    this.trail.unshift([this.x, this.y]);
+    if (this.trail.length > 9) this.trail.pop();
+
+    // a fresh list of victims on the way out and again on the way home
+    const leg = Math.floor(ride * 2);
+    if (leg !== this.leg) { this.leg = leg; this.hit.clear(); }
+    for (const e of game.enemies) {
+      if (e.dead || this.hit.has(e.id)) continue;
+      if (Math.hypot(e.x - this.x, e.y - this.y) <= e.r + 22) {   // it is a spinning blade
+        this.hit.add(e.id);
+        e.hurt(this.damage, game, { color: '#8a6a3a' });
+      }
+    }
+    return this.t < this.dur;
+  }
+  draw(ctx, time) {
+    ctx.save();
+    for (let i = 1; i < this.trail.length; i++) {
+      ctx.globalAlpha = (1 - i / this.trail.length) * 0.35;
+      Rough.line(ctx, this.trail[i - 1][0], this.trail[i - 1][1], this.trail[i][0], this.trail[i][1],
+        { color: '#8a6a3a', width: 3, jitter: 1.6, passes: 1 });
+    }
+    ctx.restore();
+
+    Rough.boil(this.id, Math.floor(time * 18));
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.spin);
+    const arm = [[-13, 10], [-3, -12], [3, -12], [2, -2], [12, 8], [8, 13], [-8, 14]];
+    Rough.scribble(ctx, arm, { color: '#c9a36b', spacing: 5, width: 5, overflow: 1.14 });
+    Rough.poly(ctx, arm, { color: '#5c4326', width: 2.4, jitter: 1.2 });
+    ctx.restore();
+  }
+}
+
+/* SECOND DRAFT: the page is scrubbed back to nothing and drawn again - the
+   enemies come back smaller and weaker, the castle comes back mended. */
+class SecondDraft {
+  constructor(game, cut) {
+    this.id = nextId();
+    this.t = 0; this.dur = 2.2; this.wiped = false; this.redrew = false;
+    this.cut = cut;
+    this.w = game.w; this.h = game.h;
+    this.strokes = [];
+    for (let i = 0; i < 14; i++) {
+      this.strokes.push({ y: -this.h / 2 + (i + 0.5) * (this.h / 14), at: i * 0.035, flip: i % 2 ? 1 : -1 });
+    }
+  }
+  update(dt, game) {
+    this.t += dt;
+    if (!this.wiped && this.t >= 0.55) {
+      this.wiped = true;
+      for (const e of game.enemies) {
+        if (e.dead) continue;
+        const take = e.boss ? this.cut * 0.5 : this.cut;    // bosses are harder to rub out
+        e.maxHp = Math.max(1, Math.round(e.maxHp * (1 - take)));
+        e.hp = Math.min(e.hp, e.maxHp);
+        e.hpShown = Math.max(0, e.hp / e.maxHp);
+        e.r = Math.max(7, e.r * (1 - take * 0.3));
+        e.baseSpeed *= 0.75;
+        e.applySlow(6 + game.statusBonus(), 0.75);
+        e.faded = 1;
+        game.effects.push(new FloatText(e.x, e.y - e.r - 10, 'redrawn', '#b06078', 15, false));
+      }
+      // the castle is part of the page too, and it gets the clean copy
+      if (game.castleHp < game.maxHp) {
+        game.castleHp++;
+        game.effects.push(new FloatText(0, -game.castleRadius - 30, '+1', '#4c9f70', 24, true));
+      }
+      game.shake(12);
+    }
+    return this.t < this.dur;
+  }
+  draw(ctx, time) {
+    const fade = this.t > this.dur - 0.7 ? E.clamp01((this.dur - this.t) / 0.7) : 1;
+    Rough.boil(this.id, 0);
+
+    // the scrub: band by band, the page goes blank
+    ctx.save();
+    for (const s of this.strokes) {
+      const k = E.clamp01((this.t - s.at) / 0.42);
+      if (k <= 0) continue;
+      const gone = E.clamp01((this.t - 0.75 - s.at) / 0.6);
+      ctx.globalAlpha = (1 - gone) * fade;
+      ctx.fillStyle = '#fffdf4';
+      const bandH = this.h / 14 + 6;
+      ctx.fillRect(-this.w / 2 - 10 + (1 - E.out(k)) * this.w * s.flip, s.y - bandH / 2,
+        this.w + 20, bandH);
+      // the edge of the rubber, still moving
+      if (k < 1) {
+        const ex = -this.w / 2 - 10 + (1 - E.out(k)) * this.w * s.flip + (s.flip > 0 ? 0 : this.w + 20);
+        ctx.globalAlpha = (1 - gone) * fade * 0.8;
+        Rough.line(ctx, ex, s.y - bandH / 2, ex, s.y + bandH / 2,
+          { color: '#e58ba0', width: 4, jitter: 3, passes: 1 });
+      }
+    }
+    ctx.restore();
+
+    // crumbs swept off the page
+    if (this.t > 0.3) {
+      Rough.srand(this.id);
+      ctx.save();
+      ctx.fillStyle = '#d8d2c2';
+      for (let i = 0; i < 40; i++) {
+        const age = E.clamp01((this.t - 0.3 - Rough.rnd() * 0.5) / 1.0);
+        if (age <= 0) continue;
+        ctx.globalAlpha = (1 - age) * 0.7 * fade;
+        ctx.fillRect(-this.w / 2 + Rough.rnd() * this.w,
+          -this.h / 2 + Rough.rnd() * this.h + age * 70, 3, 6);
+      }
+      ctx.restore();
+    }
+  }
+}
+
 /* Red ring that marks where something big is about to walk in. */
 class SpawnMark {
   constructor(x, y, r) { this.id = nextId(); this.x = x; this.y = y; this.r = r; this.life = 1.1; this.max = this.life; }

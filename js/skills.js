@@ -264,11 +264,53 @@ const SkillPayloads = {
     return 1.5;
   },
 
-  /* BLANK SLATE - a third of the drawing rubbed out around the cursor. */
+  /* SECOND DRAFT - the page is scrubbed back and drawn again. Everything on
+     it comes back permanently smaller, weaker and slower; the castle comes
+     back with a segment mended. The only skill that heals. */
   eraser(game, cine) {
-    game.effects.push(new BlankSlate(cine.wx, cine.wy, BLOCK * 3, game));
-    Sfx.play('sk_blankslate', { volume: 1, rateVar: 0 });
-    return 1.3;
+    game.effects.push(new SecondDraft(game, 0.35));
+    Sfx.play('sk_seconddraft', { volume: 1, rateVar: 0 });
+    return 2.2;
+  },
+
+  /* POLE REVERSAL - haul the whole board into one heap, hold it, then flip
+     and fling it. The more it gathered, the harder each one lands. */
+  magnet(game, cine) {
+    const pull = new MagnetPull(cine.wx, cine.wy, Math.max(game.w, game.h), 0, game, 0.75);
+    game.effects.push(pull);
+    Sfx.play('sk_polereversal', { volume: 1, rateVar: 0 });
+    const caught = pull.caught;
+    game.effects.push({
+      t: 0,
+      update(dt) {
+        this.t += dt;
+        if (this.t >= 0.85 && !this.done) {
+          this.done = true;
+          const dmg = 6 + 2 * caught.filter(c => !c.e.dead).length;
+          game.effects.push(new MagnetBurst(cine.wx, cine.wy, caught, dmg, game));
+          Sfx.play('magnet_burst', { volume: 1, rateVar: 0 });
+        }
+        return this.t < 1.1;
+      },
+      draw() { }
+    });
+    return 2.0;
+  },
+
+  /* FLIGHT PATH - five of them, criss-crossing, none of them stopping. */
+  boomerang(game, cine) {
+    const reach = Math.max(game.w, game.h) * 0.42;
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + Math.random() * 0.3;
+      // two laps each, and the whole loop swings round as it goes, so the
+      // second lap covers ground the first one missed
+      const bm = new Boomerang(0, 0, a, reach * (0.7 + Math.random() * 0.45),
+        game.aoeDamage(4), game, 2.4, 2);
+      bm.drift = (Math.random() < 0.5 ? -1 : 1) * (0.7 + Math.random() * 0.6);
+      game.effects.push(bm);
+    }
+    Sfx.play('sk_flightpath', { volume: 1, rateVar: 0 });
+    return 2.6;
   },
 
   /* EXCLAMATION - one enormous mark, slammed down where you point. */
@@ -802,51 +844,6 @@ class Crosshatch {
       const off = -span / 2 + (i / n) * span;
       Rough.line(ctx, -span, off, span, off + span * 0.5, { color: '#2f6f4f', width: 3, jitter: 3, passes: 1 });
       Rough.line(ctx, off, -span, off + span * 0.5, span, { color: '#2f6f4f', width: 3, jitter: 3, passes: 1 });
-    }
-    ctx.restore();
-  }
-}
-
-/* BLANK SLATE: a wide rub-out around the cursor. */
-class BlankSlate {
-  constructor(x, y, radius, game) {
-    this.id = nextId(); this.x = x; this.y = y; this.radius = radius;
-    this.t = 0; this.dur = 1.3; this.hit = false;
-    this.pts = Rough.noisyRing(x, y, radius, this.id, 40, 0.14);
-  }
-  update(dt, game) {
-    this.t += dt;
-    if (!this.hit && this.t >= 0.35) {
-      this.hit = true;
-      for (const e of game.enemies) {
-        if (e.dead) continue;
-        if (Math.hypot(e.x - this.x, e.y - this.y) <= this.radius + e.r) {
-          e.hurt(e.maxHp * 0.25, game, { color: '#b06078' });
-          if (!e.dead) { e.applySlow(3 + game.statusBonus(), 0.6); e.faded = 1; }
-        }
-      }
-      game.shake(12);
-    }
-    return this.t < this.dur;
-  }
-  draw(ctx, time) {
-    const k = E.out(E.clamp01(this.t / 0.4));
-    const fade = this.t > this.dur - 0.6 ? E.clamp01((this.dur - this.t) / 0.6) : 1;
-    const pts = this.pts.map(p => [this.x + (p[0] - this.x) * k, this.y + (p[1] - this.y) * k]);
-    ctx.save();
-    ctx.globalAlpha = fade * 0.95;
-    ctx.fillStyle = '#fffdf4';
-    ctx.beginPath();
-    pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
-    ctx.closePath(); ctx.fill();
-    Rough.poly(ctx, pts, { color: '#e58ba0', width: 4, jitter: 4 });
-    // rubber crumbs flying off
-    Rough.srand(this.id);
-    ctx.fillStyle = '#d8d2c2';
-    for (let i = 0; i < 24; i++) {
-      const a = Rough.rnd() * Math.PI * 2, d = this.radius * (0.5 + Rough.rnd() * 0.8) * k;
-      ctx.globalAlpha = fade * 0.6;
-      ctx.fillRect(this.x + Math.cos(a) * d, this.y + Math.sin(a) * d + k * 12, 3, 6);
     }
     ctx.restore();
   }
