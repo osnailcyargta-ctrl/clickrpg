@@ -540,6 +540,70 @@ def s_sk_seconddraft():
     return mix(scrub * 1.1, crumbs * 0.5, *redraw)
 
 
+
+# ---- the Hive ---------------------------------------------------------
+def s_hive_drone():
+    # a nest being hauled in: a low, uneven drone
+    body = am(bp(noise(1.6), 130, 3.0) * swell(1.6, 0.25, 1.6), 22, 0.4)
+    wings = am(bp(noise(1.6), 420, 2.0) * swell(1.6, 0.3, 1.7), 47, 0.55)
+    return mix(body * 1.2, wings * 0.7)
+
+
+def s_bee_swarm():
+    # a lot of small wings at once
+    layers = []
+    for f, r in [(340, 41), (520, 63), (760, 97)]:
+        layers.append(am(bp(noise(0.9), f, 2.4) * swell(0.9, 0.2, 2.0), r, 0.6))
+    return mix(*layers)
+
+
+def s_queen_screech():
+    # bigger than the rest of them, and angry about it
+    cry = mix(sweep(noise(0.7) * swell(0.7, 0.15, 2.2), 1500, 700, 8.0),
+              sweep(noise(0.7) * swell(0.7, 0.18, 2.0), 2400, 1100, 6.0) * 0.6)
+    drone = am(bp(noise(0.7), 190, 2.6) * swell(0.7, 0.2, 2.0), 31, 0.5)
+    return mix(cry * 1.1, drone * 0.9)
+
+
+def s_larva_pop():
+    # something wet splitting open
+    split = bp(noise(0.22), 900, 1.2) * env(0.22, 0.001, curve=6)
+    wet = lp(noise(0.16), 1600, 3) * env(0.16, 0.0008, curve=7)
+    return mix(split, wet * 0.8)
+
+
+def s_steroid_charge():
+    # winding up, then going
+    wind = sweep(noise(0.6) * swell(0.6, 0.85, 1.6), 200, 900, 2.2)
+    go = np.pad(mix(bp(noise(0.3), 150, 1.4) * env(0.3, 0.001, curve=5),
+                    am(bp(noise(0.35), 500, 2.0), 55, 0.6) * env(0.35, 0.002, curve=4)),
+                (int(SR * 0.55), 0))
+    return mix(wind * 0.9, go * 1.2)
+
+
+def s_lava_erupt():
+    # the ground giving way and something hot coming up through it
+    crack = grains(0.5, 14, spread=0.35, length=0.016, band=(400, 2600), decay=1.8)
+    up = sweep(noise(0.8) * swell(0.8, 0.3, 1.9), 180, 1100, 1.3)
+    boil = am(bp(noise(0.8), 300, 1.6) * swell(0.8, 0.35, 1.8), 13, 0.5)
+    return mix(crack * 0.8, up * 1.1, boil * 0.7)
+
+
+def s_lava_land():
+    # it hits, it spreads, it hisses
+    splat = lp(noise(0.35), 900, 3) * env(0.35, 0.001, curve=5)
+    hiss = hp(noise(1.1), 3400) * swell(1.1, 0.12, 1.8)
+    thud = bp(noise(0.4), 95, 1.3) * env(0.4, 0.002, curve=4)
+    return mix(splat * 1.1, hiss * 0.6, thud * 1.1)
+
+
+def s_grass_fire():
+    # the whole lawn catching at once
+    woosh = sweep(noise(1.2) * swell(1.2, 0.18, 1.8), 400, 2200, 1.2)
+    crackle = grains(1.4, 46, spread=1.1, length=0.01, band=(1400, 6000), decay=1.0)
+    return mix(woosh * 1.0, crackle * 0.85)
+
+
 SOUNDS = {
     'click_hit': s_click_hit, 'click_miss': s_click_miss, 'crit': s_crit,
     'kill': s_kill, 'kill_big': s_kill_big, 'castle_hit': s_castle_hit,
@@ -563,6 +627,9 @@ SOUNDS = {
     'magnet_pull': s_magnet_pull, 'magnet_burst': s_magnet_burst,
     'boomerang': s_boomerang, 'sk_polereversal': s_sk_polereversal,
     'sk_flightpath': s_sk_flightpath, 'sk_seconddraft': s_sk_seconddraft,
+    'hive_drone': s_hive_drone, 'bee_swarm': s_bee_swarm, 'queen_screech': s_queen_screech,
+    'larva_pop': s_larva_pop, 'steroid_charge': s_steroid_charge,
+    'lava_erupt': s_lava_erupt, 'lava_land': s_lava_land, 'grass_fire': s_grass_fire,
 }
 
 if __name__ == '__main__':

@@ -4,7 +4,10 @@
 let _id = 1;
 function nextId() { return _id++; }
 
-const BOSS_NAMES = { boss: 'THE BLOT', warden: 'THE WARDEN', eagle: 'THUNDER EAGLE' };
+const BOSS_NAMES = {
+  boss: 'THE BLOT', warden: 'THE WARDEN', eagle: 'THUNDER EAGLE',
+  hive: 'THE HIVE', queen: 'THE QUEEN'
+};
 const E = Rough.ease;
 
 class Enemy {
@@ -28,13 +31,25 @@ class Enemy {
     this.faded = 0;
     this.hpShown = 1;         // HP bar eases toward the real value
     this.wobblePhase = Math.random() * 10;
-    this.boss = kind === 'boss' || kind === 'warden' || kind === 'eagle';
+    this.boss = kind === 'boss' || kind === 'warden' || kind === 'eagle'
+      || kind === 'hive' || kind === 'queen';
     this.skillT = kind === 'boss' ? 4.5 : (kind === 'eagle' ? 2.2 : 7);
     this.dash = null;                          // the Eagle's swoop, while it lasts
     this.dashT = kind === 'eagle' ? 3.4 : 0;
     this.flap = Math.random() * 6;
     this.immuneSource = kind === 'eagle' ? 'storm' : null;   // she drinks lightning
     this.drink = 0;                                          // glow when she does
+
+    // --- the Hive's three acts
+    this.workers = [];          // phase 1: the ten that drag it in
+    this.entered = false;       // nothing is hittable until it is fully on screen
+    this.sinceSwarm = 0;        // phase 2: damage banked toward the next swarm
+    this.hatch = 0;             // larva: counts down to a steroid bee
+    this.charge = 0;            // steroid: winding up before the run
+    this.dashing = 0;
+    this.fall = null;           // lavaball: where it is going and how fast
+    this.burst = 0;             // bee: the beat it spends boiling out of the door
+    this.wing = Math.random() * 6;
     this.smear = [];                           // recent positions, for the swoop blur
     this.immuneT = 0;                          // the warden's chalk barrier
     this.barrierT = 0;                         // barrier flare when it blocks
@@ -52,6 +67,17 @@ class Enemy {
   hurt(amount, game, opts) {
     opts = opts || {};
     if (this.dead) return 0;
+    // the Hive and its haulers cannot be touched until the nest is all the
+    // way onto the page
+    if (this.untouchable) {
+      if (!opts.silent && Math.random() < 0.25) {
+        game.effects.push(new FloatText(this.x + Rough.jit(14), this.y - this.r, 'not yet', '#b8b2a3', 15, false));
+      }
+      return 0;
+    }
+    // fire gets under the Queen's shell
+    if (this.kind === 'queen' && opts.fire) amount *= 1.15;
+
     // the Thunder Eagle is made of the stuff the Storm Caller throws
     if (this.immuneSource && opts.source === this.immuneSource) {
       this.drink = 1;
@@ -70,6 +96,14 @@ class Enemy {
     }
     const dealt = Math.min(this.hp, amount);
     this.hp -= amount;
+    if (this.kind === 'hive') {
+      this.sinceSwarm += dealt;
+      while (this.sinceSwarm >= 25) {          // every 25 it lets eight out
+        this.sinceSwarm -= 25;
+        this.releaseSwarm(game);
+      }
+    }
+    if (this.kind === 'larva' && this.hatch > 0.05) this.hatch = 0.05;   // poking it hurries it
     this.flash = 0.12;
     this.hitT = 1;
     if (!opts.silent) {
@@ -91,6 +125,14 @@ class Enemy {
   die(game) {
     if (this.dead) return;
     this.dead = true;
+    if (this.kind === 'hive') {                // phase 3 walks out of the wreck
+      const q = game.spawnMinion('queen', this.x, this.y, 0, game.waveSpec ? game.waveSpec.speed : 55);
+      q.spawnT = 0; q.skillT = 2.4;
+      game.effects.push(new HiveBreak(this.x, this.y, this.r));
+      game.slowmo(0.5, 0.3);
+      game.shake(20);
+      Sfx.play('queen_screech', { volume: 1, rateVar: 0 });
+    }
     if (this.kind === 'eagle') {
       game.effects.push(new EagleAscend(this.x, this.y, this.r, game));
       game.slowmo(0.45, 0.32);
@@ -122,7 +164,7 @@ class Enemy {
       this.burnTick -= dt;
       if (this.burnTick <= 0) {
         this.burnTick = 1;
-        this.hurt(2 + Math.random(), game, { color: '#e0562d' });   // 2-3 a second
+        this.hurt(2 + Math.random(), game, { color: '#e0562d', fire: true });   // 2-3 a second
         if (this.dead) return;
       }
       if (Math.random() < dt * 16) game.effects.push(new Ember(this.x, this.y, this.r));
@@ -138,6 +180,7 @@ class Enemy {
     const d = Math.hypot(this.x, this.y) || 1;
 
     if (this.kind === 'eagle') { this.flyLikeAnEagle(dt, game, d); return; }
+    if (HIVE_KINDS[this.kind]) { this.hiveUpdate(dt, game, d); return; }
 
     const step = this.speed * dt;
     this.x -= (this.x / d) * step;
@@ -148,6 +191,23 @@ class Enemy {
       this.dead = true;
       game.effects.push(new DeathSplat(this.x, this.y, this.r, this.fill, false));
     }
+  }
+
+  /* Eight bees out of the door, all of them making for the castle. */
+  releaseSwarm(game) {
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const b = game.spawnMinion('bee', this.x + Math.cos(a) * (this.r + 8),
+        this.y + Math.sin(a) * (this.r + 8), 0, game.waveSpec ? game.waveSpec.speed : 55);
+      b.spawnT = 0.5;
+      // they boil out of the door before they turn for the castle, which is
+      // the beat you get to swat them in
+      b.burst = 0.9;
+      b.burstA = a;
+    }
+    game.effects.push(new FloatText(this.x, this.y - this.r - 12, 'swarm!', '#e8c33a', 19, false));
+    Sfx.play('bee_swarm', { volume: 0.8, throttle: 120 });
+    game.shake(7);
   }
 
   /* The Eagle holds a standoff, swoops in and pulls back out, and looses
@@ -181,8 +241,203 @@ class Enemy {
     }
   }
 
-  /* Each boss has one trick of its own. */
+  /* Everything in the Hive fight moves by its own rules. */
+  hiveUpdate(dt, game, d) {
+    const reach = (this.speed || 0) * dt;
+
+    if (this.kind === 'hive') {
+      const half = Math.min(game.w, game.h) / 2;
+      if (!this.entered && Math.hypot(this.x, this.y) < half - this.r - 10) {
+        this.entered = true;
+        game.effects.push(new FloatText(this.x, this.y - this.r - 16, 'the hive lands', '#c9903a', 20, true));
+        game.shake(12);
+      }
+      this.workers = this.workers.filter(w => !w.dead);
+      // the haulers drag it in; with none left it just sits there and takes it
+      if (this.workers.length > 0) {
+        this.x -= (this.x / d) * reach;
+        this.y -= (this.y / d) * reach;
+      }
+      this.untouchable = !this.entered || this.workers.length > 0;
+      if (d <= game.castleRadius + this.r * 0.6) { game.castleHit(this); this.dead = true; }
+      return;
+    }
+
+    if (this.kind === 'worker') {
+      // they hold station around the nest and pull it along
+      const h = this.tether;
+      if (h && !h.dead) {
+        this.untouchable = !h.entered;
+        const a = this.tetherA + Math.sin(game.time * 1.4 + this.wing) * 0.12;
+        const want = h.r + 22;
+        this.x = h.x + Math.cos(a) * want;
+        this.y = h.y + Math.sin(a) * want;
+        return;
+      }
+      this.untouchable = false;
+    }
+
+    if (this.kind === 'queen') { this.queenUpdate(dt, game, d); return; }
+
+    if (this.kind === 'larva') {
+      // it arcs in, lands, then splits open on its own or when poked
+      if (this.fall) {
+        this.fall.t += dt;
+        const u = E.clamp01(this.fall.t / this.fall.dur);
+        this.x = this.fall.sx + (this.fall.tx - this.fall.sx) * u;
+        this.y = this.fall.sy + (this.fall.ty - this.fall.sy) * u - Math.sin(u * Math.PI) * this.fall.arc;
+        if (u >= 1) { this.fall = null; this.hatch = 2; Sfx.play('lava_land', { volume: 0.35, throttle: 80 }); }
+        return;
+      }
+      this.hatch -= dt;
+      if (this.hatch <= 0) {
+        const s = game.spawnMinion('steroid', this.x, this.y, 0, game.waveSpec ? game.waveSpec.speed : 55);
+        s.spawnT = 0.4;
+        game.effects.push(new FloatText(this.x, this.y - 16, 'hatched', '#b5823a', 17, false));
+        Sfx.play('larva_pop', { volume: 0.7, throttle: 60 });
+        this.dead = true;
+      }
+      return;
+    }
+
+    if (this.kind === 'steroid') {
+      if (this.dashing > 0) {                     // the run itself
+        this.dashing -= dt;
+        const sp = this.baseSpeed * 5.5 * dt;
+        this.x -= (this.x / d) * sp;
+        this.y -= (this.y / d) * sp;
+      } else if (this.charge > 0) {               // one second of winding up
+        this.charge -= dt;
+        if (this.charge <= 0) this.dashing = 1.2;
+      } else if (d < game.castleRadius + BLOCK * 3.4) {
+        this.charge = 1;
+        Sfx.play('steroid_charge', { volume: 0.8, throttle: 100 });
+      } else {
+        this.x -= (this.x / d) * reach;
+        this.y -= (this.y / d) * reach;
+      }
+      if (d <= game.castleRadius + this.r * 0.6) { game.castleHit(this); this.dead = true; }
+      return;
+    }
+
+    if (this.kind === 'lavaball') {
+      // it rises, hangs, then drops - and it has to be shot before it lands
+      this.fall.t += dt;
+      const f = this.fall;
+      if (f.t < f.rise) {
+        this.y = f.sy - E.out(f.t / f.rise) * f.height;
+        this.x = f.sx;
+      } else {
+        const u = E.clamp01((f.t - f.rise) / f.drop);
+        this.y = f.sy - f.height + u * u * f.height;
+        if (u >= 1) { this.land(game); }
+      }
+      return;
+    }
+
+    // plain bees boil outward first, then make for the castle
+    if (this.burst > 0) {
+      this.burst -= dt;
+      this.x += Math.cos(this.burstA) * reach * 0.8;
+      this.y += Math.sin(this.burstA) * reach * 0.8;
+      return;
+    }
+    this.x -= (this.x / d) * reach;
+    this.y -= (this.y / d) * reach;
+    if (d <= game.castleRadius + this.r * 0.6) { game.castleHit(this); this.dead = true; }
+  }
+
+  /* The Queen: mortars, a rally dash for her own swarm, and a stinger she
+     puts through the paper. */
+  queenUpdate(dt, game, d) {
+    const standoff = BLOCK * 4.5;
+
+    if (this.dashing > 0) {
+      this.dashing -= dt;
+      const sp = this.baseSpeed * 6 * dt;
+      this.x += Math.cos(this.dashA) * sp;
+      this.y += Math.sin(this.dashA) * sp;
+      return;
+    }
+
+    this.skillT -= dt;
+    if (this.skillT <= 0) {
+      this.skillT = 3.4;
+      const roll = Math.floor(Math.random() * 3);
+      if (roll === 0) this.mortar(game);
+      else if (roll === 1) this.rally(game);
+      else this.sting(game);
+    }
+
+    if (d > standoff) {
+      const step = this.speed * dt;
+      this.x -= (this.x / d) * step;
+      this.y -= (this.y / d) * step;
+    } else {
+      const a = Math.atan2(this.y, this.x) + dt * 0.3;
+      this.x = Math.cos(a) * standoff;
+      this.y = Math.sin(a) * standoff;
+    }
+  }
+
+  /* Three larvae lobbed onto random blocks, landing like mortar rounds. */
+  mortar(game) {
+    for (let i = 0; i < 3; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const dist = BLOCK * (1.5 + Math.random() * 4);
+      const tx = Math.cos(a) * dist, ty = Math.sin(a) * dist;
+      const l = game.spawnMinion('larva', this.x, this.y, 0, 0);
+      l.spawnT = 1;
+      l.fall = { sx: this.x, sy: this.y, tx, ty, t: 0, dur: 0.95, arc: 120 + Math.random() * 70 };
+    }
+    game.effects.push(new FloatText(this.x, this.y - this.r - 12, 'brood!', '#efe0b0', 18, false));
+    Sfx.play('queen_screech', { volume: 0.7 });
+  }
+
+  /* She throws herself at her own swarm and they pick up the pace. */
+  rally(game) {
+    let best = null, bd = BLOCK * 6;
+    for (const e of game.enemies) {
+      if (e.dead || e === this) continue;
+      if (!HIVE_KINDS[e.kind]) continue;
+      const dd = Math.hypot(e.x - this.x, e.y - this.y);
+      if (dd < bd) { bd = dd; best = e; }
+    }
+    if (!best) return;
+    this.dashA = Math.atan2(best.y - this.y, best.x - this.x);
+    this.dashing = 0.45;
+    for (const e of game.enemies) {
+      if (e.dead || e === this || !HIVE_KINDS[e.kind]) continue;
+      if (Math.hypot(e.x - this.x, e.y - this.y) <= BLOCK * 6) {
+        e.baseSpeed *= 1.35;
+        e.rallied = 1;
+        game.effects.push(new FloatText(e.x, e.y - e.r - 8, 'faster', '#e8c33a', 14, false));
+      }
+    }
+    Sfx.play('bee_swarm', { volume: 0.7, throttle: 100 });
+  }
+
+  /* The stinger goes through the page. What comes up out of it is the part
+     that matters. */
+  sting(game) {
+    const a = Math.random() * Math.PI * 2;
+    const dist = BLOCK * (1.2 + Math.random() * 3.2);
+    game.effects.push(new GroundCrack(Math.cos(a) * dist, Math.sin(a) * dist, game));
+    game.shake(10);
+    Sfx.play('lava_erupt', { volume: 0.5 });
+  }
+
+  /* A lava ball that reached the ground. */
+  land(game) {
+    if (this.dead) return;
+    this.dead = true;
+    game.effects.push(new LavaPuddle(this.x, this.fall.sy, game));
+  }
+
+  /* Each boss has one trick of its own. The Hive and its Queen run theirs
+     out of hiveUpdate instead, so they sit this one out entirely. */
   bossSkill(dt, game) {
+    if (HIVE_KINDS[this.kind]) return;
     this.skillT -= dt;
 
     if (this.kind === 'eagle') {
@@ -291,6 +546,13 @@ class Enemy {
       case 'blotling': this.drawBlotling(ctx, x, y, rx, ry, fill, t); break;
       case 'eagle': this.drawEagle(ctx, x, y, rx, ry, fill, t, facing); break;
       case 'boltshot': this.drawBoltshot(ctx, x, y, rx, ry, fill, facing); break;
+      case 'hive': this.drawHive(ctx, x, y, rx, ry, fill, t); break;
+      case 'worker': this.drawWorker(ctx, x, y, rx, ry, fill, t); break;
+      case 'bee': this.drawBee(ctx, x, y, rx, ry, fill, t); break;
+      case 'queen': this.drawQueen(ctx, x, y, rx, ry, fill, t); break;
+      case 'larva': this.drawLarva(ctx, x, y, rx, ry, fill, t); break;
+      case 'steroid': this.drawSteroid(ctx, x, y, rx, ry, fill, t); break;
+      case 'lavaball': this.drawLavaball(ctx, x, y, rx, ry, fill, t); break;
       default: this.drawBlob(ctx, x, y, rx, ry, fill, t); break;
     }
 
@@ -730,6 +992,492 @@ class Enemy {
       { color: '#2b2b2b', width: 3.4, jitter: 1.2, passes: 2 });
   }
 
+  /* --- THE HIVE, and everything that comes out of it --- */
+
+  /* A pair of wings, beating. Everything in this fight flies on them. */
+  beeWings(ctx, x, y, r, t, spread) {
+    const beat = Math.sin(t * 26 + this.wing);
+    ctx.save();
+    ctx.globalAlpha = 0.34 + Math.abs(beat) * 0.12;
+    for (const s of [-1, 1]) {
+      const tilt = s * (0.5 + beat * 0.22);
+      const wing = [];
+      for (let i = 0; i <= 10; i++) {
+        const u = i / 10, a = Math.PI * u;
+        const wr = r * spread * (0.35 + Math.sin(a) * 0.65);
+        wing.push([x + Math.cos(a - Math.PI / 2 + tilt) * wr * s,
+        y + Math.sin(a - Math.PI / 2 + tilt) * wr * 0.55 - r * 0.45]);
+      }
+      Rough.poly(ctx, wing, { color: '#cfe4f2', width: 2, jitter: 1.4 });
+    }
+    ctx.restore();
+  }
+
+  /* A striped bee body, shared by the workers, the swarm and the Queen's
+     own thorax. Bands are laid down as fat crayon strokes. */
+  beeBody(ctx, x, y, rx, ry, fill, bands, tilt) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(tilt || 0);
+    const pts = [];
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      pts.push([Math.cos(a) * rx + Rough.jit(1.2), Math.sin(a) * ry + Rough.jit(1.2)]);
+    }
+    ctx.fillStyle = this.flash > 0 ? '#ffffff' : fill;
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.fill();
+    Rough.scribble(ctx, pts, { color: fill, spacing: 5, width: 5, overflow: 1.12 });
+    // the black bands, clipped to the body so they never overrun the shape
+    ctx.save();
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.clip();
+    for (let i = 0; i < bands; i++) {
+      const bx = -rx + ((i + 0.85) / (bands + 0.6)) * rx * 2;
+      Rough.line(ctx, bx, -ry * 1.1, bx + rx * 0.12, ry * 1.1,
+        { color: '#2b2b2b', width: rx * 0.34, jitter: 1.4, passes: 2 });
+    }
+    ctx.restore();
+    Rough.poly(ctx, pts, { color: '#2b2b2b', width: 2.4, jitter: 1.2 });
+    ctx.restore();
+  }
+
+  /* THE HIVE ITSELF - a paper nest of stacked combs, hauled in on ten
+     strands. The hole at the bottom is where the swarm comes from. */
+  drawHive(ctx, x, y, rx, ry, fill, t) {
+    const r = (rx + ry) / 2;
+    const sway = Math.sin(t * 1.1 + this.wobblePhase) * 0.05;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(sway);
+
+    // the strands the haulers are pulling on
+    for (const w of this.workers) {
+      if (w.dead) continue;
+      ctx.save();
+      ctx.globalAlpha = 0.75;
+      const wx = w.x - x, wy = w.y - y, wd = Math.hypot(wx, wy) || 1;
+      Rough.line(ctx, (wx / wd) * r * 0.86, (wy / wd) * r * 0.86, wx, wy,
+        { color: '#6b5b46', width: 2.6, jitter: 2.2, passes: 2 });
+      ctx.restore();
+    }
+
+    // the nest: a teardrop built out of wobbly combs, widest below centre
+    const shape = [];
+    for (let i = 0; i < 30; i++) {
+      const a = (i / 30) * Math.PI * 2;
+      const taper = 1 - Math.max(0, -Math.sin(a)) * 0.34;      // pinched at the top
+      const belly = 1 + Math.max(0, Math.sin(a)) * 0.12;
+      shape.push([Math.cos(a) * r * 0.9 * taper + Rough.jit(2),
+      Math.sin(a) * r * belly + Rough.jit(2)]);
+    }
+    ctx.fillStyle = this.flash > 0 ? '#ffffff' : '#e6cf9c';
+    ctx.beginPath();
+    shape.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.fill();
+    Rough.scribble(ctx, shape, { color: fill, spacing: 6, width: 6, overflow: 1.08, alpha: 0.85 });
+    Rough.grain(ctx, shape, '#7a5a26', 0.004, this.id);
+
+    // the combs, drawn as sagging bands across the nest
+    ctx.save();
+    ctx.beginPath();
+    shape.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.clip();
+    for (let i = -3; i <= 3; i++) {
+      const by = i * r * 0.27;
+      Rough.poly(ctx, [[-r, by - 4], [-r * 0.4, by + 5], [0, by + 7], [r * 0.4, by + 5], [r, by - 4]],
+        { color: '#9a7431', width: 2.2, jitter: 1.6, closed: false, alpha: 0.7 });
+    }
+    // the damage shows as splits across the combs
+    const hurt = 1 - this.hpShown;
+    for (let i = 0; i < Math.floor(hurt * 6); i++) {
+      const a = (i / 6) * Math.PI * 2 + this.wobblePhase;
+      Rough.line(ctx, Math.cos(a) * r * 0.2, Math.sin(a) * r * 0.2,
+        Math.cos(a) * r * 0.95, Math.sin(a) * r * 0.95,
+        { color: '#4a3413', width: 3, jitter: 2.4, passes: 2 });
+    }
+    ctx.restore();
+    Rough.poly(ctx, shape, { color: '#2b2b2b', width: 3.6, jitter: 1.8 });
+
+    // the mouth of the nest, and what is looking out of it
+    const mx = 0, my = r * 0.62;
+    ctx.fillStyle = '#1d1206';
+    ctx.beginPath(); ctx.ellipse(mx, my, r * 0.26, r * 0.19, 0, 0, 7); ctx.fill();
+    Rough.circle(ctx, mx, my, r * 0.26, { color: '#2b2b2b', width: 2.6, jitter: 1.8, wobble: 2.5 });
+    const lit = E.clamp01(this.sinceSwarm / 25);
+    if (lit > 0.05) {
+      ctx.save();
+      ctx.globalAlpha = lit * (0.5 + Math.sin(t * 12) * 0.3);
+      Rough.bloom(ctx, mx, my, r * 0.34, '#e8c33a', 0.8);
+      ctx.restore();
+    }
+    // a few of them crawling on the outside
+    for (let i = 0; i < 4; i++) {
+      const a = t * 0.5 + i * 1.7 + this.wobblePhase;
+      const rr = r * 0.72;
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      this.beeBody(ctx, Math.cos(a) * rr, Math.sin(a) * rr * 1.02, 5, 3.4, '#e8c33a', 2, a);
+      ctx.restore();
+    }
+    ctx.restore();
+
+    if (this.untouchable) this.hiveGuard(ctx, x, y, r * 1.05, t);
+  }
+
+  /* While the haulers live, or before the nest is all the way on the paper,
+     nothing sticks. Say so, loudly. */
+  hiveGuard(ctx, x, y, r, t) {
+    ctx.save();
+    ctx.globalAlpha = 0.34 + Math.sin(t * 4) * 0.12;
+    Rough.circle(ctx, x, y, r + 34, { color: '#9a8f86', width: 3.4, jitter: 4, wobble: 5 });
+    ctx.globalAlpha = 0.7;
+    Rough.text(ctx, this.entered ? 'cut the haulers' : 'incoming', x, y - r - 46, 16, '#6b6b6b');
+    ctx.restore();
+  }
+
+  /* A hauler bee: bigger than the swarm, hauling on a strand. */
+  drawWorker(ctx, x, y, rx, ry, fill, t) {
+    const r = (rx + ry) / 2;
+    const tilt = this.tether ? Math.atan2(this.tether.y - this.y, this.tether.x - this.x) : 0;
+    this.beeWings(ctx, x, y, r * 1.5, t, 1.1);
+    this.beeBody(ctx, x, y, r * 1.15, r * 0.78, fill, 3, tilt);
+    // the stinger, a hard little nib at the tail
+    Rough.line(ctx, x - Math.cos(tilt) * r * 1.1, y - Math.sin(tilt) * r * 1.1,
+      x - Math.cos(tilt) * r * 1.7, y - Math.sin(tilt) * r * 1.7,
+      { color: '#2b2b2b', width: 2.4, jitter: 1, passes: 2 });
+    if (this.untouchable) {
+      ctx.save(); ctx.globalAlpha = 0.3;
+      Rough.circle(ctx, x, y, r + 7, { color: '#9a8f86', width: 2, jitter: 2.4, wobble: 2.5 });
+      ctx.restore();
+    }
+  }
+
+  /* One of the swarm. Small, quick, and furious about it. */
+  drawBee(ctx, x, y, rx, ry, fill, t) {
+    const r = (rx + ry) / 2;
+    const tilt = Math.atan2(-this.y, -this.x) + Math.PI;
+    this.beeWings(ctx, x, y, r * 1.35, t, 1);
+    this.beeBody(ctx, x, y, r * 1.1, r * 0.72, fill, 2, tilt);
+    if (this.rallied) {
+      ctx.save();
+      ctx.globalAlpha = 0.4 + Math.sin(t * 14 + this.wing) * 0.2;
+      Rough.circle(ctx, x, y, r + 5, { color: '#e0562d', width: 2, jitter: 2.4, wobble: 2 });
+      ctx.restore();
+    }
+  }
+
+  /* THE QUEEN - head down, thorax, and a long armoured abdomen dragging
+     behind her. Everything points at the castle. Fire gets under the shell,
+     and she shows it. */
+  drawQueen(ctx, x, y, rx, ry, fill, t) {
+    const r = (rx + ry) / 2;
+    const face = Math.atan2(-this.y, -this.x);
+    ctx.save();
+    ctx.translate(x, y + Math.sin(t * 1.3 + this.wobblePhase) * 3);
+    ctx.rotate(face + Math.PI / 2);          // -y is the way she is going
+
+    // --- the abdomen, trailing behind, drawn first so it sits under her
+    for (let i = 4; i >= 1; i--) {
+      const u = i / 4;
+      const sy = r * (0.45 + u * 1.5);
+      const sr = r * (0.66 - u * 0.26);
+      this.beeBody(ctx, Math.sin(t * 2 + this.wobblePhase + u * 1.2) * u * 5, sy,
+        sr, sr * 0.78, i % 2 ? fill : '#8a5a1c', 1, Math.PI / 2);
+    }
+    // the stinger she puts through the paper
+    const ty = r * 2.05;
+    Rough.poly(ctx, [[-6, ty], [0, ty + r * 0.8], [6, ty]], { color: '#2b2b2b', width: 3, jitter: 1.2 });
+
+    // --- four wings, long and ragged
+    ctx.save();
+    ctx.globalAlpha = 0.3 + Math.abs(Math.sin(t * 18 + this.wing)) * 0.1;
+    for (const s of [-1, 1]) {
+      for (const k of [0, 1]) {
+        const beat = Math.sin(t * 18 + this.wing + k * 0.6) * 0.16;
+        const lean = 0.55 + k * 0.4 + beat;          // swept back off the thorax
+        const len = r * (1.8 - k * 0.55);
+        const ca = Math.cos(lean), sa = Math.sin(lean);
+        const wing = [];
+        for (let i = 0; i <= 12; i++) {
+          const u = i / 12, a = Math.PI * u;
+          const px = Math.sin(a) * len, py = -Math.cos(a) * len * 0.22;
+          wing.push([s * (px * ca - py * sa), px * sa + py * ca + r * 0.15]);
+        }
+        Rough.poly(ctx, wing, { color: '#cfe4f2', width: 2.2, jitter: 1.4 });
+      }
+    }
+    ctx.restore();
+
+    // --- thorax, with a thick ruff of fur around it
+    const body = [];
+    for (let i = 0; i < 20; i++) {
+      const a = (i / 20) * Math.PI * 2;
+      body.push([Math.cos(a) * r * 0.86 + Rough.jit(2), Math.sin(a) * r * 0.74 + Rough.jit(2)]);
+    }
+    ctx.fillStyle = this.flash > 0 ? '#ffffff' : '#3a2408';
+    ctx.beginPath();
+    body.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.fill();
+    Rough.scribble(ctx, body, { color: fill, spacing: 5, width: 6, overflow: 1.06, alpha: 0.9 });
+    Rough.poly(ctx, body, { color: '#2b2b2b', width: 3.4, jitter: 1.6 });
+    ctx.save();
+    ctx.globalAlpha = 0.8;
+    for (let i = 0; i < 14; i++) {
+      const a = Math.PI * 1.15 + (i / 13) * Math.PI * 0.7;    // the front half only
+      Rough.line(ctx, Math.cos(a) * r * 0.78, Math.sin(a) * r * 0.68,
+        Math.cos(a) * r * 0.98, Math.sin(a) * r * 0.86,
+        { color: '#c9903a', width: 2.6, jitter: 1.4, passes: 1 });
+    }
+    ctx.restore();
+
+    // --- head
+    const hy = -r * 1.28;
+    const head = Rough.circlePts(0, hy, r * 0.56, r * 0.08, 14);
+    ctx.fillStyle = this.flash > 0 ? '#ffffff' : '#2e1c05';
+    ctx.beginPath();
+    head.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.fill();
+    Rough.scribble(ctx, head, { color: '#9a6a20', spacing: 5, width: 5, overflow: 1.08, alpha: 0.85 });
+    Rough.poly(ctx, head, { color: '#2b2b2b', width: 3, jitter: 1.4 });
+
+    // the crown: six chitin spikes off the back of the skull, none even
+    for (let i = 0; i < 7; i++) {
+      const a = Math.PI * 1.18 + (i / 6) * Math.PI * 0.64;   // around the crown of the skull
+      const h = r * (0.4 + (i % 2 ? 0.26 : 0));
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const bx = ca * r * 0.5, by = hy + sa * r * 0.5;
+      Rough.poly(ctx, [[bx - sa * 5, by + ca * 5], [bx + ca * h, by + sa * h], [bx + sa * 5, by - ca * 5]],
+        { color: '#2b2b2b', width: 2.6, jitter: 1.2 });
+    }
+
+    // two compound eyes, hatched red, and nothing behind them
+    for (const s of [-1, 1]) {
+      const ex = s * r * 0.32, ey = hy - r * 0.1;
+      ctx.fillStyle = '#120a02';
+      ctx.beginPath(); ctx.ellipse(ex, ey, r * 0.2, r * 0.26, s * 0.35, 0, 7); ctx.fill();
+      ctx.save();
+      ctx.globalAlpha = 0.65;
+      for (let i = -2; i <= 2; i++) {
+        Rough.line(ctx, ex - r * 0.16, ey + i * r * 0.085, ex + r * 0.16, ey + i * r * 0.085,
+          { color: '#e0562d', width: 1.4, jitter: 0.7, passes: 1 });
+      }
+      ctx.restore();
+      Rough.circle(ctx, ex, ey, r * 0.23, { color: '#2b2b2b', width: 2.2, jitter: 1.2, wobble: 1.8 });
+    }
+    // mandibles, working
+    const gape = r * 0.1 * (1 + Math.sin(t * 5 + this.wobblePhase));
+    for (const s of [-1, 1]) {
+      Rough.poly(ctx, [[s * r * 0.3, hy + r * 0.34], [s * (r * 0.34 + gape), hy + r * 0.8],
+      [s * r * 0.08, hy + r * 0.62]], { color: '#2b2b2b', width: 2.8, jitter: 1.2, closed: false });
+    }
+    ctx.restore();
+
+    // fire gets under the shell, and it shows
+    if (this.burn > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.14 + Math.sin(t * 11) * 0.06;
+      Rough.bloom(ctx, x, y, r * 1.8, '#e0562d', 0.45);
+      ctx.restore();
+      Rough.text(ctx, '+15%', x + r * 1.1, y - r * 1.1, 14, '#e0562d');
+    }
+  }
+
+  /* A brood cell: a fat pale grub, curled and twitching, that splits open
+     into something much worse. */
+  drawLarva(ctx, x, y, rx, ry, fill, t) {
+    const r = (rx + ry) / 2;
+    const near = this.hatch > 0 && this.hatch < 0.8;
+    const pulse = near ? 1 + Math.sin(t * 22) * 0.18 : 1 + Math.sin(t * 3 + this.wobblePhase) * 0.06;
+
+    if (this.fall) {                      // a ring where it is going to land
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      Rough.circle(ctx, this.fall.tx, this.fall.ty, r * 1.4,
+        { color: '#b5823a', width: 2.4, jitter: 2.4, wobble: 3 });
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(this.wobblePhase + Math.sin(t * 2 + this.wobblePhase) * 0.2);
+    ctx.scale(pulse, 1 / pulse);
+
+    // a curled body: five overlapping segments along a shallow arc
+    for (let i = 4; i >= 0; i--) {
+      const u = i / 4;
+      const a = -0.9 + u * 1.8;
+      const sx = Math.sin(a) * r * 0.85, sy = -Math.cos(a) * r * 0.32;
+      const sr = r * (0.62 - Math.abs(u - 0.35) * 0.3);
+      Rough.blob(ctx, sx, sy, sr, i === 4 ? '#e3cf96' : fill, '#2b2b2b',
+        { spacing: 4, fillWidth: 4, sides: 9, width: 2.2, jitter: 1.1 });
+    }
+    // the head end, darker, with two blunt hooks where a mouth will be
+    const hx = Math.sin(0.9) * r * 0.85, hy = -Math.cos(0.9) * r * 0.32;
+    ctx.save();
+    ctx.globalAlpha = 0.8;
+    for (const s of [-1, 1]) {
+      Rough.line(ctx, hx, hy, hx + r * 0.3, hy + s * r * 0.26,
+        { color: '#8a6a2a', width: 2.2, jitter: 1.2, passes: 1 });
+    }
+    ctx.restore();
+    ctx.restore();
+
+    if (near) {                           // it is about to come apart
+      ctx.save();
+      ctx.globalAlpha = 0.45 + Math.sin(t * 22) * 0.25;
+      Rough.circle(ctx, x, y, r * 1.6, { color: '#b5823a', width: 2.4, jitter: 3, wobble: 2.5 });
+      ctx.restore();
+    }
+  }
+
+  /* THE STEROID BEE - what comes out of a brood cell. All shoulders, no
+     neck, wings far too small for it, and it runs the last stretch. */
+  drawSteroid(ctx, x, y, rx, ry, fill, t) {
+    const r = (rx + ry) / 2;
+    const face = Math.atan2(-this.y, -this.x);
+    const wind = this.charge > 0 ? 1 - this.charge : 0;
+    ctx.save();
+    ctx.translate(x, y);
+    if (this.charge > 0) ctx.translate(Rough.jit(3.5), Rough.jit(3.5));   // shaking
+    ctx.rotate(face + Math.PI / 2);
+    ctx.scale(1 + wind * 0.12, 1 - wind * 0.1);                           // hunching
+
+    // stubby wings, nowhere near enough of them
+    ctx.save();
+    ctx.globalAlpha = 0.3 + Math.abs(Math.sin(t * 30 + this.wing)) * 0.12;
+    for (const s of [-1, 1]) {
+      Rough.poly(ctx, [[s * r * 0.55, r * 0.1], [s * r * 1.3, r * 0.62], [s * r * 0.75, r * 0.55]],
+        { color: '#cfe4f2', width: 2, jitter: 1.6 });
+    }
+    ctx.restore();
+    // a short thick stinger out the back
+    Rough.poly(ctx, [[-6, r * 0.9], [0, r * 1.45], [6, r * 0.9]], { color: '#2b2b2b', width: 3, jitter: 1.2 });
+
+    // the slab: widest across the shoulders, tapering hard to the waist
+    const torso = [[-r * 1.14, -r * 0.34], [-r * 1.0, -r * 0.72], [-r * 0.62, -r * 0.94],
+    [0, -r * 1.0], [r * 0.62, -r * 0.94], [r * 1.0, -r * 0.72], [r * 1.14, -r * 0.34],
+    [r * 0.8, r * 0.4], [r * 0.48, r * 0.96], [-r * 0.48, r * 0.96], [-r * 0.8, r * 0.4]]
+      .map(p => [p[0] + Rough.jit(2), p[1] + Rough.jit(2)]);
+    ctx.fillStyle = this.flash > 0 ? '#ffffff' : '#5c3a10';
+    ctx.beginPath();
+    torso.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.fill();
+    Rough.scribble(ctx, torso, { color: fill, spacing: 5, width: 6, overflow: 1.08, alpha: 0.9 });
+    // the bands, clipped so they stay on the body
+    ctx.save();
+    ctx.beginPath();
+    torso.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.clip();
+    Rough.line(ctx, -r * 1.2, -r * 0.22, r * 1.2, -r * 0.16, { color: '#2b2b2b', width: r * 0.21, jitter: 1.4, passes: 2 });
+    Rough.line(ctx, -r * 1.2, r * 0.44, r * 1.2, r * 0.5, { color: '#2b2b2b', width: r * 0.18, jitter: 1.4, passes: 2 });
+    ctx.restore();
+    Rough.poly(ctx, torso, { color: '#2b2b2b', width: 3.4, jitter: 1.6 });
+    // the pectoral seam, because it wants you to see it
+    Rough.line(ctx, 0, -r * 0.85, 0, -r * 0.35, { color: '#2b2b2b', width: 2.4, jitter: 1.2, passes: 1 });
+
+    // arms: braced out and forward, ending in fists the size of its head
+    for (const s of [-1, 1]) {
+      const sh = [s * r * 0.98, -r * 0.6];
+      const el = [s * r * (1.55 + wind * 0.12), -r * 0.05];
+      const fi = [s * r * (1.2 - wind * 0.3), -r * (1.0 + wind * 0.25)];
+      Rough.poly(ctx, [sh, el, fi], { color: '#2b2b2b', width: 6, jitter: 1.6, closed: false });
+      Rough.blob(ctx, el[0], el[1], r * 0.2, fill, '#2b2b2b', { spacing: 4, fillWidth: 4, sides: 7 });
+      Rough.blob(ctx, fi[0], fi[1], r * 0.3, fill, '#2b2b2b', { spacing: 4, fillWidth: 5, sides: 7, width: 3 });
+    }
+
+    // head sunk between the shoulders, lit from inside
+    const hy = -r * 1.15;
+    Rough.blob(ctx, 0, hy, r * 0.44, '#3a2408', '#2b2b2b', { spacing: 4, fillWidth: 5, sides: 10, width: 3 });
+    for (const s of [-1, 1]) {
+      ctx.fillStyle = this.charge > 0 ? '#e0562d' : '#e8c33a';
+      ctx.beginPath();
+      ctx.ellipse(s * r * 0.19, hy - r * 0.06, r * 0.13, r * 0.18, s * 0.4, 0, 7);
+      ctx.fill();
+      Rough.circle(ctx, s * r * 0.19, hy - r * 0.06, r * 0.15, { color: '#2b2b2b', width: 2, jitter: 1.2, wobble: 1.4 });
+    }
+    for (const s of [-1, 1]) {            // mandibles, clenched
+      Rough.line(ctx, s * r * 0.2, hy + r * 0.28, s * r * 0.36, hy + r * 0.52,
+        { color: '#2b2b2b', width: 2.4, jitter: 1.2, passes: 1 });
+    }
+    ctx.restore();
+
+    // the wind-up has to read from across the page
+    if (this.charge > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.4 + wind * 0.4;
+      Rough.bloom(ctx, x, y, r * (1.5 + wind), '#e0562d', 0.7);
+      Rough.circle(ctx, x, y, r * (2.4 - wind * 1.2), { color: '#e0562d', width: 4, jitter: 3.5, wobble: 4 });
+      ctx.restore();
+      Rough.text(ctx, 'move', x, y - r * 2.1, 15, '#e0562d');
+    }
+    if (this.dashing > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      for (let i = 1; i <= 4; i++) {
+        Rough.line(ctx, x - Math.cos(face) * i * 13 + Rough.jit(6), y - Math.sin(face) * i * 13 + Rough.jit(6),
+          x - Math.cos(face) * (i + 1.6) * 13, y - Math.sin(face) * (i + 1.6) * 13,
+          { color: '#b5823a', width: 3.4, jitter: 1.6, passes: 1 });
+      }
+      ctx.restore();
+    }
+  }
+
+  /* The lava ball climbing out of a crack. Shoot it, or it lands. */
+  drawLavaball(ctx, x, y, rx, ry, fill, t) {
+    const r = (rx + ry) / 2;
+    const falling = this.fall && this.fall.t > this.fall.rise;
+    // where it is going to come down, flashing once it is on its way
+    if (this.fall) {
+      ctx.save();
+      ctx.globalAlpha = falling ? 0.45 + Math.sin(t * 14) * 0.25 : 0.22;
+      Rough.circle(ctx, this.fall.sx, this.fall.sy, r * 1.5,
+        { color: '#e0562d', width: 3, jitter: 2.4, wobble: 3 });
+      ctx.globalAlpha *= 0.6;
+      Rough.circle(ctx, this.fall.sx, this.fall.sy, r * 0.8,
+        { color: '#e0562d', width: 2, jitter: 2, wobble: 2.5 });
+      ctx.restore();
+    }
+
+    Rough.bloom(ctx, x, y, r * 2.4, '#e0562d', 0.55);
+    // flame licking off it, drawn under the body
+    for (let i = -2; i <= 2; i++) {
+      const fx = x + i * r * 0.38;
+      const h = r * (0.55 + 0.3 * Math.sin(t * 8 + i * 1.7));
+      Rough.poly(ctx, [[fx - 6, y - r * 0.5], [fx + Rough.jit(5), y - r * 0.5 - h], [fx + 6, y - r * 0.5]],
+        { color: '#e8c33a', width: 2.4, jitter: 2.2, closed: false });
+    }
+    const pts = [];
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * Math.PI * 2;
+      const wob = 1 + Math.sin(a * 3 + t * 6) * 0.11;
+      pts.push([x + Math.cos(a) * r * wob + Rough.jit(1.6), y + Math.sin(a) * r * wob + Rough.jit(1.6)]);
+    }
+    ctx.fillStyle = this.flash > 0 ? '#ffffff' : '#a82c12';
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.fill();
+    Rough.scribble(ctx, pts, { color: fill, spacing: 5, width: 6, overflow: 1.18 });
+    Rough.poly(ctx, pts, { color: '#6b1c08', width: 3, jitter: 2 });
+    // a molten core, cracked open
+    ctx.save();
+    ctx.globalAlpha = 0.75 + Math.sin(t * 9) * 0.2;
+    Rough.blob(ctx, x, y, r * 0.5, '#e8c33a', '#e8c33a', { spacing: 4, fillWidth: 5, sides: 9, width: 2 });
+    ctx.restore();
+    // and drips off the bottom while it hangs in the air
+    if (!falling) {
+      ctx.save();
+      ctx.globalAlpha = 0.65;
+      for (const s of [-1, 1]) {
+        Rough.line(ctx, x + s * r * 0.3, y + r * 0.75, x + s * r * 0.36 + Rough.jit(4), y + r * 1.5,
+          { color: '#e0562d', width: 3, jitter: 1.6, passes: 1 });
+      }
+      ctx.restore();
+    }
+  }
+
 }
 
 /* ---------------------------------------------------- the castle's sentry
@@ -1075,7 +1823,7 @@ class FireBlast {
     for (const e of game.enemies) {
       if (e.dead) continue;
       if (Math.hypot(e.x - this.x, e.y - this.y) <= radius + e.r) {
-        e.hurt(damage, game, { color: '#e0562d' });
+        e.hurt(damage, game, { color: '#e0562d', fire: true });
         if (!e.dead) e.ignite(3 + game.statusBonus());
       }
     }

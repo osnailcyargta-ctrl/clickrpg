@@ -33,6 +33,7 @@ const Game = {
   sentry: null,
   sentryType: null,         // 'stick' or 'blobd' - there is only one post
   blotKilled: false,        // the Blot has gone down at least once this run
+  lawnBurnt: false,         // the Queen's lava only gets the lawn once
   skillCharge: 0,           // clicks banked toward the skill
   skillCd: 0,               // seconds until it can be cast again
   skillAnnounced: false,
@@ -127,8 +128,13 @@ const Game = {
 
   /* The coloured patch of ground the castle stands on: a round area about 3
      blocks across, with layered noise on the edge so it never reads as a
-     compass circle. Pre-rendered once - it never changes. */
-  buildGround() {
+     compass circle. Pre-rendered - and redrawn once, in ash, if the Queen's
+     lava ever comes down on it. */
+  buildGround(burnt) {
+    const wash = burnt ? '#c9bda8' : '#d8ecc4';
+    const coats = burnt ? ['#7a6a55', '#9a8a70', '#8a7a60'] : ['#9dc98a', '#b7d9a0', '#c8dfa0'];
+    const speck = burnt ? '#3a2f22' : '#5f7d4a';
+    const rim = burnt ? '#5c4a32' : '#7fae6b';
     const R = GROUND_RADIUS * 1.35;
     const size = Math.ceil(R * 2);
     const g = document.createElement('canvas');
@@ -145,7 +151,7 @@ const Game = {
     // reading as bare stripes
     c.save();
     c.globalAlpha = 0.3;
-    c.fillStyle = '#d8ecc4';
+    c.fillStyle = wash;
     c.beginPath();
     outer.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
     c.closePath();
@@ -153,14 +159,14 @@ const Game = {
     c.restore();
 
     // two crayon passes crossing each other at different angles
-    Rough.scribble(c, outer, { color: '#9dc98a', spacing: 11, width: 9, overflow: 1.05, angle: -0.55, alpha: 0.34 });
-    Rough.scribble(c, outer, { color: '#b7d9a0', spacing: 13, width: 8, overflow: 1.04, angle: 0.75, alpha: 0.26 });
-    Rough.scribble(c, inner, { color: '#c8dfa0', spacing: 12, width: 8, overflow: 1.06, angle: 0.2, alpha: 0.22 });
-    Rough.grain(c, outer, '#5f7d4a', 0.004, 33);
+    Rough.scribble(c, outer, { color: coats[0], spacing: 11, width: 9, overflow: 1.05, angle: -0.55, alpha: burnt ? 0.42 : 0.34 });
+    Rough.scribble(c, outer, { color: coats[1], spacing: 13, width: 8, overflow: 1.04, angle: 0.75, alpha: 0.26 });
+    Rough.scribble(c, inner, { color: coats[2], spacing: 12, width: 8, overflow: 1.06, angle: 0.2, alpha: 0.22 });
+    Rough.grain(c, outer, speck, burnt ? 0.009 : 0.004, 33);
 
     c.save();
     c.globalAlpha = 0.45;
-    Rough.poly(c, outer, { color: '#7fae6b', width: 2.6, jitter: 3.4 });
+    Rough.poly(c, outer, { color: rim, width: 2.6, jitter: 3.4 });
     c.restore();
 
     // tufts of grass around the rim
@@ -171,8 +177,8 @@ const Game = {
       const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
       c.save();
       c.globalAlpha = 0.45;
-      Rough.line(c, x, y, x + Rough.jit(4), y - 4 - Rough.rnd() * 6,
-        { color: '#7fae6b', width: 1.8, jitter: 1, passes: 1 });
+      Rough.line(c, x, y, x + Rough.jit(4), y - (burnt ? 2 : 4) - Rough.rnd() * (burnt ? 3 : 6),
+        { color: rim, width: 1.8, jitter: 1, passes: 1 });
       c.restore();
     }
     this.ground = { canvas: g, size: size };
@@ -203,6 +209,8 @@ const Game = {
     this.sentry = null;
     this.sentryType = null;
     this.blotKilled = false;
+    this.lawnBurnt = false;
+    this.buildGround(false);
     this.offerScreen = null;
     this.skillCharge = 0;
     this.skillCd = 0;
@@ -454,7 +462,9 @@ const Game = {
           ['blob', 'dart', 'dart', 'brick', 'brick'];
     let kind = pool[Math.floor(Math.random() * pool.length)];
     if (w.boss && this.spawnLeft === w.count - 2) {
-      kind = w.boss === 'boss' && Math.random() < 0.5 ? 'eagle' : w.boss;
+      if (w.boss === 'boss') kind = Math.random() < 0.5 ? 'eagle' : 'boss';
+      else if (w.boss === 'warden') kind = Math.random() < 0.5 ? 'hive' : 'warden';
+      else kind = w.boss;
     }
 
     // just outside the visible paper, so they walk on screen right away
@@ -468,11 +478,14 @@ const Game = {
       sy = (Math.random() * 2 - 1) * my;
     }
     const k = ENEMY_KINDS[kind];
-    const hp = kind === 'boltshot' ? 1 : Math.max(2, Math.round(w.hp * k.hpMul));
-    this.enemies.push(new Enemy(kind, hp, w.speed * k.speedMul, sx, sy));
-    if (kind === 'boss' || kind === 'warden' || kind === 'eagle') {
+    const hp = kind === 'boltshot' ? 1
+      : (k.flatHp ? k.flatHp : Math.max(2, Math.round(w.hp * k.hpMul)));
+    const spawned = new Enemy(kind, hp, w.speed * k.speedMul, sx, sy);
+    this.enemies.push(spawned);
+    if (kind === 'hive') this.hitchHaulers(spawned, w);
+    if (kind === 'boss' || kind === 'warden' || kind === 'eagle' || kind === 'hive') {
       this.shake(10);
-      Sfx.play('boss_spawn', { volume: 1, rateVar: 0.02 });
+      Sfx.play(kind === 'hive' ? 'hive_drone' : 'boss_spawn', { volume: 1, rateVar: 0.02 });
       this.effects.push(new SpawnMark(sx, sy, k.r * 1.6));
     }
   },
@@ -499,10 +512,27 @@ const Game = {
     UI.syncHud(this);
   },
 
+  /* The Hive does not fly. Ten workers drag it in on strands, and while any
+     of them is still pulling, nothing lands on the nest. */
+  hitchHaulers(hive, w) {
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const worker = this.spawnMinion('worker',
+        hive.x + Math.cos(a) * (hive.r + 22), hive.y + Math.sin(a) * (hive.r + 22),
+        0, w.speed);
+      worker.tether = hive;
+      worker.tetherA = a;
+      worker.spawnT = 0.6;
+      worker.untouchable = true;
+      hive.workers.push(worker);
+    }
+  },
+
   /* Summoned mid-fight by a boss skill, rather than by the wave spawner. */
   spawnMinion(kind, x, y, hp, speed) {
     const k = ENEMY_KINDS[kind];
-    const rolled = kind === 'boltshot' ? 1 : Math.max(2, Math.round(hp * k.hpMul));
+    const rolled = kind === 'boltshot' ? 1
+      : (k.flatHp ? k.flatHp : Math.max(2, Math.round(hp * k.hpMul)));
     const e = new Enemy(kind, rolled, speed * k.speedMul, x, y);
     this.enemies.push(e);
     return e;

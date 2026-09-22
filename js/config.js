@@ -29,7 +29,7 @@ const WAVE_TABLE = [
   { count: 13, hp: 33, speed: 49, interval: 1.35 },
   { count: 13, hp: 38, speed: 51, interval: 1.30 },
   { count: 13, hp: 44, speed: 53, interval: 1.25 },
-  { count: 9,  hp: 50, speed: 55, interval: 1.55, boss: 'warden' }   // so does the Warden
+  { count: 9,  hp: 50, speed: 55, interval: 1.55, boss: 'warden' }   // or the Hive, 50/50
 ];
 
 const ENEMY_KINDS = {
@@ -42,7 +42,17 @@ const ENEMY_KINDS = {
   // wave 5 is a coin flip between the Blot and this: far less HP, but it
   // keeps its distance and shoots, and the shots have to be cleared
   eagle:    { r: 34, hpMul: 3.6,  speedMul: 0.85, fill: '#4a5b8f' },   // immune to Storm Caller
-  boltshot: { r: 12, hpMul: 0.0,  speedMul: 3.2,  fill: '#8ea6ff' }   // always 1 HP
+  boltshot: { r: 12, hpMul: 0.0,  speedMul: 3.2,  fill: '#8ea6ff' },  // always 1 HP
+
+  // THE HIVE - wave 10's other half. Three phases, and most of these carry
+  // a flat HP that ignores the wave table.
+  hive:    { r: 46, hpMul: 0, flatHp: 200, speedMul: 0.34, fill: '#c9903a' },
+  worker:  { r: 13, hpMul: 0, flatHp: 6,   speedMul: 1.15, fill: '#e8c33a' },
+  bee:     { r: 11, hpMul: 0, flatHp: 4,   speedMul: 1.05, fill: '#e8c33a' },
+  queen:   { r: 38, hpMul: 0, flatHp: 184, speedMul: 0.5,  fill: '#d9a441' },
+  larva:   { r: 13, hpMul: 0, flatHp: 4,   speedMul: 0,    fill: '#efe0b0' },
+  steroid: { r: 26, hpMul: 0, flatHp: 20,  speedMul: 0.8,  fill: '#b5823a' },
+  lavaball: { r: 17, hpMul: 0, flatHp: 10, speedMul: 0,    fill: '#e0562d' }
 };
 
 /* ---- CURSORS -------------------------------------------------------------

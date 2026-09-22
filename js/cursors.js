@@ -84,6 +84,7 @@ const CursorPowers = {
 const CursorOnHit = {
   scissor(game, enemy) {
     if (enemy.dead || enemy.boss) return;               // bosses don't get snipped
+    if (enemy.untouchable) return;                      // nor the Hive's haulers, yet
     if (enemy.hp > enemy.maxHp * 0.18) return;
     game.effects.push(new ScissorCut(enemy.x, enemy.y, enemy.r * 1.6));
     Sfx.play('snip', { volume: 0.8, throttle: 40 });

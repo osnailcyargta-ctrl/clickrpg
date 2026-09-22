@@ -16,7 +16,8 @@ Open `index.html` in a browser. That's the whole install.
 - **5 castle HP**, drawn as five even 20% segments. Every leak costs one, and
   the castle is redrawn for each one it loses: cracks, then broken merlons,
   then a hole in the wall and smoke, then it collapses.
-- **10 waves.** Wave 5 brings the Blot, wave 10 brings the Warden. Both boss
+- **10 waves.** Wave 5 brings the Blot, wave 10 brings the Warden. Both are coin
+  flips, so each run draws a different pair. Both boss
   waves hold a smaller crowd than the ones around them, because the bosses
   keep adding to it themselves. Each boss has a trick of its own:
   - **Wave 5 is a coin flip.** Half the time it's **the Blot**, which coughs
@@ -31,10 +32,37 @@ Open `index.html` in a browser. That's the whole install.
     is the one cursor you cannot bring to this fight. Killing it plays it out: it rears, tears free in a
     clap of light and climbs off the top of the page, leaving smear frames
     stretched behind it.
-  - **The Warden** — a slab with one enormous eye in it — chalks a barrier
-    around itself every 9s that eats all damage for 2.5s (its iris turns
-    chalk-blue and the pupil narrows, so you can see it coming), and calls two
-    bricks the first time it drops to half HP.
+  - **Wave 10 is a coin flip too.** Half the time it's **the Warden** — a slab
+    with one enormous eye in it — which chalks a barrier around itself every 9s
+    that eats all damage for 2.5s (its iris turns chalk-blue and the pupil
+    narrows, so you can see it coming), and calls two bricks the first time it
+    drops to half HP.
+  - The other half it's **the Hive**, which is three fights in a row:
+    - **Phase 1 — the haul.** The nest does not fly. Ten **worker bees** (6 HP
+      each) drag it in on strands, and *nothing in the group can be hit* until
+      the nest is all the way onto the page — clicks on it land as "not yet".
+      Once it is on, the haulers become fair game, and the nest keeps creeping
+      toward the castle for as long as one of them is still pulling. Cut all
+      ten and it stops dead.
+    - **Phase 2 — the nest.** 200 HP, sitting still, and every **25 damage you
+      put into it lets eight bees out of the door**, all of them making
+      straight for the castle. Damage banks, so a big hit can let two doors'
+      worth out at once. Burst it down fast and you eat the whole swarm at
+      once; chip it and you fight the swarm the long way.
+    - **Phase 3 — the Queen.** 184 HP, and she walks out of the wreck. She
+      takes **15% more from fire and burn** — Molten Leftkey and anything that
+      ignites is worth bringing. Every 3.4s she does one of three things:
+      **brood** (lobs three larvae on a mortar arc onto random blocks; each one
+      splits open 2s after it lands — or the moment you poke it — into a
+      **steroid bee**, 20 HP of shoulders that charges for a second within
+      three blocks of the castle and then runs at it), **rally** (throws
+      herself at her own swarm inside six blocks and speeds all of them up
+      35%), or **sting** (drives her stinger through the paper for a
+      **ground crack** that burns anything standing in it for 3s — and on the
+      last of those seconds a **lava ball** climbs out of it, 10 HP, which you
+      have to shoot down before it lands. If it lands it leaves a burning
+      puddle, and if that puddle comes down on the castle's green, **the lawn
+      goes up and the castle takes 2**).
 - Enemy **counts stop growing once you've beaten a boss** — after that the
   waves get meaner through HP and speed, not bigger crowds.
 - **Skills.** Every cursor has one. It charges over 50 clicks and you fire it
@@ -185,6 +213,7 @@ js/rough.js       crayon renderer: wobbly strokes, scribble fills, noise, easing
 js/config.js      difficulties, wave table, cursor and upgrade tables
 js/audio.js       mp3 playback: Web Audio with an <audio> fallback
 js/entities.js    enemies, bosses, status effects, sentry, every flying doodle
+js/hive.js        the Hive fight's ground cracks, lava and burning lawn
 js/skills.js      the cast cinematic and one payload per cursor
 js/offers.js      the three-card between-wave screen
 js/cursors.js     cursor powers and the drawn pointer sprites

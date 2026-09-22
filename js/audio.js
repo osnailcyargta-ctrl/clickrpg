@@ -18,7 +18,9 @@ const Sfx = {
     'sk_cloudburst', 'sk_crosshatch', 'sk_blankslate', 'sk_exclamation',
     'eagle_screech', 'eagle_dash', 'bolt_shot', 'eagle_death',
     'magnet_pull', 'magnet_burst', 'boomerang',
-    'sk_polereversal', 'sk_flightpath', 'sk_seconddraft'
+    'sk_polereversal', 'sk_flightpath', 'sk_seconddraft',
+    'hive_drone', 'bee_swarm', 'queen_screech', 'larva_pop',
+    'steroid_charge', 'lava_erupt', 'lava_land', 'grass_fire'
   ],
   path: 'assets/sfx/',
   ver: (typeof window !== 'undefined' && window.BUILD_V) ? '?v=' + window.BUILD_V : '',
