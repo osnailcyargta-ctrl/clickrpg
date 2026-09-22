@@ -15,9 +15,10 @@ class SkillCinematic {
     this.skill = skillFor(cursorId);
     this.wx = wx; this.wy = wy;
     this.t = 0;
-    this.windup = 0.62;            // page darkens, time drags, name slams
+    this.windup = 0.95;            // page darkens, time drags, name slams
+    this.freezeUntil = 2.4;        // enemies do not move at all until here
     this.payloadFired = false;
-    this.dur = 2.6;                // the whole cast, including the tail
+    this.dur = 3.6;                // the whole cast, including the tail
     this.flash = 0;
     this.rays = [];
     for (let i = 0; i < 34; i++) {
@@ -25,16 +26,24 @@ class SkillCinematic {
     }
     this.shock = [];               // rings thrown off the moment it lands
     this.motes = [];               // paper flecks sucked into the charge
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 34; i++) {
       this.motes.push({ a: Math.random() * Math.PI * 2, d: 0.3 + Math.random() * 0.9, spin: Math.random() * 6, size: 2 + Math.random() * 4 });
+    }
+    this.runes = [];               // the ring of marks that winds the charge up
+    for (let i = 0; i < 12; i++) {
+      this.runes.push({ a: (i / 12) * Math.PI * 2, kind: Math.floor(Math.random() * 3), seed: nextId() });
+    }
+    this.streaks = [];             // speed lines that stay through the payload
+    for (let i = 0; i < 18; i++) {
+      this.streaks.push({ a: Math.random() * Math.PI * 2, d: 0.4 + Math.random() * 0.7, len: 0.1 + Math.random() * 0.22, w: 1 + Math.random() * 2.4 });
     }
   }
 
   /* How much the world is slowed while this plays. */
   get timeScale() {
-    if (this.t < this.windup) return 0.22 + 0.5 * (this.t / this.windup);
-    const after = (this.t - this.windup) / 0.5;
-    return Math.min(1, 0.72 + after * 0.6);
+    if (this.t < this.windup) return 0.18 + 0.45 * (this.t / this.windup);
+    const after = (this.t - this.windup) / 0.7;
+    return Math.min(1, 0.63 + after * 0.5);
   }
 
   update(dt, game) {
@@ -88,6 +97,25 @@ class SkillCinematic {
       ctx.restore();
     }
 
+    // darkened edges, so the middle of the page is the only thing to look at
+    Rough.vignette(ctx, w, h, dark * 0.9, 'rgba(16,12,20,0.96)');
+
+    // the corner of the page curling up as the charge pulls on it
+    const curl = p < this.windup ? E.out(wind) : Math.max(0, 1 - (p - this.windup) / 0.8);
+    if (curl > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = curl * 0.5;
+      for (const c of [[0, 0, 1, 1], [w, 0, -1, 1], [0, h, 1, -1], [w, h, -1, -1]]) {
+        const lift = 30 + curl * 46;
+        Rough.poly(ctx, [
+          [c[0], c[1] + c[3] * lift],
+          [c[0] + c[2] * lift * 0.55, c[1] + c[3] * lift * 0.55],
+          [c[0] + c[2] * lift, c[1]]
+        ], { color: col, width: 3, jitter: 3, closed: false });
+      }
+      ctx.restore();
+    }
+
     // letterbox bars, drawn on with a crayon
     const bar = E.out(Math.min(1, p / 0.3)) * (p > this.dur - 0.5 ? E.clamp01((this.dur - p) / 0.5) : 1);
     if (bar > 0.02) {
@@ -128,12 +156,49 @@ class SkillCinematic {
         ctx.fillRect(-m.size / 2, -m.size / 2, m.size, m.size * 0.7);
         ctx.restore();
       }
+      // a ring of marks winding in, spinning faster as it closes
+      const spin = k * k * 7;
+      const ringR = Math.min(w, h) * 0.3 * (1 - E.out(k) * 0.72);
+      for (const rn of this.runes) {
+        const a = rn.a + spin;
+        const rx = cx + Math.cos(a) * ringR, ry = cy + Math.sin(a) * ringR;
+        ctx.save();
+        ctx.globalAlpha = (0.35 + k * 0.6) * (1 - E.clamp01((p - this.windup) / 0.3));
+        Rough.boil(rn.seed, Math.floor(time * 8));
+        const sz = 6 + k * 7;
+        if (rn.kind === 0) Rough.circle(ctx, rx, ry, sz, { color: col, width: 2.4, jitter: 2, wobble: 2 });
+        else if (rn.kind === 1) {
+          Rough.line(ctx, rx - sz, ry - sz, rx + sz, ry + sz, { color: col, width: 2.4, jitter: 2, passes: 1 });
+          Rough.line(ctx, rx + sz, ry - sz, rx - sz, ry + sz, { color: col, width: 2.4, jitter: 2, passes: 1 });
+        } else {
+          Rough.poly(ctx, [[rx - sz, ry + sz], [rx, ry - sz], [rx + sz, ry + sz]],
+            { color: col, width: 2.4, jitter: 2 });
+        }
+        ctx.restore();
+      }
+
       // the charge knot, wound tighter and tighter
       ctx.globalAlpha = 0.9 * (1 - E.clamp01((p - this.windup) / 0.3));
-      const knot = 8 + E.back(k) * 30;
-      Rough.circle(ctx, cx, cy, knot, { color: col, width: 4, jitter: 3.4 });
-      Rough.circle(ctx, cx, cy, knot * 0.66, { color: '#fffdf4', width: 3, jitter: 2.4 });
-      Rough.circle(ctx, cx, cy, knot * 0.34, { color: col, width: 2.4, jitter: 1.8 });
+      const knot = 8 + E.back(k) * 34;
+      Rough.bloom(ctx, cx, cy, knot * 3.2, col, 0.35 + k * 0.5);
+      Rough.circle(ctx, cx, cy, knot, { color: col, width: 4, jitter: 3.4, wobble: 4 });
+      Rough.circle(ctx, cx, cy, knot * 0.66, { color: '#fffdf4', width: 3, jitter: 2.4, wobble: 3 });
+      Rough.circle(ctx, cx, cy, knot * 0.34, { color: col, width: 2.4, jitter: 1.8, wobble: 2 });
+      ctx.restore();
+    }
+
+    // speed lines, still tearing past while the payload lands
+    const sp = E.clamp01((p - this.windup * 0.6) / 0.4) * E.clamp01((this.windup + 1.5 - p) / 0.8);
+    if (sp > 0.02) {
+      ctx.save();
+      Rough.boil(this.id + 61, Math.floor(time * 20));
+      for (const st of this.streaks) {
+        const far = Math.max(w, h) * st.d;
+        const x1 = cx + Math.cos(st.a) * far, y1 = cy + Math.sin(st.a) * far;
+        const x2 = cx + Math.cos(st.a) * far * (1 - st.len), y2 = cy + Math.sin(st.a) * far * (1 - st.len);
+        ctx.globalAlpha = sp * 0.5;
+        Rough.line(ctx, x1, y1, x2, y2, { color: col, width: st.w, jitter: 2, passes: 1 });
+      }
       ctx.restore();
     }
 
@@ -143,10 +208,13 @@ class SkillCinematic {
       if (age < 0 || age > 0.75) continue;
       const k = E.out(age / 0.75);
       ctx.save();
+      const rr = 30 + k * Math.max(w, h) * 0.5;
       ctx.globalAlpha = (1 - k) * 0.45;
       Rough.boil(this.id + Math.floor(ring.born * 100), Math.floor(time * 12));
-      Rough.circle(ctx, cx, cy, 30 + k * Math.max(w, h) * 0.5,
-        { color: col, width: 4 * (1 - k) + 1, jitter: 3, wobble: 6 });
+      Rough.circle(ctx, cx, cy, rr, { color: col, width: 4 * (1 - k) + 1, jitter: 3, wobble: 6 });
+      ctx.restore();
+      Rough.bloom(ctx, cx, cy, rr * 0.8, col, (1 - k) * 0.3);
+      ctx.save();
       ctx.restore();
     }
 
@@ -179,11 +247,13 @@ class SkillCinematic {
     }
 
     if (this.flash > 0) {
+      // one hard white frame, then a coloured after-flash: a hit you feel
       ctx.save();
-      ctx.globalAlpha = this.flash * 0.9;
-      ctx.fillStyle = '#fffdf4';
+      ctx.globalAlpha = this.flash > 0.72 ? 1 : this.flash * 0.85;
+      ctx.fillStyle = this.flash > 0.72 ? '#ffffff' : '#fffdf4';
       ctx.fillRect(0, 0, w, h);
       ctx.restore();
+      Rough.bloom(ctx, cx, cy, Math.max(w, h) * 0.55, col, this.flash * 0.7);
     }
   }
 }
@@ -194,8 +264,10 @@ const SkillPayloads = {
      castle's ground. 125% of a click, 105% on a boss. */
   storm(game, cine) {
     const reach = BLOCK * 5;
-    const dmg = game.clickDamage() * 1.25;
-    const bossDmg = game.clickDamage() * 1.05;
+    // flat floor plus a little scaling: tying this purely to click damage
+    // made the softest-clicking cursor in the game carry the weakest ultimate
+    const dmg = 10 + game.clickDamage() * 2;
+    const bossDmg = dmg * 0.5;
     const targets = game.enemies.filter(e => !e.dead && (
       Math.hypot(e.x - cine.wx, e.y - cine.wy) <= reach ||
       Math.hypot(e.x, e.y) <= GROUND_RADIUS + e.r));
@@ -227,7 +299,7 @@ const SkillPayloads = {
      the edge of the paper. No damage, just distance. */
   compass(game, cine) {
     const stop = Math.max(game.w, game.h) / 2 - BLOCK * 6;
-    game.effects.push(new PushRing(Math.max(BLOCK * 4, stop), game));
+    game.effects.push(new PushRing(Math.max(BLOCK * 4, stop), game, 6));
     Sfx.play('sk_perimeter', { volume: 1, rateVar: 0 });
     return 1.8;
   },
@@ -237,29 +309,28 @@ const SkillPayloads = {
     const above = game.enemies.filter(e => !e.dead && e.y < 0).length;
     const below = game.enemies.filter(e => !e.dead && e.y >= 0).length;
     const half = below >= above ? 1 : -1;        // +1 = the bottom goes
-    game.effects.push(new Guillotine(half, 10, game));
+    game.effects.push(new Guillotine(half, 22, game));
     Sfx.play('sk_guillotine', { volume: 1, rateVar: 0 });
     return 1.6;
   },
 
   /* EIGHT WAYS - static out of the cursor down eight lines at once. */
   buzz(game, cine) {
-    const dmg = game.clickDamage() * 1.25;
-    game.effects.push(new BuzzBeams(cine.wx, cine.wy, dmg, game));
+    game.effects.push(new BuzzBeams(cine.wx, cine.wy, 12, game));
     Sfx.play('sk_eightways', { volume: 1, rateVar: 0 });
     return 1.1;
   },
 
   /* CLOUDBURST - the page floods. */
   wet(game, cine) {
-    game.effects.push(new Cloudburst(game, 8));
+    game.effects.push(new Cloudburst(game, 12));
     Sfx.play('sk_cloudburst', { volume: 1, rateVar: 0 });
     return 1.6;
   },
 
   /* CROSSHATCH - the whole screen is hatched over, and the lines bite. */
   pen(game, cine) {
-    game.effects.push(new Crosshatch(game, 12));
+    game.effects.push(new Crosshatch(game, 16));
     Sfx.play('sk_crosshatch', { volume: 1, rateVar: 0 });
     return 1.5;
   },
@@ -268,7 +339,7 @@ const SkillPayloads = {
      it comes back permanently smaller, weaker and slower; the castle comes
      back with a segment mended. The only skill that heals. */
   eraser(game, cine) {
-    game.effects.push(new SecondDraft(game, 0.35));
+    game.effects.push(new SecondDraft(game, 0.35, 8));
     Sfx.play('sk_seconddraft', { volume: 1, rateVar: 0 });
     return 2.2;
   },
@@ -278,6 +349,7 @@ const SkillPayloads = {
   magnet(game, cine) {
     const pull = new MagnetPull(cine.wx, cine.wy, Math.max(game.w, game.h), 0, game, 0.75);
     game.effects.push(pull);
+    cine.wx = pull.x; cine.wy = pull.y;        // the cast follows the heap
     Sfx.play('sk_polereversal', { volume: 1, rateVar: 0 });
     const caught = pull.caught;
     game.effects.push({
@@ -286,7 +358,8 @@ const SkillPayloads = {
         this.t += dt;
         if (this.t >= 0.85 && !this.done) {
           this.done = true;
-          const dmg = 6 + 2 * caught.filter(c => !c.e.dead).length;
+          // gathering is the damage, but it cannot run away with itself
+          const dmg = 8 + 1.5 * Math.min(10, caught.filter(c => !c.e.dead).length);
           game.effects.push(new MagnetBurst(cine.wx, cine.wy, caught, dmg, game));
           Sfx.play('magnet_burst', { volume: 1, rateVar: 0 });
         }
@@ -305,7 +378,7 @@ const SkillPayloads = {
       // two laps each, and the whole loop swings round as it goes, so the
       // second lap covers ground the first one missed
       const bm = new Boomerang(0, 0, a, reach * (0.7 + Math.random() * 0.45),
-        game.aoeDamage(4), game, 2.4, 2);
+        game.aoeDamage(6), game, 2.4, 2);
       bm.drift = (Math.random() < 0.5 ? -1 : 1) * (0.7 + Math.random() * 0.6);
       game.effects.push(bm);
     }
@@ -315,7 +388,7 @@ const SkillPayloads = {
 
   /* EXCLAMATION - one enormous mark, slammed down where you point. */
   plain(game, cine) {
-    game.effects.push(new ExclamationSlam(cine.wx, cine.wy, game.clickDamage() * 6, game));
+    game.effects.push(new ExclamationSlam(cine.wx, cine.wy, 45, game));
     Sfx.play('sk_exclamation', { volume: 1, rateVar: 0 });
     return 1.2;
   }
@@ -466,6 +539,10 @@ class LightningBolt {
     for (const f of this.forks) {
       Rough.line(ctx, f[0][0], f[0][1], f[1][0], f[1][1], { color: '#aebaff', width: 3, jitter: 4, passes: 1 });
     }
+    ctx.restore();
+    Rough.bloom(ctx, this.x, this.y, 60 + E.out(k) * 90, '#8ea6ff', a * 0.75);
+    ctx.save();
+    ctx.globalAlpha = a;
     // the ground lighting up under the hit
     ctx.globalAlpha = a * 0.85;
     Rough.circle(ctx, this.x, this.y, 10 + E.out(k) * 52, { color: '#dfe6ff', width: 4.5, jitter: 3.5 });
@@ -551,9 +628,11 @@ class GatheringCloud {
 
 /* PERIMETER: a circle from the castle that shoves everything outward. */
 class PushRing {
-  constructor(target, game) {
+  constructor(target, game, damage) {
     this.id = nextId();
     this.target = target;
+    this.damage = damage || 0;
+    this.hit = new Set();
     this.t = 0; this.dur = 1.3;
     this.dust = [];
     for (let i = 0; i < 26; i++) {
@@ -574,6 +653,10 @@ class PushRing {
         e.x += (e.x / d) * push;
         e.y += (e.y / d) * push;
         e.stun = Math.max(e.stun, 0.25);
+        if (this.damage > 0 && !this.hit.has(e.id)) {
+          this.hit.add(e.id);
+          e.hurt(this.damage, game, { color: '#8a5cc4' });
+        }
       }
     }
     return this.t < this.dur + 0.4;
@@ -746,7 +829,7 @@ class BuzzBeams {
         const d = Math.hypot(e.x - this.x, e.y - this.y);
         this.arcs.push([[this.x + Math.cos(ba) * d, this.y + Math.sin(ba) * d], [e.x, e.y]]);
         e.hurt(this.damage, game, { color: '#b99a1c' });
-        if (!e.dead) e.stun = Math.max(e.stun, 0.6 + game.statusBonus());
+        if (!e.dead) e.stun = Math.max(e.stun, 0.8 + game.statusBonus());
       }
       game.shake(12);
     }
@@ -772,6 +855,7 @@ class BuzzBeams {
     }
     Rough.circle(ctx, this.x, this.y, 12 + E.out(p) * 40, { color: '#fff6c2', width: 4, jitter: 3 });
     ctx.restore();
+    Rough.bloom(ctx, this.x, this.y, 70 + E.out(p) * 120, '#e8c33a', (1 - p) * 0.6);
   }
 }
 
@@ -887,7 +971,14 @@ class ExclamationSlam {
       const k = E.out(E.clamp01((this.t - 0.3) / 0.5));
       ctx.save();
       ctx.globalAlpha = (1 - k) * 0.9;
-      Rough.circle(ctx, this.x, this.y, 16 + k * this.radius * 1.4, { color: '#2b2b2b', width: 4, jitter: 4 });
+      Rough.circle(ctx, this.x, this.y, 16 + k * this.radius * 1.4, { color: '#2b2b2b', width: 4, jitter: 4, wobble: 5 });
+      // dust punched out of the paper
+      for (let i = 0; i < 9; i++) {
+        const a = (i / 9) * Math.PI * 2 + k;
+        Rough.line(ctx, this.x + Math.cos(a) * 20, this.y + Math.sin(a) * 20,
+          this.x + Math.cos(a) * (20 + k * this.radius), this.y + Math.sin(a) * (20 + k * this.radius),
+          { color: '#8a8a8a', width: 2.4 * (1 - k) + 0.5, jitter: 3, passes: 1 });
+      }
       ctx.restore();
     }
   }

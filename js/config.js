@@ -131,9 +131,24 @@ const ONESHOT = [
     detail: 'One more castle segment, permanently - six instead of five - and the new one starts full. It is the only thing in the game that raises your ceiling instead of patching the damage.'
   },
   {
-    id: 'sentry', name: 'Stick Sentry', cost: 46, color: '#4c9f70',
-    desc: 'A stick figure joins the defence.',
-    detail: 'A doodled archer stands by the castle and plinks the nearest enemy every 1.6s for 3 damage. It never gets tired, because it is a drawing.'
+    id: 'double', name: 'Double Trouble', cost: 92, color: '#8a5cc4',
+    desc: 'Half your cursor belongs to someone else.',
+    detail: 'One side of the cursor is redrawn as another cursor, picked at random, and from then on the charge fires both tricks, taking it in turns. The most expensive thing on the page, and worth it.'
+  },
+  {
+    id: 'afterimage', name: 'Afterimage', cost: 66, color: '#7a7f8c',
+    desc: 'A ghost of your hand, running late.',
+    detail: 'A faded copy of the cursor trails a third of a second behind you and repeats every click it saw, at half damage. It cannot crit and it does not charge anything - it just keeps hitting.'
+  },
+  {
+    id: 'sentry', name: 'Stick Sentry', cost: 46, color: '#4c9f70', sentry: true,
+    desc: 'A stick figure takes the sentry post.',
+    detail: 'A doodled archer stands by the castle and plinks the nearest enemy every 1.6s for 3 damage. There is only one post, so taking this evicts whatever was standing in it.'
+  },
+  {
+    id: 'blobd', name: "Blob'd-Tier", cost: 58, color: '#6b4fb0', sentry: true, needsBlot: true,
+    desc: 'A piece of the Blot, working for you.',
+    detail: "Takes the sentry post and lobs two ink blots every 1.9s, one arcing over the top and one under, for 2 damage each. Only offered once you have put the Blot down - and it drops one of these itself, half the time."
   }
 ];
 
@@ -205,6 +220,9 @@ const SKILLS = {
 };
 
 function skillFor(cursorId) { return SKILLS[cursorId] || SKILLS.plain; }
+
+// which occupant each sentry offer puts in the post
+const SENTRY_OF = { sentry: 'stick', blobd: 'blobd' };
 
 function cursorById(id) { return CURSORS.find(c => c.id === id) || CURSORS[0]; }
 function oneshotById(id) { return ONESHOT.find(u => u.id === id); }

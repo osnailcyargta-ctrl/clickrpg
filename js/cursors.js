@@ -35,9 +35,20 @@ const CursorPowers = {
   },
 
   boomerang(game, x, y) {
-    // thrown away from the castle, so the loop sweeps the lane they walk up
-    const a = Math.atan2(y, x) + (Math.random() - 0.5) * 0.5;
-    game.effects.push(new Boomerang(x, y, a, BLOCK * 5 * game.aoeScale(), game.aoeDamage(3), game));
+    // thrown AT something. Aiming it away from the castle meant it sailed off
+    // past everything; instead it goes at the nearest body and the reach is
+    // set so that body sits mid-loop, where the arc passes twice.
+    let best = null, bd = Infinity;
+    for (const e of game.enemies) {
+      if (e.dead || e.spawnT < 0.3) continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < bd) { bd = d; best = e; }
+    }
+    const a = best ? Math.atan2(best.y - y, best.x - x) : Math.atan2(y, x);
+    const reach = best
+      ? Math.max(BLOCK * 2.2, Math.min(BLOCK * 7, bd * 1.5))
+      : BLOCK * 5 * game.aoeScale();
+    game.effects.push(new Boomerang(x, y, a, reach * game.aoeScale(), game.aoeDamage(3), game));
     Sfx.play('boomerang', { volume: 0.7 });
   },
 
@@ -330,7 +341,7 @@ const CursorMarks = {
 
 };
 
-function drawCursor(ctx, cursor, x, y, charge, pressed, t, marks) {
+function drawCursor(ctx, cursor, x, y, charge, pressed, t, marks, ghost, doubleId) {
   const s = 1 - pressed * 0.16;           // squash while held
 
   // fire and chalk sit behind the cursor, ink and the archer in front
@@ -339,9 +350,29 @@ function drawCursor(ctx, cursor, x, y, charge, pressed, t, marks) {
 
   Rough.boil(999, t * 1.5);
   ctx.save();
-  ctx.globalAlpha = 1;
-  (CursorSprites[cursor.id] || CursorSprites.plain)(ctx, x, y, s, cursor.color, t, pressed);
+  if (doubleId) {
+    // Double Trouble: your half on the left, the borrowed half on the right,
+    // clipped down the middle of the hotspot
+    const other = cursorById(doubleId);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x - 60, y - 60, 60 + 9 * s, 130); ctx.clip();
+    (CursorSprites[cursor.id] || CursorSprites.plain)(ctx, x, y, s, cursor.color, t, pressed);
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x + 9 * s, y - 60, 70, 130); ctx.clip();
+    (CursorSprites[other.id] || CursorSprites.plain)(ctx, x, y, s, other.color, t, pressed);
+    ctx.restore();
+    // the seam where the two of them meet
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    Rough.line(ctx, x + 9 * s, y - 4 * s, x + 9 * s, y + 30 * s,
+      { color: '#8a5cc4', width: 1.8, jitter: 1.6, passes: 1 });
+    ctx.restore();
+  } else {
+    (CursorSprites[cursor.id] || CursorSprites.plain)(ctx, x, y, s, cursor.color, t, pressed);
+  }
   ctx.restore();
+  if (ghost) return;                       // the afterimage stops at the outline
 
   if (marks && marks.ink) {
     Rough.boil(997, Math.floor(t * 6));

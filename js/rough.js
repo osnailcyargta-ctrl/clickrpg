@@ -246,6 +246,38 @@ const Rough = (function () {
     return lines;
   }
 
+  /* Additive glow. Crayon on paper has no light of its own, so anything that
+     is supposed to be BRIGHT - lightning, static, a magnet letting go - gets
+     one of these underneath it. */
+  function bloom(ctx, x, y, r, color, alpha) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = alpha == null ? 0.5 : alpha;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color);
+    g.addColorStop(0.45, color);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha *= 0.55;
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  /* Darkened edges, so the middle of the page is where you look. */
+  function vignette(ctx, w, h, strength, tint) {
+    if (strength <= 0.005) return;
+    ctx.save();
+    ctx.globalAlpha = strength;
+    const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.28,
+      w / 2, h / 2, Math.max(w, h) * 0.78);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(0.6, 'rgba(0,0,0,0.25)');
+    g.addColorStop(1, tint || 'rgba(16,12,20,0.95)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+
   // easings, for animation that lands softly instead of snapping
   const ease = {
     out: t => 1 - Math.pow(1 - t, 3),
@@ -256,5 +288,5 @@ const Rough = (function () {
     clamp01: v => v < 0 ? 0 : (v > 1 ? 1 : v)
   };
 
-  return { srand, rnd, jit, boil, line, poly, circle, circlePts, rectPts, scribble, blob, text, centroid, noisyRing, grain, arc, wrap, ease };
+  return { srand, rnd, jit, boil, line, poly, circle, circlePts, rectPts, scribble, blob, text, centroid, noisyRing, grain, arc, wrap, ease, bloom, vignette };
 })();

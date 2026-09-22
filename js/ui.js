@@ -20,6 +20,12 @@ const UI = {
     skillBtn.addEventListener('touchstart', e => { e.stopPropagation(); e.preventDefault(); game.castSkill(); }, { passive: false });
     skillBtn.addEventListener('contextmenu', e => e.preventDefault());
 
+    const pause = document.getElementById('hud-pause');
+    pause.addEventListener('click', e => { e.stopPropagation(); game.togglePause(); });
+    window.addEventListener('keydown', e => {
+      if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') game.togglePause();
+    });
+
     const mute = document.getElementById('hud-mute');
     const paint = () => {
       mute.textContent = Sfx.muted ? 'SOUND OFF' : 'SOUND ON';
@@ -41,6 +47,11 @@ const UI = {
   showSkillButton() {
     const b = document.getElementById('skill-button');
     if (b) b.classList.remove('hidden');
+  },
+
+  paintPause(on) {
+    const b = document.getElementById('hud-pause');
+    if (b) { b.textContent = on ? 'RESUME' : 'PAUSE'; b.classList.toggle('off', on); }
   },
 
   hideSkillButton() {
@@ -127,7 +138,12 @@ const UI = {
 
     const badges = [];
     for (const u of ONESHOT) {
+      if (u.sentry) continue;                       // shown as the post, below
       if (g.oneshot[u.id]) badges.push(badge(u.name, u.color, ''));
+    }
+    if (g.sentryType) {
+      const post = ONESHOT.find(u => SENTRY_OF[u.id] === g.sentryType);
+      if (post) badges.push(badge(post.name, post.color, ''));
     }
     for (const u of STACKING) {
       const lv = g.stacking[u.id] || 0;

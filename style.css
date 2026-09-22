@@ -80,6 +80,8 @@ html, body {
 .skill-button.ready { border-style: solid; animation: skillPulse 1.1s ease-in-out infinite; }
 .skill-button.cooling { opacity: 0.45; }
 
+.chip-row { display: flex; gap: 5px; }
+
 .mute-chip {
   pointer-events: auto; font-family: inherit; font-size: 10.5px;
   padding: 1px 8px; border: 2px solid rgba(43, 43, 43, 0.45);

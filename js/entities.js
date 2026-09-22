@@ -3,6 +3,8 @@
 
 let _id = 1;
 function nextId() { return _id++; }
+
+const BOSS_NAMES = { boss: 'THE BLOT', warden: 'THE WARDEN', eagle: 'THUNDER EAGLE' };
 const E = Rough.ease;
 
 class Enemy {
@@ -96,6 +98,8 @@ class Enemy {
       Sfx.play('eagle_death', { volume: 1, rateVar: 0 });
     }
     if (this.kind === 'boss') {                // bursts into three blotlings
+      game.blotKilled = true;
+      if (Math.random() < 0.5) game.effects.push(new BlobdDrop(this.x, this.y));
       for (let i = 0; i < 3; i++) {
         const a = (i / 3) * Math.PI * 2 + Math.random();
         game.spawnMinion('blotling', this.x + Math.cos(a) * 26, this.y + Math.sin(a) * 26,
@@ -315,7 +319,7 @@ class Enemy {
       Rough.line(ctx, bx, by, bx + w * p, by,
         { color: p > 0.5 ? '#4c9f70' : (p > 0.25 ? '#d99a26' : '#c8433a'), width: this.boss ? 8 : 6, jitter: 1, passes: 1 });
       if (this.boss) {
-        Rough.text(ctx, this.kind === 'warden' ? 'THE WARDEN' : 'THE BLOT', x, by - 13, 13, '#2b2b2b');
+        Rough.text(ctx, BOSS_NAMES[this.kind] || 'BOSS', x, by - 13, 13, '#2b2b2b');
       }
     }
   }
@@ -728,11 +732,16 @@ class Enemy {
 
 }
 
-/* ------------------------------------------------------- the stick sentry */
+/* ---------------------------------------------------- the castle's sentry
+   There is one sentry post. Either the stick figure stands in it or the
+   blob'd-tier does, never both. */
 class Sentry {
-  constructor(x, y) {
+  constructor(x, y, type) {
     this.id = nextId(); this.x = x; this.y = y;
-    this.cool = 1.6; this.aim = -Math.PI / 2; this.recoil = 0; this.bob = Math.random() * 6;
+    this.type = type || 'stick';
+    this.cool = this.type === 'blobd' ? 1.9 : 1.6;
+    this.aim = -Math.PI / 2; this.recoil = 0; this.bob = Math.random() * 6;
+    this.wob = Math.random() * 6;
   }
   update(dt, game) {
     this.cool -= dt;
@@ -748,15 +757,25 @@ class Sentry {
       let diff = ((want - this.aim + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
       this.aim += diff * Math.min(1, dt * 7);          // smooth turret turn
       if (this.cool <= 0) {
-        this.cool = 1.6;
         this.recoil = 1;
-        game.effects.push(new Arrow(this.x, this.y, best, 3));
-        Sfx.play('sentry_shot', { volume: 0.4 });
+        if (this.type === 'blobd') {
+          this.cool = 1.9;
+          // two blots, one arcing over the top and one under
+          for (const side of [-1, 1]) {
+            game.effects.push(new InkBlotShot(this.x, this.y - 4, best, 2, side));
+          }
+          Sfx.play('ink_splat', { volume: 0.45, throttle: 60 });
+        } else {
+          this.cool = 1.6;
+          game.effects.push(new Arrow(this.x, this.y, best, 3));
+          Sfx.play('sentry_shot', { volume: 0.4 });
+        }
       }
     }
     return true;
   }
   draw(ctx, t) {
+    if (this.type === 'blobd') return this.drawBlobd(ctx, t);
     Rough.boil(this.id, t * 0.6);
     const bob = Math.sin(t * 2 + this.bob) * 1.5;
     const x = this.x, y = this.y + bob;
@@ -768,6 +787,129 @@ class Sentry {
     const ax = x + Math.cos(this.aim) * (11 - pull), ay = y - 2 + Math.sin(this.aim) * (11 - pull);
     Rough.line(ctx, x, y - 2, ax, ay, { color: '#4c9f70', width: 2.6, jitter: 1 });
     Rough.arc(ctx, ax, ay, 7, this.aim - 1.1, this.aim + 1.1, { color: '#4c9f70', width: 2.2, jitter: 1.2 });
+  }
+  /* A lump of the Blot, kept on a leash and pointed the other way. */
+  drawBlobd(ctx, t) {
+    Rough.boil(this.id, t * 1.2);
+    const squat = 1 - E.pop(this.recoil) * 0.2;
+    const bob = Math.sin(t * 2.4 + this.wob) * 1.8;
+    const x = this.x, y = this.y + bob;
+    const r = 13;
+    const pts = [];
+    for (let i = 0; i < 13; i++) {
+      const a = (i / 13) * Math.PI * 2;
+      const wob = 1 + Math.sin(a * 3 + t * 2) * 0.12;
+      pts.push([x + Math.cos(a) * r * wob, y + Math.sin(a) * r * wob * squat + Rough.jit(1.2)]);
+    }
+    Rough.scribble(ctx, pts, { color: '#6b4fb0', spacing: 5, width: 5, overflow: 1.12 });
+    Rough.grain(ctx, pts, '#000000', 0.003, this.id);
+    Rough.poly(ctx, pts, { color: '#2b2b2b', width: 2.4, jitter: 1.3 });
+    // a drip, and the single eye watching whatever it is aiming at
+    Rough.blob(ctx, x, y + r * 0.95 + Math.sin(t * 3) * 1.5, r * 0.22, '#6b4fb0', '#2b2b2b',
+      { spacing: 4, fillWidth: 3, sides: 7, width: 1.6 });
+    const lx = Math.cos(this.aim) * 3, ly = Math.sin(this.aim) * 3;
+    ctx.save();
+    ctx.fillStyle = '#e8e0ff';
+    ctx.beginPath(); ctx.ellipse(x, y - 2, 5.5, 5.5, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#2b2b2b'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.ellipse(x, y - 2, 5.5, 5.5, 0, 0, 7); ctx.stroke();
+    ctx.fillStyle = '#2b2b2b';
+    ctx.beginPath(); ctx.ellipse(x + lx, y - 2 + ly, 2.4, 2.4, 0, 0, 7); ctx.fill();
+    ctx.restore();
+    // the little collar that says it works here now
+    Rough.arc(ctx, x, y + r * 0.35, r * 0.8, 0.3, Math.PI - 0.3, { color: '#c9a36b', width: 2.2, jitter: 1.2 });
+  }
+}
+
+/* The blob'd-tier's shot: an ink blot that swings out on an oval instead of
+   flying straight, one over the top and one underneath. */
+class InkBlotShot {
+  constructor(x, y, target, dmg, side) {
+    this.id = nextId();
+    this.sx = x; this.sy = y;
+    this.x = x; this.y = y;
+    this.target = target; this.dmg = dmg; this.side = side;
+    this.tx = target.x; this.ty = target.y;
+    this.t = 0; this.dur = 0.55 + Math.random() * 0.1;
+    this.spin = Math.random() * 6;
+  }
+  update(dt, game) {
+    this.t += dt;
+    if (this.target && !this.target.dead) { this.tx = this.target.x; this.ty = this.target.y; }
+    const u = Math.min(1, this.t / this.dur);
+    const dx = this.tx - this.sx, dy = this.ty - this.sy;
+    const len = Math.hypot(dx, dy) || 1;
+    // straight line plus a sine bulge across it: the two shots make an oval
+    const bulge = Math.sin(u * Math.PI) * Math.min(70, len * 0.45) * this.side;
+    this.x = this.sx + dx * u + (-dy / len) * bulge;
+    this.y = this.sy + dy * u + (dx / len) * bulge;
+    this.spin += dt * 9;
+    if (u >= 1) {
+      if (this.target && !this.target.dead) this.target.hurt(this.dmg, game, { color: '#6b4fb0' });
+      game.effects.push(new Splash(this.x, this.y, 16));
+      return false;
+    }
+    return true;
+  }
+  draw(ctx, t) {
+    Rough.boil(this.id, Math.floor(t * 12));
+    const u = Math.min(1, this.t / this.dur);
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    Rough.blob(ctx, this.x, this.y, 5.5 - u * 1.2, '#6b4fb0', '#2b2b2b',
+      { spacing: 4, fillWidth: 3.5, sides: 8, width: 1.6 });
+    ctx.globalAlpha = 0.35;
+    Rough.circle(ctx, this.x, this.y, 8, { color: '#6b4fb0', width: 1.6, jitter: 2, wobble: 2 });
+    ctx.restore();
+  }
+}
+
+/* What the Blot leaves behind, half the time. Click it to take it in. */
+class BlobdDrop {
+  constructor(x, y) {
+    this.id = nextId();
+    this.x = x; this.y = y;
+    this.t = 0; this.life = 22;          // it waits, but not forever
+    this.taken = false;
+    this.r = 19;
+  }
+  update(dt, game) {
+    this.t += dt;
+    this.life -= dt;
+    return this.life > 0 && !this.taken;
+  }
+  /* Called from the click handler before enemies are considered. */
+  tryTake(x, y, game) {
+    if (this.taken) return false;
+    if (Math.hypot(x - this.x, y - this.y) > this.r + 14) return false;
+    this.taken = true;
+    game.installSentry('blobd');
+    game.effects.push(new FloatText(this.x, this.y - 24, "blob'd-tier", '#6b4fb0', 20, true));
+    for (let i = 0; i < 16; i++) game.effects.push(new Crumb(this.x, this.y, '#6b4fb0'));
+    Sfx.play('card_buy', { volume: 0.9 });
+    return true;
+  }
+  draw(ctx, t) {
+    const bob = Math.sin(t * 2.6 + this.id) * 4;
+    const y = this.y + bob;
+    const fade = this.life < 4 ? (Math.sin(t * 12) * 0.35 + 0.65) : 1;
+    Rough.boil(this.id, Math.floor(t * 4));
+    ctx.save();
+    ctx.globalAlpha = fade;
+    // a ring so it reads as a pickup and not another enemy
+    ctx.globalAlpha = fade * (0.4 + Math.sin(t * 3) * 0.2);
+    Rough.circle(ctx, this.x, y, this.r + 7 + Math.sin(t * 3) * 3,
+      { color: '#d99a26', width: 2.4, jitter: 2.4, wobble: 3 });
+    ctx.globalAlpha = fade;
+    Rough.blob(ctx, this.x, y, this.r * 0.75, '#6b4fb0', '#2b2b2b',
+      { spacing: 5, fillWidth: 4.5, sides: 10, width: 2.2 });
+    ctx.fillStyle = '#e8e0ff';
+    ctx.beginPath(); ctx.ellipse(this.x, y - 2, 4.5, 4.5, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#2b2b2b'; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.ellipse(this.x, y - 2, 4.5, 4.5, 0, 0, 7); ctx.stroke();
+    ctx.globalAlpha = fade * 0.9;
+    Rough.text(ctx, 'CLICK', this.x, y - this.r - 16, 12, '#d99a26');
+    ctx.restore();
   }
 }
 
@@ -1346,6 +1488,15 @@ class EagleAscend {
 class MagnetPull {
   constructor(x, y, radius, damage, game, hold) {
     this.id = nextId();
+    // never haul them onto the castle - that would be handing the wave the
+    // front door, which is exactly what it did the first time
+    const safe = game.castleRadius + BLOCK * 2.6;
+    const d = Math.hypot(x, y);
+    if (d < safe) {
+      const a = d > 1 ? Math.atan2(y, x) : Math.random() * Math.PI * 2;
+      x = Math.cos(a) * safe;
+      y = Math.sin(a) * safe;
+    }
     this.x = x; this.y = y; this.radius = radius;
     this.t = 0; this.dur = 0.45 + (hold || 0);
     this.hold = hold || 0;
@@ -1511,10 +1662,10 @@ class Boomerang {
 /* SECOND DRAFT: the page is scrubbed back to nothing and drawn again - the
    enemies come back smaller and weaker, the castle comes back mended. */
 class SecondDraft {
-  constructor(game, cut) {
+  constructor(game, cut, damage) {
     this.id = nextId();
     this.t = 0; this.dur = 2.2; this.wiped = false; this.redrew = false;
-    this.cut = cut;
+    this.cut = cut; this.damage = damage || 0;
     this.w = game.w; this.h = game.h;
     this.strokes = [];
     for (let i = 0; i < 14; i++) {
@@ -1535,6 +1686,7 @@ class SecondDraft {
         e.baseSpeed *= 0.75;
         e.applySlow(6 + game.statusBonus(), 0.75);
         e.faded = 1;
+        if (this.damage > 0) e.hurt(this.damage, game, { color: '#b06078' });
         game.effects.push(new FloatText(e.x, e.y - e.r - 10, 'redrawn', '#b06078', 15, false));
       }
       // the castle is part of the page too, and it gets the clean copy

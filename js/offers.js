@@ -12,7 +12,12 @@ function buildOffers(game) {
     pool.push({ kind: 'cursor', id: c.id, name: c.name, color: c.color, cost: offerCost(c.cost, game.wave), desc: c.desc, detail: c.detail, tag: c.dmg + ' DMG CURSOR' });
   }
   for (const u of ONESHOT) {
-    if (game.oneshot[u.id]) continue;
+    if (u.sentry) {
+      // the sentry post changes hands, so these keep coming back - unless the
+      // one being offered is already the one standing in it
+      if (game.sentryType === SENTRY_OF[u.id]) continue;
+      if (u.needsBlot && !game.blotKilled) continue;    // you have to meet it first
+    } else if (game.oneshot[u.id]) continue;
     pool.push({ kind: 'oneshot', id: u.id, name: u.name, color: u.color, cost: offerCost(u.cost, game.wave), desc: u.desc, detail: u.detail, tag: 'ONE-SHOT' });
   }
   for (const u of STACKING) {

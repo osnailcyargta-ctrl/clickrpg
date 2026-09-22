@@ -26,12 +26,19 @@ const Game = {
   cursorCharge: 0,
   moltenCharge: 0,
   penTrail: null,
+  doubleId: null,           // Double Trouble's borrowed half
+  doubleTurn: 0,            // which of the two fires next
+  ghostTrail: [],           // Afterimage: where the cursor has been
+  ghostQueue: [],           // and the clicks it still owes
   sentry: null,
+  sentryType: null,         // 'stick' or 'blobd' - there is only one post
+  blotKilled: false,        // the Blot has gone down at least once this run
   skillCharge: 0,           // clicks banked toward the skill
   skillCd: 0,               // seconds until it can be cast again
   skillAnnounced: false,
   cinematic: null,          // the cast playing out, if any
   slowT: 0, slowScale: 1,   // a short drag on time, for moments like a boss dying
+  paused: false,
   touchMode: false,         // a touch was seen, so show the skill button
   pointer: { x: 0, y: 0, down: 0, inside: false },
   spawnLeft: 0, spawnTimer: 0, waveSpec: null,
@@ -189,13 +196,20 @@ const Game = {
     this.cursorCharge = 0;
     this.moltenCharge = 0;
     this.penTrail = null;
+    this.doubleId = null;
+    this.doubleTurn = 0;
+    this.ghostTrail = [];
+    this.ghostQueue = [];
     this.sentry = null;
+    this.sentryType = null;
+    this.blotKilled = false;
     this.offerScreen = null;
     this.skillCharge = 0;
     this.skillCd = 0;
     this.skillAnnounced = false;
     this.cinematic = null;
     this.slowT = 0;
+    this.paused = false;
     UI.hideAll();
     this.startWave();
   },
@@ -240,9 +254,12 @@ const Game = {
       this.skillAnnounced = false;            // a new cursor means a new skill
       this.penTrail = off.id === 'pen' ? new PenTrail() : null;
     } else if (off.kind === 'oneshot') {
-      this.oneshot[off.id] = true;
+      // a sentry is not owned, it is employed - the post can change hands
+      if (!SENTRY_OF[off.id]) this.oneshot[off.id] = true;
       if (off.id === 'chalk') this.shield = 2;
-      if (off.id === 'sentry') this.sentry = new Sentry(-this.castleRadius - 26, 14);
+      if (off.id === 'double') this.rollDouble();
+      if (off.id === 'sentry') this.installSentry('stick');
+      if (off.id === 'blobd') this.installSentry('blobd');
       if (off.id === 'molten') this.moltenCharge = 0;
       if (off.id === 'paper') { this.maxHp++; this.castleHp++; }   // the new segment starts full
     } else {
@@ -267,6 +284,7 @@ const Game = {
   },
 
   press() {
+    if (this.paused) return;
     this.pointer.down = 0.13;
     if (this.state === 'offers' && this.offerScreen) {
       this.offerScreen.click(this.pointer.x, this.pointer.y, this.w, this.h);
@@ -276,11 +294,18 @@ const Game = {
     this.click(this.pointer.x - this.w / 2, this.pointer.y - this.h / 2);
   },
 
-  click(x, y) {
+  click(x, y, opts_ghost) {
+    // anything lying on the floor gets picked up first
+    for (const f of this.effects) {
+      if (f instanceof BlobdDrop && f.tryTake(x, y, this)) return;
+    }
+
     const cursor = cursorById(this.cursorId);
-    this.cursorCharge++;
-    this.moltenCharge++;
-    if (this.skillCharge < SKILL_CHARGE) this.skillCharge++;
+    if (!opts_ghost) {                       // the ghost charges nothing
+      this.cursorCharge++;
+      this.moltenCharge++;
+      if (this.skillCharge < SKILL_CHARGE) this.skillCharge++;
+    }
 
     let target = null, bestDist = Infinity;
     for (const e of this.enemies) {
@@ -290,8 +315,9 @@ const Game = {
     }
 
     if (target) {
-      const crit = Math.random() < this.critChance();
-      target.hurt(this.clickDamage() * (crit ? CRIT_MULT : 1), this, { crit });
+      const crit = !opts_ghost && Math.random() < this.critChance();
+      const bite = this.clickDamage() * (crit ? CRIT_MULT : 1) * (opts_ghost ? 0.5 : 1);
+      target.hurt(bite, this, { crit });
       this.effects.push(new ClickRipple(x, y, crit ? '#e0562d' : cursor.color, crit));
       Sfx.play(crit ? 'crit' : 'click_hit', { throttle: 25, volume: crit ? 0.9 : 0.55, voices: 6 });
       const onHit = CursorOnHit[cursor.id];
@@ -310,11 +336,16 @@ const Game = {
     }
 
     if (cursor.every > 0 && this.cursorCharge % cursor.every === 0) {
-      const power = CursorPowers[cursor.id];
+      let firing = cursor.id;
+      if (this.oneshot.double && this.doubleId) {      // take it in turns
+        firing = this.doubleTurn % 2 === 0 ? cursor.id : this.doubleId;
+        this.doubleTurn++;
+      }
+      const power = CursorPowers[firing];
       if (power) power(this, x, y);
     }
 
-    if (this.oneshot.molten && this.moltenCharge % 5 === 0) {
+    if (!opts_ghost && this.oneshot.molten && this.moltenCharge % 5 === 0) {
       this.effects.push(new FireBlast(x, y, BLOCK * 2 * this.aoeScale(), this.aoeDamage(this.clickDamage() / 2), this));
       Sfx.play('fire_blast', { volume: 0.65, throttle: 90 });
     }
@@ -324,7 +355,7 @@ const Game = {
 
   /* Fired by hand only: right-click, or the corner button on a touchscreen. */
   castSkill() {
-    if (this.state !== 'playing' || this.cinematic) return;
+    if (this.state !== 'playing' || this.cinematic || this.paused) return;
     if (!this.skillReady()) {
       Sfx.play('click_miss', { volume: 0.5 });
       const why = this.skillCd > 0 ? Math.ceil(this.skillCd) + 's' : (SKILL_CHARGE - this.skillCharge) + ' clicks';
@@ -388,6 +419,14 @@ const Game = {
 
   shake(amount) { this.shakeAmt = Math.min(24, this.shakeAmt + amount); },
 
+  togglePause() {
+    if (this.state !== 'playing' && this.state !== 'offers') return this.paused;
+    this.paused = !this.paused;
+    UI.paintPause(this.paused);
+    Sfx.play('button', { volume: 0.6 });
+    return this.paused;
+  },
+
   slowmo(seconds, scale) {
     this.slowT = Math.max(this.slowT, seconds);
     this.slowScale = scale;
@@ -438,6 +477,28 @@ const Game = {
     }
   },
 
+  /* Double Trouble borrows a random other cursor's half - and its trick. */
+  rollDouble() {
+    const pool = CURSORS.filter(c => c.id !== this.cursorId && c.id !== 'plain' && CursorPowers[c.id]);
+    this.doubleId = pool.length ? pool[Math.floor(Math.random() * pool.length)].id : 'wet';
+    this.doubleTurn = 0;
+    this.effects.push(new FloatText(0, -this.castleRadius - 40,
+      cursorById(this.doubleId).name, cursorById(this.doubleId).color, 19, false));
+  },
+
+  /* The castle has one sentry post. Whoever moves in evicts whoever was
+     there - a stick figure, or the lump the Blot left behind. */
+  installSentry(type) {
+    const had = this.sentryType;
+    this.sentryType = type;
+    this.sentry = new Sentry(-this.castleRadius - 26, 14, type);
+    if (had && had !== type) {
+      this.effects.push(new FloatText(-this.castleRadius - 26, -6,
+        had === 'stick' ? 'stick out' : "blob'd out", '#6b6b6b', 15, false));
+    }
+    UI.syncHud(this);
+  },
+
   /* Summoned mid-fight by a boss skill, rather than by the wave spawner. */
   spawnMinion(kind, x, y, hp, speed) {
     const k = ENEMY_KINDS[kind];
@@ -459,6 +520,7 @@ const Game = {
   },
 
   update(dt) {
+    if (this.paused) return;
     if (this.pointer.down > 0) this.pointer.down = Math.max(0, this.pointer.down - dt);
     if (this.castleHitT > 0) this.castleHitT = Math.max(0, this.castleHitT - dt / 0.5);
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt / 0.6);
@@ -482,11 +544,15 @@ const Game = {
       UI.syncHud(this);
     }
 
-    // a cast, or a boss going down, drags the world into slow motion
+    // a cast, or a boss going down, drags the world into slow motion. While
+    // a cast is on screen the enemies stop dead - the skill is the thing you
+    // are meant to be watching.
     let scale = 1;
+    this.frozen = false;
     if (this.cinematic) {
       scale = this.cinematic.timeScale;
-      if (!this.cinematic.update(dt, this)) this.cinematic = null;
+      this.frozen = this.cinematic.t < this.cinematic.freezeUntil;
+      if (!this.cinematic.update(dt, this)) { this.cinematic = null; this.frozen = false; }
     }
     if (this.slowT > 0) {
       this.slowT = Math.max(0, this.slowT - dt);
@@ -523,10 +589,18 @@ const Game = {
       }
     }
 
-    for (const e of this.enemies) if (!e.dead) e.update(dt, this);
+    if (!this.frozen) for (const e of this.enemies) if (!e.dead) e.update(dt, this);
     this.enemies = this.enemies.filter(e => !e.dead);
     this.updateEffects(dt);
     if (this.penTrail) this.penTrail.update(dt, this);
+    if (this.oneshot.afterimage) {
+      this.ghostTrail.push({ x: this.pointer.x, y: this.pointer.y, at: this.time });
+      while (this.ghostTrail.length && this.time - this.ghostTrail[0].at > 0.45) this.ghostTrail.shift();
+      while (this.ghostQueue.length && this.ghostQueue[0].at <= this.time) {
+        const q = this.ghostQueue.shift();
+        this.click(q.x, q.y, true);
+      }
+    }
     if (this.sentry) this.sentry.update(dt, this);
 
     if (this.state === 'playing' && this.spawnLeft === 0 && this.enemies.length === 0) {
@@ -579,9 +653,31 @@ const Game = {
     if (this.banner) this.banner.draw(ctx, this.w, this.h, this.time);
     if (this.state === 'offers' && this.offerScreen) this.offerScreen.draw(ctx, this.w, this.h, this.time);
 
+    if (this.paused) {
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = '#fffdf4';
+      ctx.fillRect(0, 0, this.w, this.h);
+      ctx.globalAlpha = 0.9;
+      Rough.boil(4242, Math.floor(this.time * 2));
+      Rough.text(ctx, 'PAUSED', this.w / 2, this.h / 2 - 14, Math.min(58, this.w * 0.1), '#2b2b2b');
+      Rough.text(ctx, 'P, or the button up there', this.w / 2, this.h / 2 + 28, 16, '#6b6b6b');
+      Rough.line(ctx, this.w / 2 - 110, this.h / 2 + 8, this.w / 2 + 110, this.h / 2 + 8,
+        { color: '#2b2b2b', width: 3, jitter: 2.5, passes: 2 });
+      ctx.restore();
+    }
+
     if ((this.state === 'playing' || this.state === 'offers') && this.pointer.inside) {
+      if (this.oneshot.afterimage && this.ghostTrail.length) {
+        const g = this.ghostTrail[0];
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        drawCursor(ctx, cursorById(this.cursorId), g.x, g.y, 0, 0, this.time - 0.33, null, true);
+        ctx.restore();
+      }
       drawCursor(ctx, cursorById(this.cursorId), this.pointer.x, this.pointer.y,
-        this.cursorCharge, this.pointer.down > 0 ? 1 : 0, this.time, this.oneshot);
+        this.cursorCharge, this.pointer.down > 0 ? 1 : 0, this.time, this.oneshot,
+        false, this.oneshot.double ? this.doubleId : null);
     }
   },
 

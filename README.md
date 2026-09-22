@@ -20,7 +20,8 @@ Open `index.html` in a browser. That's the whole install.
   waves hold a smaller crowd than the ones around them, because the bosses
   keep adding to it themselves. Each boss has a trick of its own:
   - **Wave 5 is a coin flip.** Half the time it's **the Blot**, which coughs
-    up a fast blotling every 4.5s and bursts into three more when it dies.
+    up a fast blotling every 4.5s, bursts into three more when it dies, and
+    half the time leaves a **Blob'd-Tier** on the floor for you to click up.
   - The other half it's **the Thunder Eagle** — a raptor cut out of lightning
     with less than half the Blot's HP, which never closes in. It holds a
     standoff five blocks out, looses a bolt at the castle every 3.2s that has
@@ -40,10 +41,13 @@ Open `index.html` in a browser. That's the whole install.
   by hand — **right-click** on a mouse, or the button in the bottom-right
   corner on a touchscreen (it only appears once you've touched the screen).
   It never fires itself, and there are **30 seconds between casts** whatever
-  your click rate, so it stays an event rather than a rotation. The button is
+  your click rate, so it stays an event rather than a rotation. **Enemies stop
+  dead** while a cast is on screen — the skill is the thing you are meant to
+  be watching. The button is
   always on screen; right-click does the same thing. Every cast
   darkens the page, drags the world into slow motion and slams the skill's
   name down before the payload lands.
+- **P** pauses, or the button in the corner.
 - Kills pay out **scribbles**. After each wave you get **three cards** — a
   cursor or an upgrade each — and you buy one of them, or skip and keep the
   money. You can also **reroll** the hand: it costs the three cards' prices
@@ -89,16 +93,22 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 
 | Cursor | Skill | What it does |
 |---|---|---|
-| **Storm Caller** | THUNDERHEAD | The sky opens. Every enemy within 5 blocks of your cursor, and every enemy standing on the castle's ground, is struck for 125% of your click damage — 105% on a boss. |
-| **Compass** | PERIMETER | A circle drawn from the castle grows until it nearly fills the page, shoving every enemy out to the edge with it. No damage, just distance. |
-| **Scissor** | GUILLOTINE | A slash tears right to left across whichever half holds more enemies, marking it, and then the blades close: 10 damage to everything in it. |
-| **Buzz** | EIGHT WAYS | Static tears out of the cursor down eight lines and earths itself through every enemy on the paper: 125% of your click damage and a 0.6s freeze. |
-| **Wet** | CLOUDBURST | The page floods — 8 damage to everything, and a 40% slow for 3s. |
-| **Pen Tool** | CROSSHATCH | The whole screen is hatched over and the lines bite: 12 damage to everything. |
-| **Eraser** | SECOND DRAFT | The page is scrubbed back band by band and drawn again. Everything on it comes back **permanently** worse — 35% off max HP (half that on a boss), smaller, and a quarter slower — and the castle comes back with a segment mended. The only skill that heals. |
-| **Magnet** | POLE REVERSAL | Hauls the whole board into one heap, holds it, then flips polarity and flings it apart. The damage scales with how many it gathered — 6, plus 2 for every enemy in the pile. |
-| **Boomerang** | FLIGHT PATH | Nine of them launch from the castle, two laps each, and the whole loop swings round as it goes so the second lap covers what the first one missed. 4 a pass, and a pass is easy to take twice. |
-| **Plain** | EXCLAMATION | One enormous mark slams down where you point, for six times your click damage in 2 blocks. The biggest single hit in the game, and the smallest area. |
+| **Storm Caller** | THUNDERHEAD | The sky opens on everything within 5 blocks of your cursor and everything standing on the castle's ground: 10 + twice your click damage each, half that on a boss. |
+| **Compass** | PERIMETER | A circle drawn from the castle grows until it nearly fills the page, shoving every enemy out to the edge with it for 6 on the way. The reposition is the point. |
+| **Scissor** | GUILLOTINE | A slash tears right to left across whichever half holds more enemies, marking it, and then the blades close: 22 to everything in it. |
+| **Buzz** | EIGHT WAYS | Static earths itself through every enemy on the paper: 12 each and a 0.8s freeze. |
+| **Wet** | CLOUDBURST | The page floods: 12 to everything and a 40% slow for 3s. |
+| **Pen Tool** | CROSSHATCH | The whole screen is hatched over and the lines bite: 16 to everything. |
+| **Eraser** | SECOND DRAFT | The page is scrubbed back band by band and drawn again. Everything comes back **permanently** worse — 35% off max HP (half that on a boss), smaller, a quarter slower, plus 8 on the spot — and the castle comes back with a segment mended. The only skill that heals, and the only one that scales with how big the thing was. |
+| **Plain** | EXCLAMATION | One enormous mark slams down for a flat 45 in 2 blocks. The biggest single hit in the game, and the smallest area. |
+| **Magnet** | POLE REVERSAL | Hauls the whole board into one heap — never onto the castle — holds it, then flips and flings it: 8 plus 1.5 for every enemy in the pile, capped at ten. |
+| **Boomerang** | FLIGHT PATH | Nine of them launch from the castle, two laps each, the whole loop drifting round as it flies. 6 a pass, and a pass is easy to take twice. |
+
+Every cast opens the same way and runs about three and a half seconds: the
+page darkens and vignettes down, time drags to a fifth speed, the corners of
+the paper curl up, a ring of marks winds inward onto a blooming knot of light
+at your cursor, and the name slams down over letterboxed bars before the
+payload lands on a white frame.
 
 ## Upgrades
 
@@ -115,7 +125,10 @@ themselves around the castle, so they leave the cursor alone.
 | **Ink Overflow** | Every crit dumps a 1.4 block ink puddle for 4s: 30% slow, 2 damage a second. |
 | **Chalk Ward** | Two shield charges that eat a hit instead of your HP, re-drawn every wave. |
 | **Thick Paper** | One more castle segment, permanently — six instead of five — and the new one starts full. The castle is redrawn inside an uncoloured outer shell so you can see it. |
-| **Stick Sentry** | A doodled archer by the castle plinks the nearest enemy every 1.6s for 3 damage. |
+| **Stick Sentry** | Takes the castle's one sentry post: a doodled archer that plinks the nearest enemy every 1.6s for 3. |
+| **Blob'd-Tier** | The other occupant of that post. Lobs two ink blots every 1.9s, one arcing over the top and one under, for 2 each. Only offered once you have put the Blot down — and the Blot drops one itself, half the time, which you pick up by **clicking it off the floor**. |
+| **Double Trouble** | One side of the cursor is redrawn as another cursor, picked at random, and the charge fires both tricks from then on, taking it in turns. The most expensive thing on the page. |
+| **Afterimage** | A faded copy of the cursor trails a third of a second behind and repeats every click it saw, at half damage. It cannot crit and it charges nothing. |
 
 **Stacking** — no level cap, they keep coming back and cost more each time:
 
