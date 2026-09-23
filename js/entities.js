@@ -104,6 +104,7 @@ class Enemy {
       }
     }
     if (this.kind === 'larva' && this.hatch > 0.05) this.hatch = 0.05;   // poking it hurries it
+    if (this.kind === 'auger' && this.hp > 0 && dealt > 0) this.augerStruck(game);
     this.flash = 0.12;
     this.hitT = 1;
     if (!opts.silent) {
@@ -153,6 +154,7 @@ class Enemy {
     }
     game.onEnemyKilled(this);
     game.effects.push(new DeathSplat(this.x, this.y, this.r, this.fill, this.boss));
+    game.effects.push(new KillPop(this.x, this.y, this.r, this.fill, this.boss, game));
     if (this.boss) game.shake(14);
   }
 
@@ -177,10 +179,19 @@ class Enemy {
     if (this.drink > 0) this.drink = Math.max(0, this.drink - dt / 0.5);
     if (this.boss) this.bossSkill(dt, game);
     if (this.faded > 0) this.faded = Math.max(0, this.faded - dt * 0.6);
+    if (this.knock) {                            // thrown: slides out, easing off
+      const k = this.knock;
+      const was = E.out(k.t / k.dur);
+      k.t = Math.min(k.dur, k.t + dt);
+      const now = E.out(k.t / k.dur);
+      this.x += k.dx * (now - was); this.y += k.dy * (now - was);
+      if (k.t >= k.dur) this.knock = null;
+    }
     if (this.stun > 0) { this.stun -= dt; return; }
 
     const d = Math.hypot(this.x, this.y) || 1;
 
+    if (this.kind === 'auger') { this.augerUpdate(dt, game, d); return; }
     if (this.kind === 'eagle') { this.flyLikeAnEagle(dt, game, d); return; }
     if (HIVE_KINDS[this.kind]) { this.hiveUpdate(dt, game, d); return; }
 
@@ -517,6 +528,15 @@ class Enemy {
     const fill = this.flash > 0 ? '#ffffff' : this.fill;
     const facing = Math.atan2(-this.y, -this.x);     // they all walk at the castle
 
+    // light under the body: a boss throws a slow pulse of its own colour,
+    // and anything on fire throws a flicker of heat
+    if (this.boss && !Fx.low) {
+      Rough.bloom(ctx, x, y, this.r * (2.1 + Math.sin(t * 2 + this.wobblePhase) * 0.15), this.fill, 0.28);
+    }
+    if (this.burn > 0 && !Fx.low) {
+      Rough.bloom(ctx, x, y, this.r * (1.5 + Math.random() * 0.25), '#e0562d', 0.35 + Math.random() * 0.15);
+    }
+
     ctx.save();
     if (this.spawnT < 1) ctx.globalAlpha = E.out(this.spawnT);
 
@@ -555,6 +575,7 @@ class Enemy {
       case 'larva': this.drawLarva(ctx, x, y, rx, ry, fill, t); break;
       case 'steroid': this.drawSteroid(ctx, x, y, rx, ry, fill, t); break;
       case 'lavaball': this.drawLavaball(ctx, x, y, rx, ry, fill, t); break;
+      case 'auger': this.drawAuger(ctx, x, y, rx, ry, fill, t); break;
       default: this.drawBlob(ctx, x, y, rx, ry, fill, t); break;
     }
 
@@ -586,6 +607,7 @@ class Enemy {
         Rough.text(ctx, BOSS_NAMES[this.kind] || 'BOSS', x, by - 13, 13, '#2b2b2b');
       }
     }
+    if (this.stun > 0.05) drawStunStars(ctx, x, y, Math.max(this.r, 14), t);
   }
 
   /* This enemy's own outline, pushed outward by `pad`. Auras and barriers are
@@ -1506,6 +1528,7 @@ class Sentry {
   }
 
   update(dt, game) {
+    if (this.type === 'trapper') return this.trapperUpdate(dt, game);
     this.cool -= dt;
     if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt / 0.25);
 
@@ -1577,7 +1600,7 @@ class Sentry {
         if (e.dead || d.hit.has(e.id)) continue;
         if (Math.hypot(e.x - this.x, e.y - this.y) <= e.r + 16) {
           d.hit.add(e.id);
-          e.hurt(4, game, { color: '#8ea6ff' });
+          game.sentryHurt(e, 4, { color: '#8ea6ff' });
           for (let i = 0; i < 4; i++) game.effects.push(new Crumb(this.x, this.y, '#8ea6ff'));
         }
       }
@@ -1602,6 +1625,7 @@ class Sentry {
   draw(ctx, t) {
     if (this.type === 'blobd') return this.drawBlobd(ctx, t);
     if (this.type === 'bird') return this.drawBird(ctx, t);
+    if (this.type === 'trapper') return this.drawTrapper(ctx, t);
     Rough.boil(this.id, t * 0.6);
     const bob = Math.sin(t * 2 + this.bob) * 1.5;
     const x = this.x, y = this.y + bob;
@@ -1747,7 +1771,7 @@ class InkBlotShot {
     this.y = this.sy + dy * u + (dx / len) * bulge;
     this.spin += dt * 9;
     if (u >= 1) {
-      if (this.target && !this.target.dead) this.target.hurt(this.dmg, game, { color: '#6b4fb0' });
+      if (this.target && !this.target.dead) game.sentryHurt(this.target, this.dmg, { color: '#6b4fb0' });
       game.effects.push(new Splash(this.x, this.y, 16));
       return false;
     }
@@ -1756,6 +1780,7 @@ class InkBlotShot {
   draw(ctx, t) {
     Rough.boil(this.id, Math.floor(t * 12));
     const u = Math.min(1, this.t / this.dur);
+    if (!Fx.low) Rough.bloom(ctx, this.x, this.y, 16, '#8a6fd8', 0.5);
     ctx.save();
     ctx.globalAlpha = 0.85;
     Rough.blob(ctx, this.x, this.y, 5.5 - u * 1.2, '#6b4fb0', '#2b2b2b',
@@ -1783,7 +1808,7 @@ class BirdBolt {
     this.trail.push([this.x + Rough.jit(3), this.y + Rough.jit(3)]);
     if (this.trail.length > 5) this.trail.shift();
     if (d < 15) {
-      this.target.hurt(this.dmg, game, { color: '#8ea6ff' });
+      game.sentryHurt(this.target, this.dmg, { color: '#8ea6ff' });
       for (let i = 0; i < 3; i++) game.effects.push(new Crumb(this.x, this.y, '#8ea6ff'));
       return false;
     }
@@ -1798,6 +1823,7 @@ class BirdBolt {
       ctx.restore();
     }
     const a = this.a || 0;
+    if (!Fx.low) Rough.bloom(ctx, this.x, this.y, 18, '#8ea6ff', 0.7);
     Rough.poly(ctx, [[this.x - Math.cos(a) * 7 + Rough.jit(2), this.y - Math.sin(a) * 7 + Rough.jit(2)],
     [this.x - Math.cos(a) * 3, this.y - Math.sin(a) * 3 + 3], [this.x, this.y]],
       { color: '#dfe6ff', width: 2.4, jitter: 1.4, closed: false });
@@ -1919,7 +1945,7 @@ class Arrow {
     this.trail.push([this.x, this.y]);
     if (this.trail.length > 6) this.trail.shift();
     if (d < 14) {
-      if (this.target && !this.target.dead) this.target.hurt(this.dmg, game, { color: '#4c9f70' });
+      if (this.target && !this.target.dead) game.sentryHurt(this.target, this.dmg, { color: '#4c9f70' });
       return false;
     }
     return true;
@@ -1933,6 +1959,7 @@ class Arrow {
       ctx.restore();
     }
     const a = this.a || 0;
+    if (!Fx.low) Rough.bloom(ctx, this.x, this.y, 14, '#4c9f70', 0.45);
     Rough.line(ctx, this.x - Math.cos(a) * 8, this.y - Math.sin(a) * 8, this.x, this.y,
       { color: '#2f6f4f', width: 2.4, jitter: 0.8, passes: 1 });
   }
@@ -2013,8 +2040,8 @@ class DeathSplat {
       ctx.restore();
     }
     ctx.save();
-    ctx.globalAlpha = (1 - E.out(p)) * 0.8;
-    Rough.circle(ctx, this.x, this.y, this.r * (0.7 + E.out(p) * 1.1), { color: this.color, width: 3, jitter: 4 });
+    Rough.circle(ctx, this.x, this.y, this.r * (0.7 + E.out(p) * 1.1),
+      { color: this.color, width: 3, jitter: 4, alpha: (1 - E.out(p)) * 0.85 });
     ctx.restore();
     for (const b of this.bits) b.draw(ctx);
   }
@@ -2051,9 +2078,9 @@ class ClickRipple {
     const p = E.out(1 - this.life / this.max);
     Rough.boil(this.id, 0);
     ctx.save();
-    ctx.globalAlpha = (1 - p) * (this.crit ? 0.9 : 0.55);
+    // the ring fades as it spreads (strokes take alpha explicitly)
     Rough.circle(ctx, this.x, this.y, 6 + p * (this.crit ? 46 : 26),
-      { color: this.color, width: this.crit ? 3 : 2, jitter: 2.5 });
+      { color: this.color, width: this.crit ? 3 : 2, jitter: 2.5, alpha: (1 - p) * (this.crit ? 0.95 : 0.7) });
     ctx.restore();
   }
 }
@@ -2075,9 +2102,11 @@ class FireBlast {
   }
   update(dt) { this.life -= dt; return this.life > 0; }
   draw(ctx, t) {
-    const p = E.outQuint(1 - this.life / this.max);
+    const lin = 1 - this.life / this.max;
+    const p = E.outQuint(lin);
     const r = this.radius * (0.3 + p * 0.75);
     Rough.boil(this.id, t * 2);
+    if (!Fx.low) Rough.bloom(ctx, this.x, this.y, r * 1.3, '#ff7a2d', E.hold(lin, 0.35) * 0.8);   // heat under it
     ctx.save();
     ctx.globalAlpha = Math.max(0, 1 - p * p) * 0.95;
     Rough.blob(ctx, this.x, this.y, r, '#e8c33a', '#e0562d', { spacing: 8, fillWidth: 6, overflow: 1.18, width: 3 });

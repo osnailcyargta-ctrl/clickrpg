@@ -73,6 +73,17 @@ Open `index.html` in a browser. That's the whole install.
   else, so the whole fight keeps pace rather than melting. There is no victory
   screen out here; the run ends when the castle does, and the end card tells
   you which wave you reached.
+- **The Auger** — endless only, from wave 11, **one or two hidden in every
+  wave**. A spider that got the count wrong: three legs on its right, two
+  heavier ones on its left and a bleeding stump where the third should be, a
+  body crowded with eyes, and a drill where its mouth ought to be. It walks
+  in until it is **four blocks off the castle's lawn** and stops dead. Every
+  eye shuts at once, then opens again, all of them on the castle, pupils gone
+  to pinpricks. Then it **winds up for a second, backing away slowly** while
+  the drill screams and a red line scribbles itself across the ground to the
+  wall. Then it **runs, very fast**. **Anything that hurts it mid-run stops
+  it dead**, and it has to wind up all over again. If it gets there it goes
+  straight through the wall: **two segments**, not one.
 - Enemy **counts stop growing once you've beaten a boss** — after that the
   waves get meaner through HP and speed, not bigger crowds.
 - **Skills.** Every cursor has one. It charges over 50 clicks and you fire it
@@ -178,6 +189,7 @@ always allowed.
 |---|---|
 | **Stick Sentry** | A doodled archer. Plinks the nearest enemy every 1.6s for 3. |
 | **Blob'd-Tier** | A piece of the Blot on a leash. Lobs two ink blots every 1.9s, one arcing over the top and one under, for 2 each. Only offered once you have put the Blot down — and the Blot drops one itself, half the time, which you pick up by **clicking it off the floor**. |
+| **Trapper** | A fly trap, and the expensive one. It does nothing until something walks inside **4.5 blocks** of it, then sinks into the page, **tunnels under the ground** to it, bursts up underneath and bites: **6 damage, a stun, and the thing spat two blocks back** the way it came. Then it goes back under and comes home. It will not bite what it cannot reach from the ground — bolts and lava balls in the air. **The one sentry you can keep buying while it holds the post:** every Trapper you buy bites **1 harder, up to 10**, and each one costs more than the last. |
 | **Electric Bird** | The Thunder Eagle at a tenth the size. Plinks for 2 every 1.5s, and every 3s **throws itself six blocks at your cursor** (or all the way to it, if the cursor is nearer than that), carving **4** into everything on the line before snapping back to the post. Only offered once you have put the Eagle down, and the Eagle drops one half the time. |
 
 The bird has one trick the others don't: **hold still and it winds up.** After
@@ -187,7 +199,9 @@ wind-up is gone. It is the one thing in the game that rewards taking your hand
 off the page, which cuts against everything else here — that is the point.
 
 **Sentry Drill** is a one-shot that upgrades whoever holds the post, now and
-for every tenant after: the stick figure looses **a second arrow** a beat
+for every tenant after. **Every hit the post lands can crit the way yours
+do** — 10% of the time, for 50% more — including the Trapper's bite and the
+bird's dash. On top of that the stick figure looses **a second arrow** a beat
 behind the first, the Blob'd-Tier adds **a third blot straight up the middle**
 with no curve, and the Electric Bird hits for **4** and dashes every **2.5s**
 instead of 3.
@@ -202,6 +216,23 @@ instead of 3.
 | **Extra Credit** | +5% scribbles from every kill, per level. |
 | **Deep Ink** | +0.3s on every status you inflict, per level: burns, slows, stains, stuns. |
 | **Tape Patch** | Tapes one castle segment back together. Only offered while damaged. |
+
+## Effects, and slow machines
+
+Everything is drawn live in crayon, with light on top: every landed click
+throws a spark, a crit spins a star open, deaths burst in the thing's own
+colour and throw droplets that leave stains on the page, the castle flashes
+and sheds chunks when it loses a segment, bosses glow, burning things glow,
+stunned things get stars circling their heads.
+
+Glow is drawn from a cached sprite per colour rather than a fresh gradient
+every time, which is much cheaper. Even so, glow costs by the pixel, and a TV
+browser has little to spare. So a **frame governor** in `js/fx.js` watches the
+real frame time. If the game spends a couple of seconds under ~40 fps, it
+switches to a lighter mode that drops the purely decorative extras (small
+glows, the Auger's bristles and veins, most droplets and stains). It switches
+back once the machine keeps up again. Nothing it switches off changes a rule;
+it only changes how much there is to look at.
 
 ## Sound
 
@@ -248,6 +279,9 @@ js/config.js      difficulties, wave table, cursor and upgrade tables
 js/audio.js       mp3 playback: Web Audio with an <audio> fallback
 js/entities.js    enemies, bosses, status effects, sentry, every flying doodle
 js/hive.js        the Hive fight's ground cracks, lava and burning lawn
+js/fx.js          decoration only: hit sparks, kill bursts, droplets, the frame governor
+js/auger.js       the Auger, endless only
+js/trapper.js     the Trapper sentry
 js/skills.js      the cast cinematic and one payload per cursor
 js/offers.js      the three-card between-wave screen
 js/cursors.js     cursor powers and the drawn pointer sprites

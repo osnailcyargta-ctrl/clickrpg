@@ -37,6 +37,10 @@ const Rough = (function () {
   }
 
   /* A single wobbly stroke, drawn a couple of times with different jitter. */
+  /* NB: strokes set their alpha from `o.alpha`, they do not multiply into
+     the ctx.globalAlpha they were called at - a wrapper fade is ignored. Every
+     visual in the game was tuned by eye against that, so it stays; anything
+     that wants to fade passes `alpha` explicitly. */
   function line(ctx, x1, y1, x2, y2, o) {
     o = o || {};
     const w = o.width || 2.2, passes = o.passes || 2, j = o.jitter == null ? 1.6 : o.jitter;
@@ -249,18 +253,41 @@ const Rough = (function () {
   /* Additive glow. Crayon on paper has no light of its own, so anything that
      is supposed to be BRIGHT - lightning, static, a magnet letting go - gets
      one of these underneath it. */
-  function bloom(ctx, x, y, r, color, alpha) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = alpha == null ? 0.5 : alpha;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  /* Bloom is drawn from a pre-rendered sprite per colour rather than a fresh
+     radial gradient every call. It looks the same, and a TV browser can stamp
+     a cached image far faster than it can build and fill a gradient - which
+     is what lets the game afford a lot more of them. */
+  const bloomCache = {};
+  const BLOOM_RES = 96;
+  function bloomSprite(color) {
+    let c = bloomCache[color];
+    if (c) return c;
+    c = document.createElement('canvas');
+    c.width = c.height = BLOOM_RES;
+    const g2 = c.getContext('2d');
+    const h = BLOOM_RES / 2;
+    const g = g2.createRadialGradient(h, h, 0, h, h, h);
     g.addColorStop(0, color);
     g.addColorStop(0.45, color);
     g.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.globalAlpha *= 0.55;
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    g2.fillStyle = g;
+    g2.fillRect(0, 0, BLOOM_RES, BLOOM_RES);
+    bloomCache[color] = c;
+    return c;
+  }
+
+  function bloom(ctx, x, y, r, color, alpha) {
+    if (!(r > 0.5)) return;
+    const a = (alpha == null ? 0.5 : alpha) * 0.55;
+    if (a <= 0.004) return;
+    // absolute alpha, like the strokes and like the gradient version always
+    // was - callers were tuned against that, so this stays a pure speed-up
+    const prevOp = ctx.globalCompositeOperation, prevA = ctx.globalAlpha;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = Math.min(1, a);
+    ctx.drawImage(bloomSprite(color), x - r, y - r, r * 2, r * 2);
+    ctx.globalCompositeOperation = prevOp;
+    ctx.globalAlpha = prevA;
   }
 
   /* Darkened edges, so the middle of the page is where you look. */
@@ -285,7 +312,10 @@ const Rough = (function () {
     inOut: t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
     back: t => { const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); },
     pop: t => Math.sin(t * Math.PI),
-    clamp01: v => v < 0 ? 0 : (v > 1 ? 1 : v)
+    clamp01: v => v < 0 ? 0 : (v > 1 ? 1 : v),
+    // full strength for the first `keep` of a life, then an eased fade out -
+    // the curve for anything that should land hard and then go
+    hold: (t, keep) => t <= keep ? 1 : Math.max(0, 1 - Math.pow((t - keep) / (1 - keep), 1.6))
   };
 
   return { srand, rnd, jit, boil, line, poly, circle, circlePts, rectPts, scribble, blob, text, centroid, noisyRing, grain, arc, wrap, ease, bloom, vignette };

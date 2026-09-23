@@ -34,10 +34,12 @@ const Game = {
   sentryType: null,         // 'stick' or 'blobd' - there is only one post
   blotKilled: false,        // the Blot has gone down at least once this run
   eagleKilled: false,       // so has the Thunder Eagle
+  trapperBuys: 0,           // every one bought bites harder
   endless: false,           // the run keeps going past wave 10
   stillT: 0,                // how long the hand has been off the page
   lastPointer: { x: 0, y: 0 },
   lawnBurnt: false,         // the Queen's lava only gets the lawn once
+  augerAt: [],              // which spawns this wave are Augers
   spawnQueue: [],           // born this frame, joins at the next flush
   skillCharge: 0,           // clicks banked toward the skill
   skillCd: 0,               // seconds until it can be cast again
@@ -216,6 +218,7 @@ const Game = {
     this.sentryType = null;
     this.blotKilled = false;
     this.eagleKilled = false;
+    this.trapperBuys = 0;
     this.stillT = 0;
     this.lawnBurnt = false;
     this.spawnQueue = [];
@@ -246,6 +249,17 @@ const Game = {
     };
     this.spawnLeft = this.waveSpec.count;
     this.spawnTimer = 1.1;
+    // out past the ten-wave run, one or two Augers hide in every wave - never
+    // the first thing through the door, and never on the boss's slot
+    this.augerAt = [];
+    if (this.endless && this.wave >= AUGER_FROM_WAVE) {
+      const slots = [];
+      for (let i = 0; i <= this.waveSpec.count - 3; i++) slots.push(i);
+      const n = Math.random() < 0.4 ? 2 : 1;
+      while (this.augerAt.length < n && slots.length) {
+        this.augerAt.push(slots.splice(Math.floor(Math.random() * slots.length), 1)[0]);
+      }
+    }
     this.waveScribbles = 0;
     if (this.oneshot.chalk) this.shield = 2;     // the ward is re-drawn every wave
     this.state = 'playing';
@@ -281,6 +295,16 @@ const Game = {
       if (off.id === 'sentry') this.installSentry('stick');
       if (off.id === 'blobd') this.installSentry('blobd');
       if (off.id === 'bird') this.installSentry('bird');
+      if (off.id === 'trapper') {
+        // every Trapper bought bites harder; buying it while it already holds
+        // the post just sharpens the one standing there
+        this.trapperBuys++;
+        if (this.sentryType === 'trapper') {
+          this.effects.push(new FloatText(this.sentry.homeX, this.sentry.homeY - 30,
+            'bite ' + this.trapperDamage(), '#5e9e3a', 20, true));
+          UI.syncHud(this);
+        } else this.installSentry('trapper');
+      }
       if (off.id === 'molten') this.moltenCharge = 0;
       if (off.id === 'paper') { this.maxHp++; this.castleHp++; }   // the new segment starts full
     } else {
@@ -349,6 +373,7 @@ const Game = {
       const bite = this.clickDamage() * (crit ? CRIT_MULT : 1) * (opts_ghost ? 0.5 : 1);
       target.hurt(bite, this, { crit });
       this.effects.push(new ClickRipple(x, y, crit ? '#e0562d' : cursor.color, crit));
+      this.effects.push(new HitSpark(x, y, cursor.color, crit));
       Sfx.play(crit ? 'crit' : 'click_hit', { throttle: 25, volume: crit ? 0.9 : 0.55, voices: 6 });
       const onHit = CursorOnHit[cursor.id];
       if (onHit) onHit(this, target);
@@ -432,6 +457,7 @@ const Game = {
       this.shake(8);
     } else {
       this.castleHp--;
+      this.effects.push(new CastleBurst(this));
       Sfx.play('castle_hit', { volume: 0.95, throttle: 0 });
       this.shake(17);
       this.flash = 1;
@@ -488,6 +514,7 @@ const Game = {
       else if (w.boss === 'warden') kind = Math.random() < 0.5 ? 'hive' : 'warden';
       else kind = w.boss;
     }
+    if (this.augerAt && this.augerAt.includes(this.spawnLeft)) kind = 'auger';
 
     // just outside the visible paper, so they walk on screen right away
     const mx = this.w / 2 + 60, my = this.h / 2 + 60;
@@ -504,6 +531,11 @@ const Game = {
     const spawned = new Enemy(kind, hp, w.speed * k.speedMul, sx, sy);
     this.enemies.push(spawned);
     if (kind === 'hive') this.hitchHaulers(spawned, w);
+    if (kind === 'auger') {
+      this.shake(8);
+      Sfx.play('auger_screech', { volume: 1, rateVar: 0.05 });
+      this.effects.push(new SpawnMark(sx, sy, k.r * 2.2));
+    }
     if (kind === 'boss' || kind === 'warden' || kind === 'eagle' || kind === 'hive') {
       this.shake(10);
       Sfx.play(kind === 'hive' ? 'hive_drone' : 'boss_spawn', { volume: 1, rateVar: 0.02 });
@@ -527,10 +559,29 @@ const Game = {
     this.sentryType = type;
     this.sentry = new Sentry(-this.castleRadius - 26, 14, type);
     if (had && had !== type) {
+      const gone = { stick: 'stick out', blobd: "blob'd out", bird: 'bird out', trapper: 'trap out' };
       this.effects.push(new FloatText(-this.castleRadius - 26, -6,
-        had === 'stick' ? 'stick out' : "blob'd out", '#6b6b6b', 15, false));
+        gone[had] || 'out', '#6b6b6b', 15, false));
     }
     UI.syncHud(this);
+  },
+
+  /* How hard the Trapper bites: 6 for the first one bought, 1 more for every
+     one bought after, never past 10. */
+  trapperDamage() {
+    return Math.min(TRAPPER_MAX_DMG, TRAPPER_BASE_DMG + Math.max(0, this.trapperBuys - 1));
+  },
+
+  /* Every hit a sentry lands goes through here, so the Drill can make it crit
+     the way a click does. */
+  sentryHurt(e, dmg, opts) {
+    opts = Object.assign({}, opts);
+    if (this.oneshot.drill && Math.random() < SENTRY_CRIT_CHANCE) {
+      dmg *= CRIT_MULT;
+      opts.crit = true;
+      this.effects.push(new HitSpark(e.x, e.y, opts.color || '#2b2b2b', true));
+    }
+    return e.hurt(dmg, this, opts);
   },
 
   /* The Hive does not fly. Ten workers drag it in on strands, and while any
@@ -576,6 +627,9 @@ const Game = {
   frame(now) {
     let dt = (now - this.last) / 1000;
     this.last = now;
+    // the governor reads the real frame time, before it is capped - a tab
+    // switch is clipped so one long gap cannot condemn the machine
+    if (this.state === 'playing' && !this.paused) Fx.sample(Math.min(dt, 0.1));
     if (dt > 0.05) dt = 0.05;
     this.time += dt;
     this.update(dt);
@@ -707,12 +761,13 @@ const Game = {
         const s = this.ground.size;
         ctx.drawImage(this.ground.canvas, -s / 2, -s / 2, s, s);
       }
-      for (const f of this.effects) if (f instanceof InkPuddle) f.draw(ctx, this.time);
+      for (const f of this.effects) if (f instanceof InkPuddle || f.under) f.draw(ctx, this.time);
       if (this.penTrail) this.penTrail.draw(ctx, this.time);
       this.drawCastle(ctx);
       if (this.sentry) this.sentry.draw(ctx, this.time);
       for (const e of this.enemies) e.draw(ctx, this.time);
-      for (const f of this.effects) if (!(f instanceof InkPuddle)) f.draw(ctx, this.time);
+      if (this.sentry && this.sentry.type === 'trapper') this.sentry.drawTrapperOver(ctx, this.time);
+      for (const f of this.effects) if (!(f instanceof InkPuddle) && !f.under) f.draw(ctx, this.time);
     }
     ctx.restore();
 

@@ -4,6 +4,7 @@ const BLOCK = 40;                  // one "block" of the doodle grid
 const BASE_CLICK_DAMAGE = 3;      // the Plain Cursor's hit; every cursor sets its own
 const BASE_CRIT_CHANCE = 0.10;
 const CRIT_MULT = 1.5;             // crit = 50% more damage
+const SENTRY_CRIT_CHANCE = 0.10;   // with the Sentry Drill, the post crits like you do
 const CASTLE_HP = 5;               // 5 bar segments, 20% each
 const WAVES_PER_RUN = 10;
 const ENDLESS_BOSSES = ['boss', 'eagle', 'warden', 'hive'];   // past wave 10 it is a draw
@@ -11,6 +12,11 @@ const ENDLESS_BOSS_EVERY = 5;
 const SKILL_CHARGE = 50;        // clicks to charge a skill
 const SKILL_COOLDOWN = 30;      // seconds between casts, however fast you click
 const GROUND_RADIUS = BLOCK * 3;   // the coloured ground around the castle
+const AUGER_FROM_WAVE = 11;        // the Auger only exists out past the ten-wave run
+const AUGER_STOP = GROUND_RADIUS + BLOCK * 4;   // where it halts to wind up
+const TRAPPER_BASE_DMG = 6;
+const TRAPPER_MAX_DMG = 10;
+const TRAPPER_RANGE = BLOCK * 4.5;
 
 const DIFFICULTIES = {
   easy:   { name: 'EASY',   hpMul: 0.65, countMul: 0.65, speedMul: 0.85, intervalMul: 1.2,  color: '#4c9f70', reward: 0.9 },
@@ -99,7 +105,12 @@ const ENEMY_KINDS = {
   queen:   { r: 38, hpMul: 0, flatHp: 184, speedMul: 0.5,  boss: true,  fill: '#d9a441' },
   larva:   { r: 13, hpMul: 0, flatHp: 4,   speedMul: 0,    fill: '#efe0b0' },
   steroid: { r: 26, hpMul: 0, flatHp: 20,  speedMul: 0.8,  fill: '#b5823a' },
-  lavaball: { r: 17, hpMul: 0, flatHp: 10, speedMul: 0,    fill: '#e0562d' }
+  lavaball: { r: 17, hpMul: 0, flatHp: 10, speedMul: 0,    fill: '#e0562d' },
+
+  // THE AUGER - endless only, wave 11 on, one or two a wave. Walks to four
+  // blocks off the lawn, winds up backing away, then runs at the castle. A
+  // hit mid-run stops it dead and it has to wind up all over again.
+  auger:    { r: 24, hpMul: 2.6, speedMul: 0.8, fill: '#3a2436' }
 };
 
 /* ---- CURSORS -------------------------------------------------------------
@@ -190,7 +201,7 @@ const ONESHOT = [
   {
     id: 'double', name: 'Double Trouble', cost: 92, color: '#8a5cc4',
     desc: 'Half your cursor belongs to someone else.',
-    detail: 'One side of the cursor is redrawn as another cursor, picked at random, and from then on the charge fires both tricks, taking it in turns. The most expensive thing on the page, and worth it.'
+    detail: 'One side of the cursor is redrawn as another cursor, picked at random, and from then on the charge fires both tricks, taking it in turns. One of the most expensive things on the page, and worth it.'
   },
   {
     id: 'afterimage', name: 'Afterimage', cost: 66, color: '#7a7f8c',
@@ -210,7 +221,12 @@ const ONESHOT = [
   {
     id: 'drill', name: 'Sentry Drill', cost: 70, color: '#d99a26',
     desc: 'Whoever holds the post gets better at it.',
-    detail: 'Permanently, for whoever stands in the sentry post: the stick figure looses a second arrow a beat behind the first, the Blob\'d-Tier adds a third blot straight up the middle with no curve, and the Electric Bird hits for 4 and dashes every 2.5s instead of 3.'
+    detail: 'Permanently, for whoever stands in the sentry post: every hit it lands can crit the way yours do - 10% of the time, for 50% more. On top of that the stick figure looses a second arrow a beat behind the first, the Blob\'d-Tier adds a third blot straight up the middle with no curve, and the Electric Bird hits for 4 and dashes every 2.5s instead of 3.'
+  },
+  {
+    id: 'trapper', name: 'Trapper', cost: 96, color: '#5e9e3a', sentry: true, stacks: true,
+    desc: 'Something with teeth, planted by the castle.',
+    detail: 'A fly trap takes the sentry post. When anything walks inside four and a half blocks of it, it sinks into the page, tunnels across under the ground and bursts up underneath: 6 damage, a stun, and the thing is spat two blocks back the way it came. Unlike the other sentries you can keep buying it while it holds the post - every Trapper you buy bites 1 harder, up to 10.'
   },
   {
     id: 'blobd', name: "Blob'd-Tier", cost: 58, color: '#6b4fb0', sentry: true, needsBlot: true,
@@ -289,7 +305,7 @@ const SKILLS = {
 function skillFor(cursorId) { return SKILLS[cursorId] || SKILLS.plain; }
 
 // which occupant each sentry offer puts in the post
-const SENTRY_OF = { sentry: 'stick', blobd: 'blobd', bird: 'bird' };
+const SENTRY_OF = { sentry: 'stick', blobd: 'blobd', bird: 'bird', trapper: 'trapper' };
 
 function cursorById(id) { return CURSORS.find(c => c.id === id) || CURSORS[0]; }
 function oneshotById(id) { return ONESHOT.find(u => u.id === id); }

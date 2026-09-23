@@ -15,9 +15,26 @@ function buildOffers(game) {
     if (u.sentry) {
       // the sentry post changes hands, so these keep coming back - unless the
       // one being offered is already the one standing in it
-      if (game.sentryType === SENTRY_OF[u.id]) continue;
+      const holding = game.sentryType === SENTRY_OF[u.id];
+      // the Trapper is the exception: it keeps coming back to sharpen the one
+      // already in the post, until it bites for the most it ever will
+      if (holding && !(u.stacks && game.trapperDamage() < TRAPPER_MAX_DMG)) continue;
       if (u.needsBlot && !game.blotKilled) continue;    // you have to meet it first
       if (u.needsEagle && !game.eagleKilled) continue;
+      if (u.stacks) {
+        const next = game.trapperBuys === 0 ? TRAPPER_BASE_DMG : Math.min(TRAPPER_MAX_DMG, game.trapperDamage() + 1);
+        pool.push({
+          kind: 'oneshot', id: u.id, name: u.name, color: u.color,
+          // each one costs more than the last
+          cost: offerCost(Math.round(u.cost * (1 + 0.3 * game.trapperBuys)), game.wave),
+          desc: holding ? 'Sharper teeth for the one in the post.' : u.desc,
+          detail: holding
+            ? 'The Trapper already holds the post. This one makes it bite for ' + next + ' instead of ' + game.trapperDamage() + '. It stops being offered once it bites for ' + TRAPPER_MAX_DMG + '.'
+            : u.detail + (game.trapperBuys ? ' Bought before this run, so it comes back biting for ' + next + '.' : ''),
+          tag: holding ? 'SENTRY \u00b7 BITE ' + next : 'SENTRY'
+        });
+        continue;
+      }
     } else if (game.oneshot[u.id]) continue;
     pool.push({ kind: 'oneshot', id: u.id, name: u.name, color: u.color, cost: offerCost(u.cost, game.wave), desc: u.desc, detail: u.detail, tag: u.sentry ? 'SENTRY' : 'ONE-SHOT' });
   }

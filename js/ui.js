@@ -159,7 +159,8 @@ const UI = {
     }
     if (g.sentryType) {
       const post = ONESHOT.find(u => SENTRY_OF[u.id] === g.sentryType);
-      if (post) badges.push(badge(post.name, post.color, ''));
+      if (post) badges.push(badge(post.name, post.color,
+        g.sentryType === 'trapper' ? 'bite ' + g.trapperDamage() : ''));
     }
     for (const u of STACKING) {
       const lv = g.stacking[u.id] || 0;

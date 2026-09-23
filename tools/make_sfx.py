@@ -604,6 +604,59 @@ def s_grass_fire():
     return mix(woosh * 1.0, crackle * 0.85)
 
 
+def s_auger_screech():
+    # something wet and wrong clearing its throat, then a grinding shriek
+    rasp = am(sweep(noise(0.9) * swell(0.9, 0.25, 1.6), 1800, 700, 3.5), 38, 0.75)
+    grind = am(bp(noise(0.9), 260, 1.8) * swell(0.9, 0.3, 1.4), 23, 0.6)
+    clicks = grains(0.9, 26, spread=0.75, length=0.006, band=(2500, 6000), decay=1.2)
+    return mix(rasp * 1.0, grind * 0.8, clicks * 0.7)
+
+
+def s_auger_chitter():
+    # every eye turning at once: a fast dry clatter
+    return mix(grains(0.32, 30, spread=0.28, length=0.005, band=(2800, 7000), decay=0.8) * 1.2,
+               am(bp(noise(0.32), 900, 3.0) * swell(0.32, 0.2, 2.0), 45, 0.8) * 0.4)
+
+
+def s_auger_charge():
+    # the drill spinning up: a grind that climbs and tightens for a second
+    x = noise(1.05) * swell(1.05, 0.92, 4.0)
+    whine = sweep(x, 250, 3200, 5.0)
+    teeth = am(sweep(noise(1.05), 120, 900, 2.0) * swell(1.05, 0.9, 3.0), 30, 0.85)
+    return mix(whine * 1.0, teeth * 0.9)
+
+
+def s_auger_dash():
+    # gone: a tearing rush with the drill screaming inside it
+    rush = sweep(noise(0.55) * env(0.55, 0.004, curve=2.2), 3500, 400, 1.6)
+    scream = am(bp(noise(0.55), 2600, 6.0) * env(0.55, 0.002, curve=2.8), 60, 0.6)
+    scrape = grains(0.5, 18, spread=0.4, length=0.01, band=(600, 2400), decay=1.4)
+    return mix(rush * 1.1, scream * 0.7, scrape * 0.6)
+
+
+def s_trap_dig():
+    # something pulling itself down into the paper
+    return mix(grains(0.4, 22, spread=0.34, length=0.014, band=(300, 1400), decay=1.6) * 1.1,
+               sweep(noise(0.4) * swell(0.4, 0.3, 2.0), 700, 180, 1.4) * 0.8)
+
+
+def s_trap_emerge():
+    # the page splitting open from underneath
+    burst = bp(noise(0.3), 220, 1.2) * env(0.3, 0.001, curve=5)
+    tear = sweep(noise(0.3) * env(0.3, 0.002, curve=4), 600, 2600, 1.6)
+    dirt = grains(0.35, 16, spread=0.2, length=0.01, band=(500, 2000), decay=2.0)
+    return mix(burst * 1.2, tear * 0.8, dirt * 0.8)
+
+
+def s_trap_snap():
+    # jaws shutting: a hard wet crack and a crunch behind it
+    crack = hp(noise(0.08), 900) * env(0.08, 0.0005, curve=9)
+    thud = lp(noise(0.25), 260) * env(0.25, 0.001, curve=6)
+    crunch = grains(0.3, 14, spread=0.18, length=0.012, band=(800, 3500), decay=2.4)
+    wet = am(bp(noise(0.25), 1300, 2.5) * env(0.25, 0.004, curve=4), 70, 0.7)
+    return mix(crack * 1.4, thud * 1.1, crunch * 0.8, wet * 0.5)
+
+
 SOUNDS = {
     'click_hit': s_click_hit, 'click_miss': s_click_miss, 'crit': s_crit,
     'kill': s_kill, 'kill_big': s_kill_big, 'castle_hit': s_castle_hit,
@@ -630,6 +683,9 @@ SOUNDS = {
     'hive_drone': s_hive_drone, 'bee_swarm': s_bee_swarm, 'queen_screech': s_queen_screech,
     'larva_pop': s_larva_pop, 'steroid_charge': s_steroid_charge,
     'lava_erupt': s_lava_erupt, 'lava_land': s_lava_land, 'grass_fire': s_grass_fire,
+    'auger_screech': s_auger_screech, 'auger_chitter': s_auger_chitter,
+    'auger_charge': s_auger_charge, 'auger_dash': s_auger_dash,
+    'trap_dig': s_trap_dig, 'trap_emerge': s_trap_emerge, 'trap_snap': s_trap_snap,
 }
 
 if __name__ == '__main__':
