@@ -17,8 +17,9 @@ function buildOffers(game) {
       // one being offered is already the one standing in it
       if (game.sentryType === SENTRY_OF[u.id]) continue;
       if (u.needsBlot && !game.blotKilled) continue;    // you have to meet it first
+      if (u.needsEagle && !game.eagleKilled) continue;
     } else if (game.oneshot[u.id]) continue;
-    pool.push({ kind: 'oneshot', id: u.id, name: u.name, color: u.color, cost: offerCost(u.cost, game.wave), desc: u.desc, detail: u.detail, tag: 'ONE-SHOT' });
+    pool.push({ kind: 'oneshot', id: u.id, name: u.name, color: u.color, cost: offerCost(u.cost, game.wave), desc: u.desc, detail: u.detail, tag: u.sentry ? 'SENTRY' : 'ONE-SHOT' });
   }
   for (const u of STACKING) {
     if (u.id === 'patch' && game.castleHp >= game.maxHp) continue;    // nothing to tape

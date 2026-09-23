@@ -12,8 +12,20 @@ const UI = {
     const tag = document.getElementById('build-tag');
     if (tag) tag.textContent = 'build ' + (window.BUILD_V || '?');
 
+    // the mode toggle sits above the difficulties and just flags the next start
+    this.endless = false;
+    const modeBtns = document.querySelectorAll('[data-mode]');
+    const paintMode = () => modeBtns.forEach(b2 =>
+      b2.classList.toggle('on', (b2.dataset.mode === 'endless') === this.endless));
+    modeBtns.forEach(b2 => b2.addEventListener('click', () => {
+      Sfx.play('button', { volume: 0.7 });
+      this.endless = b2.dataset.mode === 'endless';
+      paintMode();
+    }));
+    paintMode();
+
     document.querySelectorAll('[data-diff]').forEach(btn => {
-      btn.addEventListener('click', () => { Sfx.play('button', { volume: 0.7 }); game.start(btn.dataset.diff); });
+      btn.addEventListener('click', () => { Sfx.play('button', { volume: 0.7 }); game.start(btn.dataset.diff, this.endless); });
     });
     const skillBtn = document.getElementById('skill-button');
     skillBtn.addEventListener('click', e => { e.stopPropagation(); game.castSkill(); });
@@ -82,10 +94,14 @@ const UI = {
   syncHud(g) {
     const d = DIFFICULTIES[g.difficulty];
 
-    // wave pips, with the boss waves marked
+    // wave pips, with the boss waves marked. Past the tenth there is no end to
+    // count toward, so the row becomes the block of five you are inside.
     const pips = [];
-    for (let i = 1; i <= WAVES_PER_RUN; i++) {
-      const boss = !!WAVE_TABLE[i - 1].boss;
+    const past = g.endless && g.wave > WAVES_PER_RUN;
+    const from = past ? Math.floor((g.wave - 1) / ENDLESS_BOSS_EVERY) * ENDLESS_BOSS_EVERY + 1 : 1;
+    const to = past ? from + ENDLESS_BOSS_EVERY - 1 : WAVES_PER_RUN;
+    for (let i = from; i <= to; i++) {
+      const boss = past ? (i % ENDLESS_BOSS_EVERY === 0) : !!WAVE_TABLE[i - 1].boss;
       const cls = 'pip' + (i < g.wave ? ' done' : (i === g.wave ? ' now' : '')) + (boss ? ' boss' : '');
       pips.push('<i class="' + cls + '"></i>');
     }
@@ -104,7 +120,7 @@ const UI = {
     }
 
     const diffEl = document.getElementById('hud-diff');
-    diffEl.textContent = d.name;
+    diffEl.textContent = g.endless ? d.name + ' \u00b7 ENDLESS' : d.name;
     diffEl.style.color = d.color;
     diffEl.style.borderColor = d.color;
 
@@ -169,7 +185,9 @@ const UI = {
       .filter(s => s.lv > 0)
       .map(s => s.u.name + ' ×' + s.lv);
     document.getElementById('end-body').innerHTML =
-      '<div>' + DIFFICULTIES[g.difficulty].name + ' &middot; wave ' + g.wave + ' of ' + WAVES_PER_RUN + '</div>'
+      '<div>' + DIFFICULTIES[g.difficulty].name
+      + (g.endless ? ' &middot; endless &middot; wave ' + g.wave + ' reached'
+        : ' &middot; wave ' + g.wave + ' of ' + WAVES_PER_RUN) + '</div>'
       + '<div>' + g.totalKills + ' scribbles erased</div>'
       + '<div>castle ' + g.castleHp + '/' + g.maxHp + '</div>'
       + '<div>holding: ' + cursorById(g.cursorId).name + '</div>'

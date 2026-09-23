@@ -168,3 +168,10 @@ button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1
   .badge { font-size: 9.5px; }
   .purse-chip { font-size: 16px; }
 }
+
+/* the run-length toggle above the difficulty buttons */
+.modes { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 4px; }
+.mode { display: flex; flex-direction: column; gap: 3px; min-width: 176px; padding: 10px 16px; opacity: 0.5; }
+.mode b { font-family: var(--title); font-size: 16px; letter-spacing: 2px; }
+.mode span { font-size: 11px; opacity: 0.7; }
+.mode.on { opacity: 1; border-color: #6b4fb0; color: #57409a; }

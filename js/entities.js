@@ -134,6 +134,8 @@ class Enemy {
       Sfx.play('queen_screech', { volume: 1, rateVar: 0 });
     }
     if (this.kind === 'eagle') {
+      game.eagleKilled = true;
+      if (Math.random() < 0.5) game.effects.push(new BirdDrop(this.x, this.y));
       game.effects.push(new EagleAscend(this.x, this.y, this.r, game));
       game.slowmo(0.45, 0.32);
       game.shake(18);
@@ -1490,10 +1492,38 @@ class Sentry {
     this.cool = this.type === 'blobd' ? 1.9 : 1.6;
     this.aim = -Math.PI / 2; this.recoil = 0; this.bob = Math.random() * 6;
     this.wob = Math.random() * 6;
+    this.homeX = x; this.homeY = y;      // the bird always comes back to the post
+    this.dashCool = 3;                   // bird: seconds until the next run
+    this.dash = null;
+    this.queued = [];                    // shots waiting on a delay, for the Drill
   }
+
+  /* The bird's dash timer, shortened by however long you have been holding
+     still. Never below a second, and the Drill lowers the ceiling too. */
+  dashMax(game) { return game.oneshot.drill ? 2.5 : 3; }
+  dashWait(game) {
+    return Math.max(1, this.dashMax(game) - game.stillBonus());
+  }
+
   update(dt, game) {
     this.cool -= dt;
     if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt / 0.25);
+
+    // shots the Drill put on a delay
+    for (let i = this.queued.length - 1; i >= 0; i--) {
+      const q = this.queued[i];
+      q.at -= dt;
+      if (q.at <= 0) {
+        this.queued.splice(i, 1);
+        if (q.target && !q.target.dead) {
+          game.effects.push(new Arrow(this.x, this.y, q.target, q.dmg));
+          Sfx.play('sentry_shot', { volume: 0.3, throttle: 40 });
+        }
+      }
+    }
+
+    if (this.type === 'bird') this.birdDash(dt, game);
+
     let best = null, bd = Infinity;
     for (const e of game.enemies) {
       if (e.dead) continue;
@@ -1508,22 +1538,70 @@ class Sentry {
         this.recoil = 1;
         if (this.type === 'blobd') {
           this.cool = 1.9;
-          // two blots, one arcing over the top and one under
+          // two blots, one arcing over the top and one under - and with the
+          // Drill a third straight up the middle, which arrives first
           for (const side of [-1, 1]) {
             game.effects.push(new InkBlotShot(this.x, this.y - 4, best, 2, side));
           }
+          if (game.oneshot.drill) game.effects.push(new InkBlotShot(this.x, this.y - 4, best, 2, 0));
           Sfx.play('ink_splat', { volume: 0.45, throttle: 60 });
+        } else if (this.type === 'bird') {
+          this.cool = 1.5;
+          game.effects.push(new BirdBolt(this.x, this.y - 4, best, game.oneshot.drill ? 4 : 2));
+          Sfx.play('zap', { volume: 0.32, throttle: 60 });
         } else {
           this.cool = 1.6;
           game.effects.push(new Arrow(this.x, this.y, best, 3));
+          // the Drill looses a second one a beat behind the first
+          if (game.oneshot.drill) this.queued.push({ at: 0.28, target: best, dmg: 3 });
           Sfx.play('sentry_shot', { volume: 0.4 });
         }
       }
     }
     return true;
   }
+
+  /* Six blocks at the cursor, or all the way to it if it is nearer than that,
+     and back to the post afterwards. Anything on the line takes 4. */
+  birdDash(dt, game) {
+    if (this.dash) {
+      const d = this.dash;
+      d.t += dt;
+      const k = E.clamp01(d.t / d.dur);
+      // out hard, home slower, the way the Eagle swoops
+      const swing = k < 0.42 ? E.out(k / 0.42) : 1 - E.inOut((k - 0.42) / 0.58);
+      this.x = d.fromX + (d.toX - d.fromX) * swing;
+      this.y = d.fromY + (d.toY - d.fromY) * swing;
+      // carve whatever it passes through, once each
+      for (const e of game.enemies) {
+        if (e.dead || d.hit.has(e.id)) continue;
+        if (Math.hypot(e.x - this.x, e.y - this.y) <= e.r + 16) {
+          d.hit.add(e.id);
+          e.hurt(4, game, { color: '#8ea6ff' });
+          for (let i = 0; i < 4; i++) game.effects.push(new Crumb(this.x, this.y, '#8ea6ff'));
+        }
+      }
+      if (k >= 1) { this.dash = null; this.x = this.homeX; this.y = this.homeY; }
+      return;
+    }
+    this.dashCool -= dt;
+    if (this.dashCool > 0) return;
+    this.dashCool = this.dashWait(game);
+    const px = game.pointer.x - game.w / 2, py = game.pointer.y - game.h / 2;
+    const dx = px - this.homeX, dy = py - this.homeY;
+    const d = Math.hypot(dx, dy) || 1;
+    const reach = Math.min(BLOCK * 6, d);            // to the cursor, or six blocks at it
+    this.dash = {
+      t: 0, dur: 0.5, hit: new Set(),
+      fromX: this.homeX, fromY: this.homeY,
+      toX: this.homeX + (dx / d) * reach, toY: this.homeY + (dy / d) * reach
+    };
+    Sfx.play('eagle_dash', { volume: 0.4, throttle: 120 });
+  }
+
   draw(ctx, t) {
     if (this.type === 'blobd') return this.drawBlobd(ctx, t);
+    if (this.type === 'bird') return this.drawBird(ctx, t);
     Rough.boil(this.id, t * 0.6);
     const bob = Math.sin(t * 2 + this.bob) * 1.5;
     const x = this.x, y = this.y + bob;
@@ -1566,6 +1644,82 @@ class Sentry {
     ctx.restore();
     // the little collar that says it works here now
     Rough.arc(ctx, x, y + r * 0.35, r * 0.8, 0.3, Math.PI - 0.3, { color: '#c9a36b', width: 2.2, jitter: 1.2 });
+  }
+
+  /* THE ELECTRIC BIRD - the Eagle at a tenth the size, drawn in the same
+     forked lightning and pointed at whatever it is about to throw itself at. */
+  drawBird(ctx, t) {
+    Rough.boil(this.id, t * 1.4);
+    const flying = !!this.dash;
+    const bob = flying ? 0 : Math.sin(t * 3.4 + this.wob) * 2;
+    const x = this.x, y = this.y + bob;
+    const a = this.dash
+      ? Math.atan2(this.dash.toY - this.dash.fromY, this.dash.toX - this.dash.fromX)
+      : this.aim;
+    const beat = Math.sin(t * (flying ? 26 : 8) + this.wob);
+
+    // the streak it tears while it is out
+    if (flying) {
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      for (const off of [-4, 4]) {
+        Rough.line(ctx, x - Math.cos(a) * 34 + off, y - Math.sin(a) * 34,
+          x - Math.cos(a) * 6, y - Math.sin(a) * 6,
+          { color: '#8ea6ff', width: 2.4, jitter: 2.8, passes: 1 });
+      }
+      ctx.restore();
+    }
+
+    // no meter - it just visibly winds up, sparking harder the closer it is
+    const k = flying ? 0 : E.clamp01(1 - this.dashCool / this.dashWait(Game));
+    if (k > 0.6) {
+      const heat = (k - 0.6) / 0.4;
+      ctx.save();
+      ctx.globalAlpha = heat * 0.45;
+      Rough.bloom(ctx, x, y, 14 + heat * 8, '#8ea6ff', 0.5);
+      ctx.globalAlpha = heat * (0.5 + Math.sin(t * 22) * 0.4);
+      for (let i = 0; i < 3; i++) {
+        const sa = t * 7 + i * 2.1 + this.wob;
+        const rr = 11 + heat * 5;
+        Rough.line(ctx, x + Math.cos(sa) * rr, y + Math.sin(sa) * rr,
+          x + Math.cos(sa) * (rr + 4), y + Math.sin(sa) * (rr + 4),
+          { color: '#8ea6ff', width: 2, jitter: 1.6, passes: 1 });
+      }
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(a + Math.PI / 2);          // -y is the way it is looking
+
+    // wings: one forked bolt each side, swept back, thin enough to read
+    const span = 16 + beat * 3 + k * 2;
+    for (const s of [-1, 1]) {
+      Rough.poly(ctx, [[s * 3, -2], [s * span * 0.45, -1 - beat], [s * span * 0.7, 3],
+      [s * span, 1 + beat * 2]],
+        { color: '#8ea6ff', width: 2.6, jitter: 1.6, closed: false });
+      Rough.poly(ctx, [[s * span * 0.7, 3], [s * span * 0.8, 7]],
+        { color: '#8ea6ff', width: 2, jitter: 1.4, closed: false });
+    }
+
+    // a forked tail, the way the Eagle's reads
+    Rough.poly(ctx, [[-3.5, 8], [0, 4], [3.5, 8]], { color: '#8ea6ff', width: 2.2, jitter: 1.4, closed: false });
+
+    // body: a pointed lozenge rather than a lump, so the silhouette has a nose
+    const body = [[0, -10], [4.2, -2], [2.8, 7], [-2.8, 7], [-4.2, -2]]
+      .map(pt => [pt[0] + Rough.jit(0.9), pt[1] + Rough.jit(0.9)]);
+    ctx.fillStyle = '#dfe6ff';
+    ctx.beginPath();
+    body.forEach((pt, i) => i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]));
+    ctx.closePath(); ctx.fill();
+    Rough.scribble(ctx, body, { color: '#8ea6ff', spacing: 4, width: 4, overflow: 1.1 });
+    Rough.poly(ctx, body, { color: '#3a4a7a', width: 1.7, jitter: 0.9 });
+
+    // beak and one hard little eye
+    Rough.poly(ctx, [[-1.8, -8], [0, -13], [1.8, -8]], { color: '#d99a26', width: 1.8, jitter: 0.8 });
+    ctx.fillStyle = '#2b2b2b';
+    ctx.beginPath(); ctx.ellipse(1.5, -6, 1.1, 1.1, 0, 0, 7); ctx.fill();
+    ctx.restore();
   }
 }
 
@@ -1613,6 +1767,95 @@ class InkBlotShot {
 }
 
 /* What the Blot leaves behind, half the time. Click it to take it in. */
+/* The Electric Bird's shot: a short forked bolt rather than an arrow. */
+class BirdBolt {
+  constructor(x, y, target, dmg) {
+    this.id = nextId(); this.x = x; this.y = y; this.target = target; this.dmg = dmg;
+    this.speed = 620; this.trail = [];
+  }
+  update(dt, game) {
+    if (!this.target || this.target.dead) return false;
+    const tx = this.target.x, ty = this.target.y;
+    const d = Math.hypot(tx - this.x, ty - this.y) || 1;
+    this.a = Math.atan2(ty - this.y, tx - this.x);
+    this.x += (tx - this.x) / d * this.speed * dt;
+    this.y += (ty - this.y) / d * this.speed * dt;
+    this.trail.push([this.x + Rough.jit(3), this.y + Rough.jit(3)]);
+    if (this.trail.length > 5) this.trail.shift();
+    if (d < 15) {
+      this.target.hurt(this.dmg, game, { color: '#8ea6ff' });
+      for (let i = 0; i < 3; i++) game.effects.push(new Crumb(this.x, this.y, '#8ea6ff'));
+      return false;
+    }
+    return true;
+  }
+  draw(ctx) {
+    for (let i = 1; i < this.trail.length; i++) {
+      ctx.save();
+      ctx.globalAlpha = i / this.trail.length * 0.6;
+      Rough.line(ctx, this.trail[i - 1][0], this.trail[i - 1][1], this.trail[i][0], this.trail[i][1],
+        { color: '#8ea6ff', width: 2.2, jitter: 1.6, passes: 1 });
+      ctx.restore();
+    }
+    const a = this.a || 0;
+    Rough.poly(ctx, [[this.x - Math.cos(a) * 7 + Rough.jit(2), this.y - Math.sin(a) * 7 + Rough.jit(2)],
+    [this.x - Math.cos(a) * 3, this.y - Math.sin(a) * 3 + 3], [this.x, this.y]],
+      { color: '#dfe6ff', width: 2.4, jitter: 1.4, closed: false });
+  }
+}
+
+/* What the Thunder Eagle leaves behind, half the time. */
+class BirdDrop {
+  constructor(x, y) {
+    this.id = nextId();
+    this.x = x; this.y = y;
+    this.t = 0; this.life = 22;
+    this.taken = false;
+    this.r = 19;
+  }
+  update(dt, game) {
+    this.t += dt;
+    this.life -= dt;
+    return this.life > 0 && !this.taken;
+  }
+  tryTake(x, y, game) {
+    if (this.taken) return false;
+    if (Math.hypot(x - this.x, y - this.y) > this.r + 14) return false;
+    this.taken = true;
+    game.installSentry('bird');
+    game.effects.push(new FloatText(this.x, this.y - 24, 'electric bird', '#8ea6ff', 20, true));
+    for (let i = 0; i < 16; i++) game.effects.push(new Crumb(this.x, this.y, '#8ea6ff'));
+    Sfx.play('card_buy', { volume: 0.9 });
+    return true;
+  }
+  draw(ctx, t) {
+    const bob = Math.sin(t * 3 + this.id) * 4;
+    const y = this.y + bob;
+    const fade = this.life < 4 ? (Math.sin(t * 12) * 0.35 + 0.65) : 1;
+    Rough.boil(this.id, Math.floor(t * 4));
+    ctx.save();
+    ctx.globalAlpha = fade * (0.4 + Math.sin(t * 3) * 0.2);
+    Rough.circle(ctx, this.x, y, this.r + 7 + Math.sin(t * 3) * 3,
+      { color: '#d99a26', width: 2.4, jitter: 2.4, wobble: 3 });
+    ctx.globalAlpha = fade;
+    Rough.bloom(ctx, this.x, y, 22, '#8ea6ff', 0.4);
+    // a folded little bolt-bird sitting in the ring
+    const beat = Math.sin(t * 9);
+    for (const sd of [-1, 1]) {
+      Rough.poly(ctx, [[this.x + sd * 2, y - 1], [this.x + sd * 9, y - 5 - beat * 2],
+      [this.x + sd * 11, y - 1], [this.x + sd * 14, y + 4]],
+        { color: '#8ea6ff', width: 2.4, jitter: 1.8, closed: false });
+    }
+    Rough.blob(ctx, this.x, y, 6, '#8ea6ff', '#2b2b2b', { spacing: 4, fillWidth: 3.5, sides: 8, width: 1.8 });
+    Rough.blob(ctx, this.x, y - 8, 4, '#dfe6ff', '#2b2b2b', { spacing: 3, fillWidth: 3, sides: 7, width: 1.6 });
+    Rough.poly(ctx, [[this.x - 1.8, y - 10], [this.x, y - 15], [this.x + 1.8, y - 10]],
+      { color: '#d99a26', width: 1.8, jitter: 1 });
+    ctx.globalAlpha = fade * 0.9;
+    Rough.text(ctx, 'CLICK', this.x, y - this.r - 16, 12, '#d99a26');
+    ctx.restore();
+  }
+}
+
 class BlobdDrop {
   constructor(x, y) {
     this.id = nextId();

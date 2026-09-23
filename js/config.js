@@ -6,6 +6,8 @@ const BASE_CRIT_CHANCE = 0.10;
 const CRIT_MULT = 1.5;             // crit = 50% more damage
 const CASTLE_HP = 5;               // 5 bar segments, 20% each
 const WAVES_PER_RUN = 10;
+const ENDLESS_BOSSES = ['boss', 'eagle', 'warden', 'hive'];   // past wave 10 it is a draw
+const ENDLESS_BOSS_EVERY = 5;
 const SKILL_CHARGE = 50;        // clicks to charge a skill
 const SKILL_COOLDOWN = 30;      // seconds between casts, however fast you click
 const GROUND_RADIUS = BLOCK * 3;   // the coloured ground around the castle
@@ -32,24 +34,69 @@ const WAVE_TABLE = [
   { count: 9,  hp: 50, speed: 55, interval: 1.55, boss: 'warden' }   // or the Hive, 50/50
 ];
 
+/* Past the tenth wave the table runs out, so the rest is generated. Ordinary
+   enemies keep getting fatter; bosses get fatter faster, so the fight between
+   waves 20 and 30 is a different animal rather than the same one for longer.
+   Crowds stay where the table left them - the arrival rate is what a pair of
+   hands can actually keep up with, and no amount of HP changes that. */
+function endlessSpec(wave) {
+  const past = wave - WAVES_PER_RUN;                 // 1 on wave 11
+  const last = WAVE_TABLE[WAVES_PER_RUN - 1];
+  const boss = wave % ENDLESS_BOSS_EVERY === 0
+    ? ENDLESS_BOSSES[Math.floor(Math.random() * ENDLESS_BOSSES.length)] : null;
+  // gently quadratic, not exponential: your click damage climbs by addition,
+  // so HP that doubles every few waves would just wall the run instantly
+  const scale = 1 + 0.15 * past + 0.005 * past * past;
+  return {
+    count: boss ? 9 : 13,
+    hp: Math.round(last.hp * scale),
+    speed: Math.min(86, last.speed + past * 1.1),
+    interval: Math.max(0.85, last.interval - past * 0.02),
+    boss: boss,
+    hpScale: scale,
+    bossMul: Math.pow(1.1, past / ENDLESS_BOSS_EVERY)
+  };
+}
+
+function waveSpecAt(wave) {
+  if (wave <= WAVES_PER_RUN) {
+    const spec = WAVE_TABLE[wave - 1];
+    return { count: spec.count, hp: spec.hp, speed: spec.speed, interval: spec.interval,
+      boss: spec.boss || null, hpScale: 1, bossMul: 1 };
+  }
+  return endlessSpec(wave);
+}
+
+/* One place where an enemy's HP is decided, so the flat-HP half of the Hive
+   fight scales with the wave exactly the way the Warden's multiplier does.
+   `fallback` is the HP a summoner passed in for its own spawn. */
+function rolledHp(kind, spec, fallback) {
+  if (kind === 'boltshot') return 1;
+  const k = ENEMY_KINDS[kind];
+  const sc = spec ? (spec.hpScale || 1) : 1;
+  const bm = k.boss ? (spec ? (spec.bossMul || 1) : 1) : 1;
+  const base = k.flatHp ? k.flatHp * sc : fallback * k.hpMul;
+  return Math.max(2, Math.round(base * bm));
+}
+
 const ENEMY_KINDS = {
   blob:   { r: 17, hpMul: 1.0,  speedMul: 1.00, fill: '#7a5cc4' },
   dart:   { r: 13, hpMul: 0.65, speedMul: 1.55, fill: '#3f97c9' },
   brick:  { r: 22, hpMul: 1.7,  speedMul: 0.65, fill: '#b5623a' },
-  boss:   { r: 40, hpMul: 5.0,  speedMul: 0.45, fill: '#2f2f3f' },   // splits, and spits blotlings
-  warden: { r: 52, hpMul: 7.0,  speedMul: 0.38, fill: '#5c1f3a' },  // shields itself, and calls guards
+  boss:   { r: 40, hpMul: 5.0,  speedMul: 0.45, boss: true, fill: '#2f2f3f' },   // splits, and spits blotlings
+  warden: { r: 52, hpMul: 7.0,  speedMul: 0.38, boss: true, fill: '#5c1f3a' },  // shields itself, and calls guards
   blotling: { r: 11, hpMul: 1.0,  speedMul: 1.35, fill: '#6b4fb0' },
   // wave 5 is a coin flip between the Blot and this: far less HP, but it
   // keeps its distance and shoots, and the shots have to be cleared
-  eagle:    { r: 34, hpMul: 3.6,  speedMul: 0.85, fill: '#4a5b8f' },   // immune to Storm Caller
+  eagle:    { r: 34, hpMul: 3.6,  speedMul: 0.85, boss: true, fill: '#4a5b8f' },   // immune to Storm Caller
   boltshot: { r: 12, hpMul: 0.0,  speedMul: 3.2,  fill: '#8ea6ff' },  // always 1 HP
 
   // THE HIVE - wave 10's other half. Three phases, and most of these carry
   // a flat HP that ignores the wave table.
-  hive:    { r: 46, hpMul: 0, flatHp: 200, speedMul: 0.34, fill: '#c9903a' },
+  hive:    { r: 46, hpMul: 0, flatHp: 200, speedMul: 0.34, boss: true, fill: '#c9903a' },
   worker:  { r: 13, hpMul: 0, flatHp: 6,   speedMul: 1.15, fill: '#e8c33a' },
   bee:     { r: 11, hpMul: 0, flatHp: 4,   speedMul: 1.05, fill: '#e8c33a' },
-  queen:   { r: 38, hpMul: 0, flatHp: 184, speedMul: 0.5,  fill: '#d9a441' },
+  queen:   { r: 38, hpMul: 0, flatHp: 184, speedMul: 0.5,  boss: true,  fill: '#d9a441' },
   larva:   { r: 13, hpMul: 0, flatHp: 4,   speedMul: 0,    fill: '#efe0b0' },
   steroid: { r: 26, hpMul: 0, flatHp: 20,  speedMul: 0.8,  fill: '#b5823a' },
   lavaball: { r: 17, hpMul: 0, flatHp: 10, speedMul: 0,    fill: '#e0562d' }
@@ -156,6 +203,16 @@ const ONESHOT = [
     detail: 'A doodled archer stands by the castle and plinks the nearest enemy every 1.6s for 3 damage. There is only one post, so taking this evicts whatever was standing in it.'
   },
   {
+    id: 'bird', name: 'Electric Bird', cost: 64, color: '#8ea6ff', sentry: true, needsEagle: true,
+    desc: 'A hatchling off the Thunder Eagle.',
+    detail: "Takes the sentry post, plinks the nearest enemy every 1.5s for 2, and every 3s throws itself six blocks at your cursor, carving 4 into everything on the line. Hold still and it winds up: after 2s of not moving and not clicking, every further second cuts 0.1s off that dash, down to 1s. Move or click and the wind-up is gone. Only offered once you have put the Eagle down - and it drops one of these itself, half the time."
+  },
+  {
+    id: 'drill', name: 'Sentry Drill', cost: 70, color: '#d99a26',
+    desc: 'Whoever holds the post gets better at it.',
+    detail: 'Permanently, for whoever stands in the sentry post: the stick figure looses a second arrow a beat behind the first, the Blob\'d-Tier adds a third blot straight up the middle with no curve, and the Electric Bird hits for 4 and dashes every 2.5s instead of 3.'
+  },
+  {
     id: 'blobd', name: "Blob'd-Tier", cost: 58, color: '#6b4fb0', sentry: true, needsBlot: true,
     desc: 'A piece of the Blot, working for you.',
     detail: "Takes the sentry post and lobs two ink blots every 1.9s, one arcing over the top and one under, for 2 damage each. Only offered once you have put the Blot down - and it drops one of these itself, half the time."
@@ -232,7 +289,7 @@ const SKILLS = {
 function skillFor(cursorId) { return SKILLS[cursorId] || SKILLS.plain; }
 
 // which occupant each sentry offer puts in the post
-const SENTRY_OF = { sentry: 'stick', blobd: 'blobd' };
+const SENTRY_OF = { sentry: 'stick', blobd: 'blobd', bird: 'bird' };
 
 function cursorById(id) { return CURSORS.find(c => c.id === id) || CURSORS[0]; }
 function oneshotById(id) { return ONESHOT.find(u => u.id === id); }

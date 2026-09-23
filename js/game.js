@@ -33,7 +33,12 @@ const Game = {
   sentry: null,
   sentryType: null,         // 'stick' or 'blobd' - there is only one post
   blotKilled: false,        // the Blot has gone down at least once this run
+  eagleKilled: false,       // so has the Thunder Eagle
+  endless: false,           // the run keeps going past wave 10
+  stillT: 0,                // how long the hand has been off the page
+  lastPointer: { x: 0, y: 0 },
   lawnBurnt: false,         // the Queen's lava only gets the lawn once
+  spawnQueue: [],           // born this frame, joins at the next flush
   skillCharge: 0,           // clicks banked toward the skill
   skillCd: 0,               // seconds until it can be cast again
   skillAnnounced: false,
@@ -184,8 +189,9 @@ const Game = {
     this.ground = { canvas: g, size: size };
   },
 
-  start(diff) {
+  start(diff, endless) {
     this.difficulty = diff;
+    this.endless = !!endless;
     this.enemies = [];
     this.effects = [];
     this.wave = 0;
@@ -209,7 +215,10 @@ const Game = {
     this.sentry = null;
     this.sentryType = null;
     this.blotKilled = false;
+    this.eagleKilled = false;
+    this.stillT = 0;
     this.lawnBurnt = false;
+    this.spawnQueue = [];
     this.buildGround(false);
     this.offerScreen = null;
     this.skillCharge = 0;
@@ -225,13 +234,15 @@ const Game = {
   startWave() {
     this.wave++;
     const d = DIFFICULTIES[this.difficulty];
-    const spec = WAVE_TABLE[this.wave - 1];
+    const spec = waveSpecAt(this.wave);
     this.waveSpec = {
       count: Math.max(3, Math.round(spec.count * d.countMul)),
       hp: spec.hp * d.hpMul,
       speed: spec.speed * d.speedMul,
       interval: spec.interval * d.intervalMul,
-      boss: spec.boss || null
+      boss: spec.boss || null,
+      hpScale: spec.hpScale || 1,
+      bossMul: spec.bossMul || 1
     };
     this.spawnLeft = this.waveSpec.count;
     this.spawnTimer = 1.1;
@@ -241,7 +252,8 @@ const Game = {
     Sfx.play('wave_start', { volume: 0.6 });
     this.banner = this.waveSpec.boss
       ? new WaveBanner('WAVE ' + this.wave, this.waveSpec.boss === 'warden' ? 'the warden is coming' : 'something big is coming', '#c8433a')
-      : new WaveBanner('WAVE ' + this.wave, this.wave === WAVES_PER_RUN ? 'last one' : '', '#2b2b2b');
+      : new WaveBanner('WAVE ' + this.wave,
+        (!this.endless && this.wave === WAVES_PER_RUN) ? 'last one' : '', '#2b2b2b');
     UI.hideAll();
     UI.syncHud(this);
   },
@@ -268,6 +280,7 @@ const Game = {
       if (off.id === 'double') this.rollDouble();
       if (off.id === 'sentry') this.installSentry('stick');
       if (off.id === 'blobd') this.installSentry('blobd');
+      if (off.id === 'bird') this.installSentry('bird');
       if (off.id === 'molten') this.moltenCharge = 0;
       if (off.id === 'paper') { this.maxHp++; this.castleHp++; }   // the new segment starts full
     } else {
@@ -279,6 +292,13 @@ const Game = {
   },
 
   /* ---------------------------------------------------------------- input */
+  /* How much the Electric Bird's dash timer has been shortened by holding
+     still. Nothing counts for the first two seconds; after that every second
+     is worth another tenth. Moving or clicking wipes it. */
+  stillBonus() {
+    return Math.max(0, this.stillT - 2) * 0.1;
+  },
+
   movePointer(cx, cy) {
     const r = this.canvas.getBoundingClientRect();
     this.pointer.x = cx - r.left;
@@ -303,9 +323,11 @@ const Game = {
   },
 
   click(x, y, opts_ghost) {
+    if (!opts_ghost) this.stillT = 0;        // clicking is not standing still
     // anything lying on the floor gets picked up first
     for (const f of this.effects) {
       if (f instanceof BlobdDrop && f.tryTake(x, y, this)) return;
+      if (f instanceof BirdDrop && f.tryTake(x, y, this)) return;
     }
 
     const cursor = cursorById(this.cursorId);
@@ -478,8 +500,7 @@ const Game = {
       sy = (Math.random() * 2 - 1) * my;
     }
     const k = ENEMY_KINDS[kind];
-    const hp = kind === 'boltshot' ? 1
-      : (k.flatHp ? k.flatHp : Math.max(2, Math.round(w.hp * k.hpMul)));
+    const hp = rolledHp(kind, w, w.hp);
     const spawned = new Enemy(kind, hp, w.speed * k.speedMul, sx, sy);
     this.enemies.push(spawned);
     if (kind === 'hive') this.hitchHaulers(spawned, w);
@@ -528,14 +549,27 @@ const Game = {
     }
   },
 
-  /* Summoned mid-fight by a boss skill, rather than by the wave spawner. */
+  /* Summoned mid-fight by a boss skill, rather than by the wave spawner.
+
+     The new one waits in a queue instead of joining `enemies` on the spot.
+     Area damage walks that array while it deals its damage, so anything born
+     mid-sweep - the Queen out of the Hive, blotlings out of the Blot - used to
+     land in the list the sweep was still reading and get killed by the very
+     blast that spawned its parent. The caller still gets the object back and
+     can set it up; it joins the fight at the next flush. */
   spawnMinion(kind, x, y, hp, speed) {
     const k = ENEMY_KINDS[kind];
-    const rolled = kind === 'boltshot' ? 1
-      : (k.flatHp ? k.flatHp : Math.max(2, Math.round(hp * k.hpMul)));
+    const rolled = rolledHp(kind, this.waveSpec, hp);
     const e = new Enemy(kind, rolled, speed * k.speedMul, x, y);
-    this.enemies.push(e);
+    this.spawnQueue.push(e);
     return e;
+  },
+
+  /* Everything born since the last flush joins the fight. */
+  flushSpawns() {
+    if (!this.spawnQueue.length) return;
+    for (const e of this.spawnQueue) if (!e.dead) this.enemies.push(e);
+    this.spawnQueue.length = 0;
   },
 
   /* ----------------------------------------------------------------- loop */
@@ -552,6 +586,15 @@ const Game = {
   update(dt) {
     if (this.paused) return;
     if (this.pointer.down > 0) this.pointer.down = Math.max(0, this.pointer.down - dt);
+
+    // a hand that has not moved is winding the bird up
+    if (Math.hypot(this.pointer.x - this.lastPointer.x, this.pointer.y - this.lastPointer.y) > 2) {
+      this.stillT = 0;
+      this.lastPointer.x = this.pointer.x;
+      this.lastPointer.y = this.pointer.y;
+    } else {
+      this.stillT += dt;
+    }
     if (this.castleHitT > 0) this.castleHitT = Math.max(0, this.castleHitT - dt / 0.5);
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt / 0.6);
     this.hpShown += (this.castleHp - this.hpShown) * Math.min(1, dt * 7);
@@ -620,8 +663,10 @@ const Game = {
     }
 
     if (!this.frozen) for (const e of this.enemies) if (!e.dead) e.update(dt, this);
+    this.flushSpawns();
     this.enemies = this.enemies.filter(e => !e.dead);
     this.updateEffects(dt);
+    this.flushSpawns();               // before the wave-clear check below
     if (this.penTrail) this.penTrail.update(dt, this);
     if (this.oneshot.afterimage) {
       this.ghostTrail.push({ x: this.pointer.x, y: this.pointer.y, at: this.time });
@@ -636,7 +681,7 @@ const Game = {
     if (this.state === 'playing' && this.spawnLeft === 0 && this.enemies.length === 0) {
       this.banner = null;
       Sfx.play('wave_clear', { volume: 0.75 });
-      if (this.wave >= WAVES_PER_RUN) {          // nothing left to spend it on
+      if (!this.endless && this.wave >= WAVES_PER_RUN) {   // nothing left to spend it on
         this.state = 'victory';
         UI.showEnd(this, true);
       } else {

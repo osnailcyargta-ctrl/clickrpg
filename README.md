@@ -63,6 +63,16 @@ Open `index.html` in a browser. That's the whole install.
       have to shoot down before it lands. If it lands it leaves a burning
       puddle, and if that puddle comes down on the castle's green, **the lawn
       goes up and the castle takes 2**).
+- **Endless**, picked on the title screen instead of the ten-wave run. The
+  waves never stop: ordinary enemy HP keeps climbing on a gently quadratic
+  curve (a wave-30 blob is worth six of a wave-10 one), and **bosses climb
+  faster still** on top of that. Past wave 10 a boss lands **every fifth wave**
+  and it is **drawn at random** from all four — the Blot, the Thunder Eagle,
+  the Warden and the Hive — so you cannot plan a loadout around knowing what
+  is coming. The Hive's flat-HP half scales on the same curve as everything
+  else, so the whole fight keeps pace rather than melting. There is no victory
+  screen out here; the run ends when the castle does, and the end card tells
+  you which wave you reached.
 - Enemy **counts stop growing once you've beaten a boss** — after that the
   waves get meaner through HP and speed, not bigger crowds.
 - **Skills.** Every cursor has one. It charges over 50 clicks and you fire it
@@ -144,7 +154,7 @@ payload lands on a white frame.
 nothing to show on the battlefield leave their mark on the cursor instead:
 **Molten Leftkey** sets it alight, with flames climbing off its body, heat
 pooling under it and smoke coming off the top, and **Ink Overflow** stains
-its tip and drips from the point. Chalk Ward and Stick Sentry already draw
+its tip and drips from the point. Chalk Ward and the sentries already draw
 themselves around the castle, so they leave the cursor alone.
 
 | | What it does |
@@ -153,10 +163,34 @@ themselves around the castle, so they leave the cursor alone.
 | **Ink Overflow** | Every crit dumps a 1.4 block ink puddle for 4s: 30% slow, 2 damage a second. |
 | **Chalk Ward** | Two shield charges that eat a hit instead of your HP, re-drawn every wave. |
 | **Thick Paper** | One more castle segment, permanently — six instead of five — and the new one starts full. The castle is redrawn inside an uncoloured outer shell so you can see it. |
-| **Stick Sentry** | Takes the castle's one sentry post: a doodled archer that plinks the nearest enemy every 1.6s for 3. |
-| **Blob'd-Tier** | The other occupant of that post. Lobs two ink blots every 1.9s, one arcing over the top and one under, for 2 each. Only offered once you have put the Blot down — and the Blot drops one itself, half the time, which you pick up by **clicking it off the floor**. |
+| **Sentry Drill** | Upgrades whoever is standing in the sentry post, permanently. See below. |
 | **Double Trouble** | One side of the cursor is redrawn as another cursor, picked at random, and the charge fires both tricks from then on, taking it in turns. The most expensive thing on the page. |
 | **Afterimage** | A faded copy of the cursor trails a third of a second behind and repeats every click it saw, at half damage. It cannot crit and it charges nothing. |
+
+### The sentry post
+
+There is **one** post by the castle and one tenant in it. These are tagged
+`SENTRY` on the offer card rather than `ONE-SHOT`, because taking one evicts
+whoever was standing there — they keep coming back around, and swapping is
+always allowed.
+
+| | What stands there |
+|---|---|
+| **Stick Sentry** | A doodled archer. Plinks the nearest enemy every 1.6s for 3. |
+| **Blob'd-Tier** | A piece of the Blot on a leash. Lobs two ink blots every 1.9s, one arcing over the top and one under, for 2 each. Only offered once you have put the Blot down — and the Blot drops one itself, half the time, which you pick up by **clicking it off the floor**. |
+| **Electric Bird** | The Thunder Eagle at a tenth the size. Plinks for 2 every 1.5s, and every 3s **throws itself six blocks at your cursor** (or all the way to it, if the cursor is nearer than that), carving **4** into everything on the line before snapping back to the post. Only offered once you have put the Eagle down, and the Eagle drops one half the time. |
+
+The bird has one trick the others don't: **hold still and it winds up.** After
+two seconds of not moving the mouse and not clicking, every further second cuts
+**0.1s** off its dash timer, down to a floor of **1s**. Move or click and the
+wind-up is gone. It is the one thing in the game that rewards taking your hand
+off the page, which cuts against everything else here — that is the point.
+
+**Sentry Drill** is a one-shot that upgrades whoever holds the post, now and
+for every tenant after: the stick figure looses **a second arrow** a beat
+behind the first, the Blob'd-Tier adds **a third blot straight up the middle**
+with no curve, and the Electric Bird hits for **4** and dashes every **2.5s**
+instead of 3.
 
 **Stacking** — no level cap, they keep coming back and cost more each time:
 
