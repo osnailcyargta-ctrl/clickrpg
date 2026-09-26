@@ -3,8 +3,15 @@
 FANDHARN - sound effect renderer.
 
 Every sound here is paper-and-pencil foley built out of shaped noise: taps,
-scratches, crumples, tears and scrubs. There are no oscillator tones, so
-nothing beeps like a synth - it should sound like a notebook being attacked.
+scratches, crumples, tears and scrubs. Nothing beeps like a synth - it should
+sound like a notebook being attacked. The one exception is WEIGHT: a very
+short sine that drops in pitch, mixed under the impacts so a hit lands with a
+thud you feel rather than a tone you hear.
+
+Every sound then goes through the same mastering chain (master()): rumble
+and DC cut, a soft-saturation stage that squeezes the peaks so a short tap is
+not drowned out by a long whoosh at the same volume setting, and a short
+paper-room tail sized to the sound (ROOM).
 
 Run it to rebuild assets/sfx/*.mp3:
 
@@ -138,8 +145,114 @@ def finish(x, peak=0.85, fade=0.004):
     return x
 
 
+def thump(d, f0, f1, curve=6.0):
+    """The weight under a hit: a sine sliding from f0 down to f1, gone fast."""
+    n = int(SR * d)
+    t = np.arange(n) / SR
+    f = f1 + (f0 - f1) * np.exp(-t / (d * 0.25))
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    e = np.exp(-curve * t / d)
+    a = max(1, int(SR * 0.0015))
+    e[:a] *= np.linspace(0, 1, a)
+    return np.sin(ph) * e
+
+
+def room_ir(size):
+    """A small, dark, paper-soft room: a few early bounces, then a quick tail."""
+    d = 0.08 + size * 0.5
+    ir = noise(d) * env(d, 0.001, curve=6.5)
+    ir = lp(ir, 5200 - size * 2400)
+    for ms, g in [(7, 0.5), (13, 0.35), (21, 0.25)]:
+        i = int(SR * ms / 1000)
+        if i < len(ir):
+            ir[i] += g * np.max(np.abs(ir))
+    ir[0] = 0
+    return ir / (np.sqrt(np.sum(ir ** 2)) or 1)
+
+
+# How much each sound thumps: (seconds, start Hz, end Hz, level, delay s).
+# Level is against the sound's own peak before mastering.
+WEIGHT = {
+    'click_hit': (0.07, 190, 85, 0.35, 0), 'crit': (0.12, 170, 60, 0.6, 0),
+    'kill': (0.1, 150, 70, 0.4, 0), 'kill_big': (0.3, 120, 40, 0.8, 0),
+    'castle_hit': (0.35, 110, 38, 0.9, 0), 'card_buy': (0.12, 160, 70, 0.5, 0),
+    'button': (0.04, 220, 120, 0.2, 0), 'ward': (0.15, 200, 90, 0.3, 0),
+    'boss_spawn': (0.9, 70, 30, 0.7, 0.05), 'game_over': (0.7, 90, 30, 0.9, 0.35),
+    'fire_blast': (0.3, 120, 45, 0.7, 0), 'water_pop': (0.06, 260, 120, 0.25, 0),
+    'ink_splat': (0.12, 150, 60, 0.45, 0), 'sentry_shot': (0.05, 200, 110, 0.2, 0),
+    'thunder_strike': (0.5, 110, 32, 1.0, 0.01), 'skill_cast': (0.35, 120, 40, 0.8, 0.6),
+    'guillotine': (0.3, 130, 45, 0.7, 0.34), 'push_wave': (0.45, 90, 35, 0.6, 0),
+    'sk_thunderhead': (0.8, 100, 28, 1.0, 0.46), 'sk_perimeter': (0.4, 110, 40, 0.6, 0.08),
+    'sk_guillotine': (0.45, 120, 38, 0.9, 0.44), 'sk_eightways': (0.25, 140, 50, 0.6, 0.02),
+    'sk_cloudburst': (0.4, 110, 40, 0.6, 0), 'sk_exclamation': (0.7, 95, 28, 1.1, 0.3),
+    'eagle_death': (0.6, 100, 30, 0.9, 0.3), 'magnet_burst': (0.4, 120, 38, 0.9, 0),
+    'sk_polereversal': (0.6, 100, 30, 1.0, 0.85), 'larva_pop': (0.1, 180, 80, 0.4, 0),
+    'steroid_charge': (0.25, 130, 50, 0.6, 0.55), 'lava_erupt': (0.5, 90, 35, 0.6, 0),
+    'lava_land': (0.35, 110, 40, 0.8, 0), 'auger_dash': (0.3, 100, 40, 0.5, 0),
+    'trap_emerge': (0.25, 130, 50, 0.7, 0), 'trap_snap': (0.18, 160, 55, 0.8, 0),
+    'star_hit': (0.18, 160, 60, 0.6, 0), 'sk_starfall': (1.2, 90, 25, 1.2, 0.55),
+    'hammer_tick': (0.06, 240, 140, 0.3, 0), 'hammer_slam': (0.5, 110, 34, 1.3, 0),
+    'sk_quake': (1.4, 70, 24, 1.3, 0),
+}
+
+# How much room each sound gets: (size 0..1, wet level). Quick UI sounds
+# stay nearly dry; skills and bosses get space around them.
+ROOM_DEFAULT = (0.25, 0.14)
+ROOM = {
+    'click_hit': (0.12, 0.08), 'click_miss': (0.1, 0.05), 'button': (0.08, 0.04),
+    'card_draw': (0.15, 0.08), 'card_buy': (0.15, 0.1), 'skip': (0.15, 0.06),
+    'sentry_shot': (0.15, 0.1), 'hammer_tick': (0.15, 0.1), 'kill': (0.18, 0.1),
+    'boss_spawn': (0.7, 0.22), 'game_over': (0.7, 0.22), 'victory': (0.6, 0.22),
+    'eagle_screech': (0.6, 0.2), 'queen_screech': (0.6, 0.2), 'auger_screech': (0.6, 0.2),
+    'thunder_strike': (0.55, 0.2), 'thunder_roll': (0.6, 0.18),
+    'hammer_slam': (0.4, 0.16), 'sk_quake': (0.7, 0.2),
+}
+
+
+def master(name, x):
+    """The chain every sound goes through on its way to disk."""
+    x = np.nan_to_num(np.asarray(x, dtype=float))
+    x = x / (np.max(np.abs(x)) or 1.0)
+    # how loud this sound used to come out (plain peak-normalised): the mix
+    # in the game was balanced against that, so the chain may lift it but
+    # only so far
+    was = np.sqrt(np.mean((x * 0.85) ** 2))
+    w = WEIGHT.get(name)
+    if w:
+        d, f0, f1, lvl, at = w
+        x = mix(x, np.pad(thump(d, f0, f1), (int(SR * at), 0)) * lvl)
+    x = hp(x, 28, 2)                                    # DC and rumble nobody hears
+    x = x / (np.max(np.abs(x)) or 1.0)
+    # soft saturation: squeezes the tallest peaks so the body of the sound
+    # comes up - short taps get the most out of it
+    drive = 2.2 if len(x) / SR < 0.4 else 1.6
+    x = np.tanh(drive * x) / np.tanh(drive)
+    size, wet = ROOM.get(name, ROOM_DEFAULT)
+    ir = room_ir(size)
+    tail = signal.fftconvolve(x, ir)
+    tail = hp(tail, 180)                                # a room that does not boom
+    tail *= (np.sqrt(np.mean(x ** 2)) / (np.sqrt(np.mean(tail ** 2)) or 1)) * wet * 1.6
+    x = mix(x, tail)
+    # trim what the tail left at the silence floor
+    thresh = np.max(np.abs(x)) * 10 ** (-60 / 20)
+    loud = np.nonzero(np.abs(x) > thresh)[0]
+    if len(loud):
+        x = x[:min(len(x), loud[-1] + int(SR * 0.01))]
+    x = finish(x, peak=0.89, fade=0.006)
+    now = np.sqrt(np.mean(x ** 2))
+    cap = was * 10 ** (MAX_LIFT_DB / 20)
+    if now > cap:
+        x = x * (cap / now)
+    return x * 10 ** (TRIM_DB.get(name, 0.0) / 20)
+
+
+MAX_LIFT_DB = 6.0
+# a last word on a few sounds that play so often they must sit under the clicks
+TRIM_DB = {'kill': -5.0}
+
+
 def write(name, x, kbps=96):
-    x = finish(x)
+    x = master(name, x)
     # short transients smear badly at low bitrates, so spend a few more kB
     if len(x) / SR < 0.35:
         kbps = 128
@@ -158,9 +271,12 @@ def write(name, x, kbps=96):
 
 # -------------------------------------------------------------- the sounds
 def s_click_hit():
+    # a pencil jabbed into the page: the tip, the paper giving, a flick of grit
     tick = bp(noise(0.07), 2600, 1.3) * env(0.07, 0.0004, curve=9)
     body = bp(noise(0.06), 320, 2.0) * env(0.06, 0.001, curve=11) * 0.5
-    return mix(tick, body)
+    give = ring(noise(0.05), 1150, 9) * env(0.05, 0.0006, curve=10) * 0.35
+    grit = grains(0.09, 4, spread=0.03, length=0.004, band=(3500, 7000), decay=3.0) * 0.4
+    return mix(tick, body, give, grit)
 
 
 def s_click_miss():
@@ -171,12 +287,17 @@ def s_crit():
     scratch = am(bp(noise(0.16), 4200, 1.6), 55, 0.7) * env(0.16, 0.0008, curve=5)
     snap = bp(noise(0.05), 5200, 2.2) * env(0.05, 0.0003, curve=10)
     thump = bp(noise(0.09), 260, 1.8) * env(0.09, 0.001, curve=9) * 0.6
-    return mix(scratch, snap * 0.9, thump)
+    glint = np.pad(ring(noise(0.18), 3300, 26) * env(0.18, 0.001, curve=6) * 0.35, (int(SR * 0.015), 0))
+    return mix(scratch, snap * 0.9, thump, glint)
 
 
 def s_kill():
-    return mix(grains(0.24, 12, spread=0.14, length=0.01, band=(1400, 5200), decay=3.2),
-               bp(noise(0.1), 420, 1.4) * env(0.1, 0.001, curve=8) * 0.4)
+    # a doodle popping: a wet little burst and its crumbs
+    pop = bp(noise(0.05), 1200, 1.6) * env(0.05, 0.0004, curve=10) * 0.8
+    crumbs = grains(0.24, 12, spread=0.14, length=0.01, band=(1400, 5200), decay=3.2)
+    body = bp(noise(0.1), 420, 1.4) * env(0.1, 0.001, curve=8) * 0.4
+    splat = lp(noise(0.12), 1100, 3) * env(0.12, 0.001, curve=7) * 0.35
+    return mix(pop, crumbs, body, splat)
 
 
 def s_kill_big():
@@ -702,7 +823,10 @@ def s_hammer_slam():
     body = ring(noise(0.4), 95, 6) * env(0.4, 0.002, curve=5)
     crack = hp(noise(0.08), 1400) * env(0.08, 0.0005, curve=9)
     grit = grains(0.5, 26, spread=0.4, length=0.01, band=(700, 3000), decay=2.0)
-    return mix(thud * 1.6, body * 1.0, crack * 0.9, grit * 0.6)
+    knock = ring(noise(0.18), 190, 10) * env(0.18, 0.001, curve=6)          # the steel head ringing, dull
+    clang = ring(noise(0.25), 1650, 30) * env(0.25, 0.0008, curve=6) * 0.25
+    pebbles = np.pad(grains(0.4, 10, spread=0.3, length=0.008, band=(1500, 4500), decay=1.5), (int(SR * 0.12), 0))
+    return mix(thud * 1.6, body * 1.0, crack * 0.9, grit * 0.6, knock * 0.7, clang, pebbles * 0.5)
 
 
 def s_sk_quake():
@@ -711,7 +835,9 @@ def s_sk_quake():
     crack = hp(noise(0.12), 1200) * env(0.12, 0.0005, curve=8)
     rolling = sweep(noise(2.0) * swell(2.0, 0.2, 2.5), 400, 90, 1.2)
     debris = grains(1.8, 60, spread=1.5, length=0.012, band=(500, 2600), decay=1.6)
-    return mix(rumble * 1.7, crack * 1.1, rolling * 0.8, debris * 0.6)
+    slam = bp(noise(0.5), 90, 1.2) * env(0.5, 0.002, curve=3.5)
+    groan = np.pad(am(bp(noise(1.4), 160, 2.2) * swell(1.4, 0.3, 2.0), 4.5, 0.5), (int(SR * 0.15), 0))
+    return mix(rumble * 1.7, crack * 1.1, rolling * 0.8, debris * 0.6, slam * 1.2, groan * 0.6)
 
 
 SOUNDS = {

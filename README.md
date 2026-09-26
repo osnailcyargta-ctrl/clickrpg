@@ -292,6 +292,12 @@ just plays the files.
 
 - Rebuild them with `python3 tools/make_sfx.py` (needs `numpy`, `scipy`,
   `lameenc`). Each sound is one function in that script.
+- Every sound goes through one mastering chain on the way out: rumble cut,
+  a soft-saturation stage so short taps are not lost next to long whooshes,
+  a short paper-room tail sized to the sound (`ROOM`), and under each impact
+  a quick low thud (`WEIGHT`) so hits land with some body. No sound is
+  allowed to come out more than 6 dB louder than it used to, so the balance
+  the in-game volumes were tuned against holds.
 - To use your own recording instead, drop an mp3 with the same name into
   `assets/sfx/` — the game only looks sounds up by file name.
 - Web Audio is used when available; opening `index.html` straight off the disk
