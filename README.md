@@ -178,7 +178,7 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Storm Caller** | 2 | 15 clicks | A cloud gathers over a random enemy; half a second later the bolt lands for 50% of your click damage and splashes 4 into everything within a block of it. The Thunder Eagle is immune to all of it. |
 | **Horseshoe Magnet** | 2.5 | 12 clicks | Hauls everything within 4 blocks to the point you clicked, for 2 on the way, and leaves them stacked on top of each other for whatever you throw next. |
 | **Boomerang** | 3 | 10 clicks | The throw loops out five blocks and curves home again, cutting 3 into everything on the way out and 3 more on the way back — line the arc up and the same enemy pays twice. |
-| **Sledgehammer** | 2.5 | hold | A click does nothing. **Hold for at least a second** and let go: it comes down on everything within 1.5 blocks. Every full second more adds 20%, and at **3 seconds it comes down by itself** at +40%. A ring round the cursor fills while you hold. |
+| **Sledgehammer** | 10 | hold | A click does nothing. **Hold for at least 0.75s** and let go: it comes down on everything within 1.5 blocks. Every full second more adds 20%, and at **3 seconds it comes down by itself** at +40%. A ring round the cursor fills while you hold. |
 | **Scissor Cursor** | 4 | — | Hardest click, no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Useless against a crowd. |
 
 ### Skills

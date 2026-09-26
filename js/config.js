@@ -17,9 +17,9 @@ const AUGER_STOP = GROUND_RADIUS + BLOCK * 4;   // where it halts to wind up
 const TRAPPER_BASE_DMG = 6;
 const TRAPPER_MAX_DMG = 10;
 const TRAPPER_RANGE = BLOCK * 4.5;
-const HAMMER_MIN = 1;              // seconds held before a let-go does anything
+const HAMMER_MIN = 0.75;           // seconds held before a let-go does anything
 const HAMMER_MAX = 3;              // at this it comes down on its own
-const HAMMER_STEP = 0.2;           // +20% for every full second past the first
+const HAMMER_STEP = 0.2;           // +20% for every full second past the minimum
 const HAMMER_RADIUS = BLOCK * 1.5;
 
 const DIFFICULTIES = {
@@ -178,9 +178,9 @@ const CURSORS = [
     detail: 'The hardest click at 4, with no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Nothing here helps against a crowd.'
   },
   {
-    id: 'hammer', name: 'Sledgehammer', cost: 48, color: '#6b5a4a', every: 0, dmg: 2.5, hold: true,
+    id: 'hammer', name: 'Sledgehammer', cost: 48, color: '#6b5a4a', every: 0, dmg: 10, hold: true,
     desc: 'Hold it up. Let go to bring it down.',
-    detail: 'A click does nothing. Hold for at least a second and let go: it comes down on everything within a block and a half for 2.5 each. Every full second more you hold adds 20% - and at three seconds it comes down by itself, at +40%.'
+    detail: 'A click does nothing. Hold for at least 0.75s and let go: it comes down on everything within a block and a half for 10 each. Every full second more you hold adds 20% - and at three seconds it comes down by itself, at +40%.'
   }
 ];
 
