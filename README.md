@@ -9,6 +9,40 @@ them.
 
 Open `index.html` in a browser. That's the whole install.
 
+## The title screen
+
+Three buttons in the bottom-left corner, over the castle with enemies
+circling it:
+
+- **PLAY** opens a popup: 10 waves or Endless, then Easy / Normal / Hard.
+- **BESTIARY** opens a book of every enemy and boss: its picture, its stats,
+  where it shows up, and a live preview of it attacking. The preview runs the
+  enemy's real code in a small stand-in for the game with the sound off, so
+  the book always matches the game.
+- **SKIN** opens the skin shop.
+
+Every frame in the menus is drawn in crayon the same way the between-wave
+cards are (`js/doodle.js`): straight wobbly lines that re-draw a few times a
+second, with colour scribbled in past the edge.
+
+## Coins and skins
+
+Coins are saved in the browser (`localStorage`), so they survive closing the
+tab. You earn them by:
+
+- finishing the 10-wave run: **1** on Normal, **2** on Hard;
+- every 10th wave in Endless: on Normal the first pays 1 and each one after
+  pays 1 more, up to **5** a time; on Hard it starts at 2 and goes up to **10**.
+
+Easy pays nothing. Coins from Endless are saved the moment the wave clears,
+so a run that dies later keeps them.
+
+A skin changes a cursor's (or, later, a sentry's) name and look. **Star
+Caller** (4 coins) reskins the Storm Caller: the cursor is a star, its strike
+is a star that falls and shrinks onto its target, its skill is **STARFALL**
+(the page goes white and one enormous meteor comes down on the castle), and
+its card between waves gets a spiky gold border.
+
 ## Rules
 
 - **Click an enemy.** The damage depends on the cursor you hold (2 to 4); 10% of clicks crit for 50% more.
@@ -82,8 +116,10 @@ Open `index.html` in a browser. That's the whole install.
   to pinpricks. Then it **winds up for a second, backing away slowly** while
   the drill screams and a red line scribbles itself across the ground to the
   wall. Then it **runs, very fast**. **Anything that hurts it mid-run stops
-  it dead**, and it has to wind up all over again. If it gets there it goes
-  straight through the wall: **two segments**, not one.
+  it dead**, and it has to wind up all over again. If it gets there it costs
+  one segment, like anything else. It is built to be horrible to look at, not
+  to be the hardest thing in the wave: about one and a half times an ordinary
+  enemy's HP, and a run you get most of a second to react to.
 - Enemy **counts stop growing once you've beaten a boss** — after that the
   waves get meaner through HP and speed, not bigger crowds.
 - **Skills.** Every cursor has one. It charges over 50 clicks and you fire it
@@ -280,6 +316,12 @@ js/audio.js       mp3 playback: Web Audio with an <audio> fallback
 js/entities.js    enemies, bosses, status effects, sentry, every flying doodle
 js/hive.js        the Hive fight's ground cracks, lava and burning lawn
 js/fx.js          decoration only: hit sparks, kill bursts, droplets, the frame governor
+js/deaths.js      how each enemy breaks when it dies
+js/save.js        coins and skins, kept in localStorage
+js/skins.js       the skins, and everything the Star Caller draws
+js/doodle.js      crayon frames for the HTML menus
+js/menu.js        the title screen, its castle scene, the skin shop
+js/bestiary.js    the bestiary book and its live previews
 js/auger.js       the Auger, endless only
 js/trapper.js     the Trapper sentry
 js/skills.js      the cast cinematic and one payload per cursor

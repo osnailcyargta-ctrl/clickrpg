@@ -23,7 +23,10 @@ const CursorPowers = {
     const pick = live.length ? live[Math.floor(Math.random() * live.length)] : null;
     const tx = pick ? pick.x : x + Rough.jit(BLOCK * 3);
     const ty = pick ? pick.y : y + Rough.jit(BLOCK * 3);
-    game.effects.push(new GatheringCloud(tx, ty, game,
+    // the Star Caller skin drops a star where the cloud would gather; the
+    // arguments - and so the damage - are exactly the same either way
+    const Look = cursorLook('storm').power === 'star' ? FallingStar : GatheringCloud;
+    game.effects.push(new Look(tx, ty, game,
       game.aoeDamage(game.clickDamage() * 0.5),   // the bolt itself
       BLOCK * game.aoeScale(),                    // one block of splash
       game.aoeDamage(4)));                        // which only ever does 4
@@ -344,6 +347,7 @@ const CursorMarks = {
 
 function drawCursor(ctx, cursor, x, y, charge, pressed, t, marks, ghost, doubleId) {
   const s = 1 - pressed * 0.16;           // squash while held
+  const look = cursorLook(cursor.id);     // a worn skin redraws it
 
   // fire and chalk sit behind the cursor, ink and the archer in front
   Rough.boil(998, Math.floor(t * 8));
@@ -354,14 +358,14 @@ function drawCursor(ctx, cursor, x, y, charge, pressed, t, marks, ghost, doubleI
   if (doubleId) {
     // Double Trouble: your half on the left, the borrowed half on the right,
     // clipped down the middle of the hotspot
-    const other = cursorById(doubleId);
+    const other = cursorLook(doubleId);
     ctx.save();
     ctx.beginPath(); ctx.rect(x - 60, y - 60, 60 + 9 * s, 130); ctx.clip();
-    (CursorSprites[cursor.id] || CursorSprites.plain)(ctx, x, y, s, cursor.color, t, pressed);
+    (CursorSprites[look.sprite] || CursorSprites.plain)(ctx, x, y, s, look.color, t, pressed);
     ctx.restore();
     ctx.save();
     ctx.beginPath(); ctx.rect(x + 9 * s, y - 60, 70, 130); ctx.clip();
-    (CursorSprites[other.id] || CursorSprites.plain)(ctx, x, y, s, other.color, t, pressed);
+    (CursorSprites[other.sprite] || CursorSprites.plain)(ctx, x, y, s, other.color, t, pressed);
     ctx.restore();
     // the seam where the two of them meet
     ctx.save();
@@ -370,7 +374,7 @@ function drawCursor(ctx, cursor, x, y, charge, pressed, t, marks, ghost, doubleI
       { color: '#8a5cc4', width: 1.8, jitter: 1.6, passes: 1 });
     ctx.restore();
   } else {
-    (CursorSprites[cursor.id] || CursorSprites.plain)(ctx, x, y, s, cursor.color, t, pressed);
+    (CursorSprites[look.sprite] || CursorSprites.plain)(ctx, x, y, s, look.color, t, pressed);
   }
   ctx.restore();
   if (ghost) return;                       // the afterimage stops at the outline
@@ -391,7 +395,7 @@ function drawCursor(ctx, cursor, x, y, charge, pressed, t, marks, ghost, doubleI
     ctx.globalAlpha = 0.95;
     if (p > 0.001) {
       Rough.arc(ctx, x, y - 2, r, -Math.PI / 2, -Math.PI / 2 + p * Math.PI * 2,
-        { color: cursor.color, width: 3, jitter: 1.2, passes: 1 });
+        { color: look.color, width: 3, jitter: 1.2, passes: 1 });
     }
     ctx.restore();
   }

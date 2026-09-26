@@ -110,7 +110,7 @@ const ENEMY_KINDS = {
   // THE AUGER - endless only, wave 11 on, one or two a wave. Walks to four
   // blocks off the lawn, winds up backing away, then runs at the castle. A
   // hit mid-run stops it dead and it has to wind up all over again.
-  auger:    { r: 24, hpMul: 2.6, speedMul: 0.8, fill: '#3a2436' }
+  auger:    { r: 24, hpMul: 1.5, speedMul: 0.8, fill: '#3a2436' }
 };
 
 /* ---- CURSORS -------------------------------------------------------------

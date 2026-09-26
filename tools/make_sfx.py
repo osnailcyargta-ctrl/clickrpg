@@ -657,6 +657,32 @@ def s_trap_snap():
     return mix(crack * 1.4, thud * 1.1, crunch * 0.8, wet * 0.5)
 
 
+def s_star_fall():
+    # a star coming down: a bright glassy shimmer sliding lower as it falls
+    shimmer = am(sweep(noise(0.55) * swell(0.55, 0.7, 2.0), 7000, 2600, 6.0), 31, 0.7)
+    sparkle = grains(0.55, 30, spread=0.5, length=0.004, band=(5000, 9000), decay=0.4)
+    return mix(shimmer * 0.9, sparkle * 0.8)
+
+
+def s_star_hit():
+    # it lands: a bright crack with a glittering tail
+    crack = hp(noise(0.06), 1800) * env(0.06, 0.0005, curve=9)
+    thump = lp(noise(0.2), 380) * env(0.2, 0.001, curve=6)
+    glitter = grains(0.45, 34, spread=0.35, length=0.004, band=(4500, 9500), decay=1.4)
+    return mix(crack * 1.3, thump * 0.9, glitter * 0.8)
+
+
+def s_sk_starfall():
+    # the sky goes white, something enormous comes down, and the ground goes
+    rush = sweep(noise(0.6) * swell(0.6, 0.95, 5.0), 5000, 500, 1.4)
+    boom = lp(noise(1.8), 140) * env(1.8, 0.002, curve=3.2)
+    body = bp(noise(1.8), 420, 0.9) * env(1.8, 0.004, curve=4)
+    debris = grains(1.6, 40, spread=1.1, length=0.014, band=(500, 3200), decay=1.8)
+    glitter = grains(1.6, 50, spread=1.4, length=0.004, band=(5000, 9500), decay=1.0)
+    hit = np.pad(mix(boom * 1.6, body * 0.9, debris * 0.7, glitter * 0.5), (int(SR * 0.55), 0))
+    return mix(rush * 0.9, hit)
+
+
 SOUNDS = {
     'click_hit': s_click_hit, 'click_miss': s_click_miss, 'crit': s_crit,
     'kill': s_kill, 'kill_big': s_kill_big, 'castle_hit': s_castle_hit,
@@ -686,6 +712,7 @@ SOUNDS = {
     'auger_screech': s_auger_screech, 'auger_chitter': s_auger_chitter,
     'auger_charge': s_auger_charge, 'auger_dash': s_auger_dash,
     'trap_dig': s_trap_dig, 'trap_emerge': s_trap_emerge, 'trap_snap': s_trap_snap,
+    'star_fall': s_star_fall, 'star_hit': s_star_hit, 'sk_starfall': s_sk_starfall,
 }
 
 if __name__ == '__main__':

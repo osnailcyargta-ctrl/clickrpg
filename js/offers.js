@@ -7,9 +7,11 @@ const OFFER_DELAY = 0.5;
 function buildOffers(game) {
   const pool = [];
 
-  for (const c of CURSORS) {
-    if (c.id === 'plain' || c.id === game.cursorId) continue;
-    pool.push({ kind: 'cursor', id: c.id, name: c.name, color: c.color, cost: offerCost(c.cost, game.wave), desc: c.desc, detail: c.detail, tag: c.dmg + ' DMG CURSOR' });
+  for (const c0 of CURSORS) {
+    if (c0.id === 'plain' || c0.id === game.cursorId) continue;
+    const c = cursorLook(c0.id);              // a worn skin renames it on the card too
+    pool.push({ kind: 'cursor', id: c.id, name: c.name, color: c.color, cost: offerCost(c.cost, game.wave), desc: c.desc, detail: c.detail,
+      tag: c.dmg + ' DMG CURSOR' + (c.skinned ? ' \u00b7 SKIN' : ''), card: c.card || null });
   }
   for (const u of ONESHOT) {
     if (u.sentry) {
@@ -276,10 +278,25 @@ class OfferScreen {
       Rough.grain(ctx, pts, off.color, 0.0015, this.id + i);
     }
     Rough.boil(this.id * 17 + i, time * 0.5);
-    Rough.poly(ctx, pts, {
-      color: this.hover === i && this.chosen < 0 ? off.color : '#2b2b2b',
-      width: this.hover === i ? 3.6 : 2.8, jitter: 1.6, progress: pr.outline
-    });
+    if (off.card === 'spiky') {
+      // a skinned card: a gold star-burst border, glowing, with a star in
+      // each corner, drawn on over the same outline beat as a plain card
+      Rough.bloom(ctx, c.x + c.w / 2, c.y + c.h / 2, Math.max(c.w, c.h) * 0.7, '#ffd24a', 0.25 * pr.outline);
+      const spikes = spikyOutline(c, 1.5);
+      Rough.poly(ctx, spikes, { color: '#e8a93a', width: 3.4, jitter: 1.2, progress: pr.outline });
+      Rough.poly(ctx, pts, { color: this.hover === i && this.chosen < 0 ? off.color : '#6b4a12',
+        width: this.hover === i ? 3 : 2.2, jitter: 1.4, progress: pr.outline });
+      if (pr.outline >= 1) {
+        for (const [sx, sy] of [[c.x, c.y], [c.x + c.w, c.y], [c.x, c.y + c.h], [c.x + c.w, c.y + c.h]]) {
+          drawStar(ctx, sx, sy, 9 + Math.sin(time * 3 + sx) * 1.2, time * 0.8, 1);
+        }
+      }
+    } else {
+      Rough.poly(ctx, pts, {
+        color: this.hover === i && this.chosen < 0 ? off.color : '#2b2b2b',
+        width: this.hover === i ? 3.6 : 2.8, jitter: 1.6, progress: pr.outline
+      });
+    }
 
     if (pr.fill > 0.5) {
       const ta = E.clamp01((pr.fill - 0.5) / 0.4);

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Patrick+Hand&display=swap">
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -36,48 +36,90 @@
   <span id="skill-button-label">SKILL</span>
 </button>
 
-<div id="menu" class="screen">
-  <h1>FANDHARN</h1>
-  <div class="rules">
-    <div class="rule"><b>CLICK</b><span>2-4 damage, 10% crit</span></div>
-    <div class="rule"><b>10 WAVES</b><span>or endless, if you would rather not stop</span></div>
-    <div class="rule"><b>5 HP</b><span>one segment per leak</span></div>
-    <div class="rule"><b>BUY</b><span>pick 1 of 3 between waves</span></div>
-    <div class="rule"><b>10 CURSORS</b><span>each hits for its own number</span></div>
-    <div class="rule"><b>SKILLS</b><span>50 clicks, then right-click</span></div>
+<!-- the title screen: three buttons in the corner, the castle behind them -->
+<div id="front" class="screen front">
+  <div class="front-stack">
+    <h1 class="front-title">FANDHARN</h1>
+    <button class="front-btn play" data-go="play" data-doodle="#c8433a" data-fill="#c8433a" data-paper="1" data-weight="3.2"><b>PLAY</b></button>
+    <button class="front-btn" data-go="bestiary" data-doodle="ink" data-paper="1"><b>BESTIARY</b></button>
+    <button class="front-btn" data-go="skins" data-doodle="ink" data-paper="1"><b>SKIN</b></button>
   </div>
-  <div class="modes">
-    <button class="mode on" data-mode="ten"><b>10 WAVES</b><span>bosses on 5 and 10, then it is over</span></button>
-    <button class="mode" data-mode="endless"><b>ENDLESS</b><span>no end, a random boss every 5</span></button>
+</div>
+
+<!-- PLAY: the run setup, as the title screen used to be -->
+<div id="menu" class="screen popup-screen hidden">
+  <div class="popup play-popup" data-doodle="ink" data-paper="1" data-weight="3.4">
+    <button class="popup-close" data-go="front" aria-label="close" data-doodle="ink" data-paper="1">&times;</button>
+    <div class="modes">
+      <button class="mode on" data-mode="ten" data-doodle="#6b4fb0"><b>10 WAVES</b><span>bosses on 5 and 10, then it is over</span></button>
+      <button class="mode" data-mode="endless" data-doodle="#b8b2a3"><b>ENDLESS</b><span>no end, a random boss every 5</span></button>
+    </div>
+    <div class="diffs">
+      <button class="diff easy" data-diff="easy" data-doodle="#4c9f70"><b>EASY</b><span>thin enemies, thin crowds</span></button>
+      <button class="diff normal" data-diff="normal" data-doodle="#d99a26"><b>NORMAL</b><span>the drawing as intended</span></button>
+      <button class="diff hard" data-diff="hard" data-doodle="#c8433a"><b>HARD</b><span>fat HP, packed waves</span></button>
+    </div>
+    <span id="build-tag" class="build-tag"></span>
   </div>
-  <div class="diffs">
-    <button class="diff easy" data-diff="easy"><b>EASY</b><span>thin enemies, thin crowds</span></button>
-    <button class="diff normal" data-diff="normal"><b>NORMAL</b><span>the drawing as intended</span></button>
-    <button class="diff hard" data-diff="hard"><b>HARD</b><span>fat HP, packed waves</span></button>
+</div>
+
+<!-- BESTIARY: a book, open on the table -->
+<div id="bestiary" class="screen book-screen hidden">
+  <div class="book" data-doodle="ink" data-paper="1" data-weight="3.4">
+    <button class="book-close" data-go="front" aria-label="close" data-doodle="ink" data-paper="1">&times;</button>
+    <div class="page page-left">
+      <h2>BESTIARY</h2>
+      <div id="beast-list" class="beast-list"></div>
+    </div>
+    <div class="spine" data-doodle="#b8b2a3" data-weight="1.6"></div>
+    <div class="page page-right">
+      <div class="beast-view" data-doodle="ink" data-paper="1"><canvas id="beast-canvas" class="beast-canvas"></canvas></div>
+      <h3 id="beast-name" class="beast-name"></h3>
+      <div id="beast-where" class="beast-where"></div>
+      <div id="beast-stats" class="beast-stats"></div>
+      <p id="beast-text" class="beast-text"></p>
+    </div>
   </div>
-  <p class="hint">mouse or touch &mdash; same thing <span id="build-tag" class="build-tag"></span></p>
+</div>
+
+<!-- SKIN: spend the coins -->
+<div id="skins" class="screen popup-screen hidden">
+  <div class="popup skins-popup" data-doodle="ink" data-paper="1" data-weight="3.4">
+    <button class="popup-close" data-go="front" aria-label="close" data-doodle="ink" data-paper="1">&times;</button>
+    <h2>SKINS</h2>
+    <div class="coin-purse"><i class="coin" data-doodle="#a5741b" data-fill="#f2c230" data-shape="circle" data-weight="2"></i><b id="coin-count">0</b><span>coins</span></div>
+    <div id="skin-list" class="skin-list"></div>
+    <p class="hint coin-rules">Normal win: 1 coin &middot; Hard win: 2 &middot; Endless: every 10 waves</p>
+    <p class="hint save-warn hidden" id="save-warn">this browser is not keeping saves - coins last until the tab closes</p>
+  </div>
 </div>
 
 <div id="end" class="screen hidden">
   <h2 id="end-title">THE CASTLE FELL</h2>
   <div id="end-body" class="end-body"></div>
-  <button data-action="menu">BACK TO THE TITLE</button>
+  <button data-action="menu" data-doodle="ink">BACK TO THE TITLE</button>
 </div>
 
 <!-- BUILD: bump this (and the ?v= on every asset) to beat browser caches -->
-<script>window.BUILD_V = "15";</script>
-<script src="js/audio.js?v=15"></script>
-<script src="js/rough.js?v=15"></script>
-<script src="js/config.js?v=15"></script>
-<script src="js/entities.js?v=15"></script>
-<script src="js/hive.js?v=15"></script>
-<script src="js/fx.js?v=15"></script>
-<script src="js/auger.js?v=15"></script>
-<script src="js/trapper.js?v=15"></script>
-<script src="js/skills.js?v=15"></script>
-<script src="js/offers.js?v=15"></script>
-<script src="js/cursors.js?v=15"></script>
-<script src="js/ui.js?v=15"></script>
-<script src="js/game.js?v=15"></script>
+<script>window.BUILD_V = "17";</script>
+<script src="js/audio.js?v=17"></script>
+<script src="js/rough.js?v=17"></script>
+<script src="js/config.js?v=17"></script>
+<script src="js/save.js?v=17"></script>
+<script src="js/entities.js?v=17"></script>
+<script src="js/hive.js?v=17"></script>
+<script src="js/fx.js?v=17"></script>
+<script src="js/deaths.js?v=17"></script>
+<script src="js/auger.js?v=17"></script>
+<script src="js/trapper.js?v=17"></script>
+<script src="js/skills.js?v=17"></script>
+<script src="js/offers.js?v=17"></script>
+<script src="js/cursors.js?v=17"></script>
+<script src="js/skins.js?v=17"></script>
+<script src="js/doodle.js?v=17"></script>
+<script src="js/bestiary.js?v=17"></script>
+<script src="js/menu.js?v=17"></script>
+<script src="js/ui.js?v=17"></script>
+<script src="js/game.js?v=17"></script>
 </body>
 </html>

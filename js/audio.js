@@ -22,7 +22,8 @@ const Sfx = {
     'hive_drone', 'bee_swarm', 'queen_screech', 'larva_pop',
     'steroid_charge', 'lava_erupt', 'lava_land', 'grass_fire',
     'auger_screech', 'auger_chitter', 'auger_charge', 'auger_dash',
-    'trap_dig', 'trap_emerge', 'trap_snap'
+    'trap_dig', 'trap_emerge', 'trap_snap',
+    'star_fall', 'star_hit', 'sk_starfall'
   ],
   path: 'assets/sfx/',
   ver: (typeof window !== 'undefined' && window.BUILD_V) ? '?v=' + window.BUILD_V : '',

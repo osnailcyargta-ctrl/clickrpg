@@ -35,6 +35,7 @@ const Game = {
   blotKilled: false,        // the Blot has gone down at least once this run
   eagleKilled: false,       // so has the Thunder Eagle
   trapperBuys: 0,           // every one bought bites harder
+  coinsRun: 0,              // coins earned this run, for the end card
   endless: false,           // the run keeps going past wave 10
   stillT: 0,                // how long the hand has been off the page
   lastPointer: { x: 0, y: 0 },
@@ -219,6 +220,7 @@ const Game = {
     this.blotKilled = false;
     this.eagleKilled = false;
     this.trapperBuys = 0;
+    this.coinsRun = 0;
     this.stillT = 0;
     this.lawnBurnt = false;
     this.spawnQueue = [];
@@ -549,7 +551,7 @@ const Game = {
     this.doubleId = pool.length ? pool[Math.floor(Math.random() * pool.length)].id : 'wet';
     this.doubleTurn = 0;
     this.effects.push(new FloatText(0, -this.castleRadius - 40,
-      cursorById(this.doubleId).name, cursorById(this.doubleId).color, 19, false));
+      cursorLook(this.doubleId).name, cursorLook(this.doubleId).color, 19, false));
   },
 
   /* The castle has one sentry post. Whoever moves in evicts whoever was
@@ -564,6 +566,16 @@ const Game = {
         gone[had] || 'out', '#6b6b6b', 15, false));
     }
     UI.syncHud(this);
+  },
+
+  /* Coins go straight into the save, so nothing earned can be lost to a
+     crash or a closed tab afterwards. */
+  earnCoins(n) {
+    if (!(n > 0)) return;
+    Save.addCoins(n);
+    this.coinsRun += n;
+    this.effects.push(new CoinPop(n));
+    Sfx.play('card_buy', { volume: 0.9, rateVar: 0 });
   },
 
   /* How hard the Trapper bites: 6 for the first one bought, 1 more for every
@@ -625,7 +637,10 @@ const Game = {
 
   /* ----------------------------------------------------------------- loop */
   frame(now) {
-    let dt = (now - this.last) / 1000;
+    // never negative: the first animation-frame timestamp can land a hair
+    // before the performance.now() it is measured from, and a negative step
+    // runs spawn-ins backwards (an enemy with a negative size throws)
+    let dt = Math.max(0, (now - this.last) / 1000);
     this.last = now;
     // the governor reads the real frame time, before it is capped - a tab
     // switch is clipped so one long gap cannot condemn the machine
@@ -638,6 +653,7 @@ const Game = {
   },
 
   update(dt) {
+    if (this.state === 'menu') { MenuScene.update(dt); return; }
     if (this.paused) return;
     if (this.pointer.down > 0) this.pointer.down = Math.max(0, this.pointer.down - dt);
 
@@ -666,8 +682,8 @@ const Game = {
     if (!this.skillAnnounced && this.skillReady() && this.state === 'playing') {
       this.skillAnnounced = true;
       Sfx.play('skill_ready', { volume: 0.7 });
-      this.effects.push(new FloatText(0, -this.castleRadius - 54, skillFor(this.cursorId).name + ' READY',
-        cursorById(this.cursorId).color, 20, false));
+      this.effects.push(new FloatText(0, -this.castleRadius - 54, skillLook(this.cursorId).name + ' READY',
+        cursorLook(this.cursorId).color, 20, false));
       UI.syncHud(this);
     }
 
@@ -735,7 +751,13 @@ const Game = {
     if (this.state === 'playing' && this.spawnLeft === 0 && this.enemies.length === 0) {
       this.banner = null;
       Sfx.play('wave_clear', { volume: 0.75 });
+      // every tenth wave out in endless pays coins, and pays them now - a run
+      // that dies at wave 27 keeps what it earned at 10 and 20
+      if (this.endless && this.wave % COIN_RULES.every === 0) {
+        this.earnCoins(coinsForEndlessMilestone(this.difficulty, this.wave / COIN_RULES.every));
+      }
       if (!this.endless && this.wave >= WAVES_PER_RUN) {   // nothing left to spend it on
+        this.earnCoins(coinsForVictory(this.difficulty));
         this.state = 'victory';
         UI.showEnd(this, true);
       } else {
@@ -768,6 +790,8 @@ const Game = {
       for (const e of this.enemies) e.draw(ctx, this.time);
       if (this.sentry && this.sentry.type === 'trapper') this.sentry.drawTrapperOver(ctx, this.time);
       for (const f of this.effects) if (!(f instanceof InkPuddle) && !f.under) f.draw(ctx, this.time);
+    } else {
+      MenuScene.draw(ctx, this);
     }
     ctx.restore();
 
@@ -945,7 +969,7 @@ const Game = {
     ctx.restore();
 
     if (dmg >= 3) this.drawSmoke(ctx, R, t, dmg);
-    this.drawHpBar(ctx, 0, -R - 30);
+    if (this.state !== 'menu') this.drawHpBar(ctx, 0, -R - 30);   // no numbers on the title or in the book
   },
 
   drawSmoke(ctx, R, t, dmg) {

@@ -11,8 +11,8 @@ class SkillCinematic {
   constructor(game, cursorId, wx, wy) {
     this.id = nextId();
     this.cursorId = cursorId;
-    this.cursor = cursorById(cursorId);
-    this.skill = skillFor(cursorId);
+    this.cursor = cursorLook(cursorId);      // a skin renames and recolours the cast
+    this.skill = skillLook(cursorId);
     this.wx = wx; this.wy = wy;
     this.t = 0;
     this.windup = 0.95;            // page darkens, time drags, name slams
@@ -272,6 +272,16 @@ const SkillPayloads = {
       Math.hypot(e.x - cine.wx, e.y - cine.wy) <= reach ||
       Math.hypot(e.x, e.y) <= GROUND_RADIUS + e.r));
 
+    // the Star Caller's STARFALL: the same targets and the same numbers,
+    // delivered by one meteor on the castle instead of a bolt apiece
+    if (cursorLook('storm').payload === 'meteor') {
+      const hits = targets.map(e => ({ x: e.x, y: e.y, damage: e.boss ? bossDmg : dmg, at: Math.hypot(e.x, e.y) }));
+      const m = new Meteor(game, hits, reach);
+      game.effects.push(m);
+      game.effects.push(new StarShower(game, m.dur));
+      return m.dur + 0.2;
+    }
+
     game.effects.push(new StormFront(cine.wx, cine.wy, reach));
     game.effects.push(new StormRain(game, 1.9));
     Sfx.play('sk_thunderhead', { volume: 1, rateVar: 0 });
@@ -459,6 +469,23 @@ class StormRain {
   }
 }
 
+/* What a Storm Caller strike does when it lands, and nothing else - no
+   pictures. Every look the Storm Caller can wear (its own bolts, the Star
+   Caller's stars and meteor) resolves its hit through this one function, so
+   a skin can never change a number. Struck or splashed, never both. */
+function stormHit(game, x, y, damage, radius, splash) {
+  if (!(damage > 0) && !splash) return;
+  for (const e of game.enemies) {
+    if (e.dead) continue;
+    const d = Math.hypot(e.x - x, e.y - y);
+    if (d <= radius + e.r) {
+      if (damage > 0) e.hurt(damage, game, { color: '#dfe6ff', source: 'storm' });
+    } else if (splash && d <= splash.radius + e.r) {
+      e.hurt(splash.damage, game, { color: '#9fb4ff', source: 'storm' });
+    }
+  }
+}
+
 /* One bolt: a jagged fall from off the top of the page, forks and all. */
 class LightningBolt {
   constructor(x, y, o) {
@@ -502,18 +529,7 @@ class LightningBolt {
       this.struck = true;
       Rough.boil(this.id, 0);
       this.build();
-      // struck or splashed, never both
-      if (this.damage > 0 || this.splash) {
-        for (const e of game.enemies) {
-          if (e.dead) continue;
-          const d = Math.hypot(e.x - this.x, e.y - this.y);
-          if (d <= this.radius + e.r) {
-            if (this.damage > 0) e.hurt(this.damage, game, { color: '#dfe6ff', source: 'storm' });
-          } else if (this.splash && d <= this.splash.radius + e.r) {
-            e.hurt(this.splash.damage, game, { color: '#9fb4ff', source: 'storm' });
-          }
-        }
-      }
+      stormHit(game, this.x, this.y, this.damage, this.radius, this.splash);
       game.effects.push(new ScorchMark(this.x, this.y, this.radius || 14));
       for (let i = 0; i < 16; i++) game.effects.push(new Ember(this.x, this.y, 22));
       for (let i = 0; i < 8; i++) game.effects.push(new Crumb(this.x, this.y, '#8ea6ff'));

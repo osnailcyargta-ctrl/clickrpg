@@ -175,3 +175,169 @@ button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1
 .mode b { font-family: var(--title); font-size: 16px; letter-spacing: 2px; }
 .mode span { font-size: 11px; opacity: 0.7; }
 .mode.on { opacity: 1; border-color: #6b4fb0; color: #57409a; }
+
+/* ------------------------------------------------------------ title screen */
+.screen.front {
+  background: transparent;                 /* the castle scene is drawn behind it */
+  align-items: flex-start; justify-content: flex-end;
+  padding: 28px 34px calc(34px + env(safe-area-inset-bottom, 0px));
+  cursor: default;                         /* the canvas under it hides the pointer */
+}
+.front-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.front-title {
+  font-size: clamp(40px, 8vw, 76px); margin: 0 0 8px 2px; transform: rotate(-2deg);
+  text-shadow: 3px 3px 0 rgba(43, 43, 43, 0.14), 0 0 22px rgba(255, 253, 244, 0.9);
+}
+.front-btn {
+  min-width: 220px; text-align: left; padding: 12px 22px;
+  background: rgba(255, 253, 244, 0.92);
+  animation: frontIn 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+.front-btn b { font-family: var(--title); font-size: 24px; letter-spacing: 3px; }
+.front-btn:nth-of-type(1) { animation-delay: 0.05s; transform: rotate(-1deg); }
+.front-btn:nth-of-type(2) { animation-delay: 0.12s; transform: rotate(0.6deg); }
+.front-btn:nth-of-type(3) { animation-delay: 0.19s; transform: rotate(-0.4deg); }
+.front-btn.play { border-color: #c8433a; color: #a4352e; min-width: 250px; }
+.front-btn.play b { font-size: 30px; }
+@keyframes frontIn { from { opacity: 0; transform: translateX(-30px) rotate(-3deg); } }
+
+.back { position: absolute; top: 16px; left: 16px; font-size: 14px; padding: 7px 14px; }
+
+/* ----------------------------------------------------------------- bestiary */
+.book-screen { background: rgba(43, 38, 30, 0.55); padding: 16px; }
+.book {
+  position: relative; display: flex; width: min(1060px, 96vw); height: min(640px, 90vh);
+  background: #f3e8c8; border: 3px solid #5c4326; border-radius: 12px 8px 14px 10px;
+  box-shadow: 0 0 0 7px #7a5a36, 0 0 0 10px #4a3420, 10px 14px 0 10px rgba(0, 0, 0, 0.25);
+  animation: bookIn 0.45s cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+@keyframes bookIn { from { transform: scale(0.85) rotate(-3deg) translateY(30px); opacity: 0; } }
+.page { flex: 1; padding: 20px 22px; min-width: 0; display: flex; flex-direction: column;
+  background-image: repeating-linear-gradient(transparent 0 27px, rgba(92, 67, 38, 0.1) 27px 28px); }
+.page-left { border-right: 1px solid rgba(92, 67, 38, 0.25); }
+.spine { width: 16px; background: linear-gradient(90deg, rgba(0,0,0,0.12), rgba(0,0,0,0.02) 40%, rgba(0,0,0,0.12)); }
+.page h2 { color: #5c4326; margin-bottom: 8px; }
+.book-close { position: absolute; top: -18px; right: -18px; width: 42px; height: 42px; padding: 0;
+  font-size: 26px; line-height: 1; border-radius: 50%; z-index: 2; }
+.beast-list { overflow-y: auto; flex: 1; padding-right: 6px; }
+.beast-group { font-family: var(--title); font-size: 15px; letter-spacing: 2px; color: #8a6a3a; margin: 12px 0 4px; }
+.beast-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 3px 8px; margin: 2px 0; border: 2px solid transparent; box-shadow: none;
+  background: transparent; border-radius: 10px 6px 12px 7px; font-size: 16px;
+}
+.beast-row:hover:not(:disabled) { transform: translateX(3px); box-shadow: none; border-color: rgba(92, 67, 38, 0.35); }
+.beast-row.on { border-color: #5c4326; background: rgba(255, 253, 244, 0.7); }
+.beast-row canvas.thumb { width: 46px; height: 46px; flex: none; }
+.beast-row .boss-tag { font-size: 10px; letter-spacing: 1.5px; color: #c8433a; margin-left: auto; }
+.page-right { align-items: stretch; overflow-y: auto; }
+.beast-canvas { width: 100%; height: 250px; flex: none; border: 2px solid rgba(92, 67, 38, 0.4);
+  border-radius: 10px 7px 12px 8px; background: #fffdf4; }
+.beast-name { font-family: var(--title); font-size: 26px; margin: 10px 0 0; color: #3a2a18; }
+.beast-where { font-size: 13px; color: #8a6a3a; margin-bottom: 8px; }
+.beast-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+.beast-stat { border: 2px solid rgba(92, 67, 38, 0.3); border-radius: 9px 6px 10px 7px; padding: 4px 8px; background: rgba(255, 253, 244, 0.6); }
+.beast-stat i { display: block; font-style: normal; font-size: 10px; letter-spacing: 1.5px; opacity: 0.6; }
+.beast-stat b { font-size: 16px; }
+.beast-text { margin: 0; font-size: 15px; line-height: 1.45; color: #3a2a18; }
+
+@media (max-width: 760px) {
+  .book { flex-direction: column; height: 92vh; }
+  .spine { display: none; }
+  .page-left { flex: 0 0 34%; border-right: none; border-bottom: 1px solid rgba(92, 67, 38, 0.25); }
+  .beast-canvas { height: 190px; }
+  .beast-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* -------------------------------------------------------------------- skins */
+.coin-purse { display: flex; align-items: center; gap: 8px; font-size: 20px; }
+.coin-purse b { font-family: var(--title); font-size: 30px; color: #a5741b; }
+.coin { display: inline-block; width: 24px; height: 24px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffe79a, #f2c230 55%, #c9921d);
+  border: 2.5px solid #a5741b; box-shadow: 0 0 10px rgba(255, 210, 74, 0.6); }
+.skin-list { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; max-width: 900px; }
+.skin-card { width: 280px; border: 3px solid var(--ink); border-radius: 16px 10px 18px 9px; padding: 12px;
+  background: var(--paper); display: flex; flex-direction: column; gap: 6px; box-shadow: 4px 4px 0 rgba(43,43,43,0.2); }
+.skin-card.spiky { border-color: #e8a93a; box-shadow: 0 0 0 4px rgba(232, 169, 58, 0.25), 0 0 22px rgba(255, 210, 74, 0.45); }
+.skin-card canvas.skin-preview { width: 100%; height: 170px; }
+.skin-card h3 { font-family: var(--title); margin: 4px 0 0; font-size: 22px; }
+.skin-card .skin-for { font-size: 12px; opacity: 0.6; }
+.skin-card p { margin: 0; font-size: 14px; }
+.skin-card button { margin-top: 6px; font-size: 16px; }
+.skin-card button.equipped { border-color: #4c9f70; color: #3c7c58; }
+.skin-card button:disabled { opacity: 0.45; cursor: default; }
+.coin-rules { max-width: 560px; text-align: center; line-height: 1.5; }
+.end-coins { color: #a5741b; font-weight: bold; }
+
+/* ======================================================= the crayon pass
+   Every frame in the menus is drawn by js/doodle.js in crayon, the way the
+   between-wave cards are - so nothing here may be smooth: no rounded
+   corners, no soft shadows, no gradients, and no easing. Animations move in
+   a few hard steps, like a flip-book. (Declared last so it wins.) */
+.doodled {
+  position: relative; isolation: isolate;
+  background: transparent !important; border-color: transparent !important;
+  border-radius: 0 !important; box-shadow: none !important;
+  transition: none !important;
+}
+.doodle-bg { position: absolute; left: -10px; top: -10px; z-index: -1; pointer-events: none; }
+button.doodled:hover:not(:disabled) { transform: translateY(-2px) !important; box-shadow: none !important; }
+button.doodled:active:not(:disabled) { transform: translate(1px, 1px) !important; }
+
+/* straight, not tilted */
+.front-btn, .rule, .rule:nth-child(odd), .rule:nth-child(even) { transform: none; }
+.front-btn:nth-of-type(1), .front-btn:nth-of-type(2), .front-btn:nth-of-type(3) { transform: none; }
+.front-title { transform: none; text-shadow: 3px 3px 0 rgba(43, 43, 43, 0.12); }
+
+/* flip-book motion instead of eased motion */
+.screen { animation: screenIn 0.3s steps(3, end); }
+h1 { animation: titleIn 0.45s steps(4, end); }
+.rule { animation: ruleIn 0.36s steps(3, end) backwards; }
+.front-btn { animation: frontIn 0.36s steps(3, end) backwards; }
+.book { animation: bookIn 0.36s steps(3, end); }
+
+/* the book: a sheet of paper drawn in crayon, not a leather binder */
+.book-screen { background: rgba(255, 253, 244, 0.62); }
+.book { box-shadow: none; border: 0; background: transparent; }
+.page { background-image: none; }
+.page-left { border-right: 0; }
+.spine { width: 4px; margin: 26px 0; background: none; }
+.page h2 { color: var(--ink); }
+.beast-group { color: #8a8a8a; }
+.beast-row { border: 0; border-radius: 0; }
+.beast-row.on { background: transparent; }
+.beast-row:hover:not(:disabled) { transform: none; }
+.beast-row .boss-tag { color: #c8433a; }
+.beast-view { flex: none; margin: 4px 4px 0; }
+.beast-canvas { display: block; border: 0; border-radius: 0; background: transparent; }
+.beast-name { color: var(--ink); }
+.beast-where { color: #8a8a8a; }
+.beast-stat { margin: 3px; }
+.beast-text { color: #3a3a3a; }
+.book-close { top: -14px; right: -14px; }
+
+/* the shop */
+.skin-card { background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+.skin-card.spiky { box-shadow: none; }
+.skin-card .skin-view { margin: 2px; }
+.skin-card canvas.skin-preview { display: block; border: 0; border-radius: 0; background: transparent; }
+.coin { background: none; border: 0; box-shadow: none; width: 22px; height: 22px; }
+.coin-inline { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; margin-left: 4px; }
+
+/* crayon frames need a positioned parent, but these two live in corners */
+.back.doodled, .book-close.doodled { position: absolute; }
+
+/* ---------------------------------------------------------------- popups
+   PLAY and SKIN open the way the bestiary does: a crayon sheet of paper over
+   the castle scene, with a close mark in the corner. */
+.popup-screen { background: rgba(255, 253, 244, 0.62); padding: 16px; }
+.popup {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  padding: 34px 30px 26px; max-width: 94vw;   /* no overflow clip: it would crop the crayon at the edges */
+  animation: bookIn 0.36s steps(3, end);
+}
+.popup .popup-close.doodled { position: absolute; top: -14px; right: -14px; }
+.popup-close { width: 42px; height: 42px; padding: 0; font-size: 26px; line-height: 1; z-index: 2; }
+.popup .build-tag { position: absolute; right: 12px; bottom: 6px; margin: 0; }
+.popup h2 { margin: -6px 0 0; }
+.skins-popup { min-width: min(560px, 94vw); }

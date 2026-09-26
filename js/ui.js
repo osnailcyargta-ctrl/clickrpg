@@ -15,8 +15,12 @@ const UI = {
     // the mode toggle sits above the difficulties and just flags the next start
     this.endless = false;
     const modeBtns = document.querySelectorAll('[data-mode]');
-    const paintMode = () => modeBtns.forEach(b2 =>
-      b2.classList.toggle('on', (b2.dataset.mode === 'endless') === this.endless));
+    const paintMode = () => modeBtns.forEach(b2 => {
+      const on = (b2.dataset.mode === 'endless') === this.endless;
+      b2.classList.toggle('on', on);
+      b2.dataset.doodle = on ? '#6b4fb0' : '#b8b2a3';     // the crayon changes colour with it
+      if (b2._doodle) Doodle.draw(b2._doodle, true);
+    });
     modeBtns.forEach(b2 => b2.addEventListener('click', () => {
       Sfx.play('button', { volume: 0.7 });
       this.endless = b2.dataset.mode === 'endless';
@@ -49,6 +53,7 @@ const UI = {
     });
     paint();
 
+    Menu.bind(game);
     document.querySelectorAll('[data-action="menu"]').forEach(btn => {
       btn.addEventListener('click', () => { Sfx.play('button', { volume: 0.7 }); this.showMenu(); });
     });
@@ -73,19 +78,26 @@ const UI = {
 
   showMenu() {
     this._pipHtml = this._badgeHtml = null;
-    this.game.state = 'menu';
-    this.game.enemies = [];
-    this.game.effects = [];
-    this.game.banner = null;
-    this.game.offerScreen = null;
+    const g = this.game;
+    g.state = 'menu';
+    g.enemies = [];
+    g.effects = [];
+    g.banner = null;
+    g.offerScreen = null;
+    g.cinematic = null;
+    // the castle behind the title stands whole, whatever the last run did to it
+    g.castleHp = g.maxHp = CASTLE_HP; g.collapse = 0; g.castleHitT = 0; g.shield = 0;
+    g.oneshot = {};
+    if (g.lawnBurnt) { g.lawnBurnt = false; g.buildGround(false); }
+    MenuScene.init();
     this.hideAll();
-    this.menu.classList.remove('hidden');
+    Menu.go('front');
     this.hud.classList.add('hidden');
     this.hideSkillButton();
   },
 
   hideAll() {
-    this.menu.classList.add('hidden');
+    Menu.hideAll();
     this.end.classList.add('hidden');
     this.hud.classList.remove('hidden');
     this.showSkillButton();
@@ -124,7 +136,7 @@ const UI = {
     diffEl.style.color = d.color;
     diffEl.style.borderColor = d.color;
 
-    const cur = cursorById(g.cursorId);
+    const cur = cursorLook(g.cursorId);
     const chip = document.getElementById('hud-cursor');
     const chipText = cur.name + '  ' + g.clickDamage() + ' dmg'
       + (cur.every > 0 ? '  ' + (g.cursorCharge % cur.every) + '/' + cur.every : '');
@@ -133,7 +145,7 @@ const UI = {
     chip.style.borderColor = cur.color;
 
     // skill chip: charging, ready, or cooling down
-    const skill = skillFor(g.cursorId);
+    const skill = skillLook(g.cursorId);
     const chipEl = document.getElementById('hud-skill');
     const btnEl = document.getElementById('skill-button');
     const btnLabel = document.getElementById('skill-button-label');
@@ -175,6 +187,7 @@ const UI = {
 
   showEnd(g, won) {
     this.end.classList.remove('hidden');
+    Doodle.scan(this.end);
     this.hud.classList.add('hidden');
     this.hideSkillButton();
     const title = document.getElementById('end-title');
@@ -191,7 +204,9 @@ const UI = {
         : ' &middot; wave ' + g.wave + ' of ' + WAVES_PER_RUN) + '</div>'
       + '<div>' + g.totalKills + ' scribbles erased</div>'
       + '<div>castle ' + g.castleHp + '/' + g.maxHp + '</div>'
-      + '<div>holding: ' + cursorById(g.cursorId).name + '</div>'
+      + '<div>holding: ' + cursorLook(g.cursorId).name + '</div>'
+      + (g.coinsRun ? '<div class="end-coins">+' + g.coinsRun + (g.coinsRun === 1 ? ' coin' : ' coins')
+        + ' &middot; ' + Save.coins + ' saved</div>' : '')
       + (stacks.length ? '<div class="end-small">' + stacks.join(' &middot; ') + '</div>' : '');
   }
 };

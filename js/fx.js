@@ -214,3 +214,35 @@ function drawStunStars(ctx, x, y, r, t) {
     ctx.restore();
   }
 }
+
+/* Coins earned: a doodled gold coin bounces down over the castle with the
+   amount on it. Drawn in screen space above everything but the cursor. */
+class CoinPop {
+  constructor(n) {
+    this.id = nextId();
+    this.n = n;
+    this.t = 0; this.dur = 2.6;
+  }
+  update(dt) { this.t += dt; return this.t < this.dur; }
+  draw(ctx, time) {
+    const k = this.t / this.dur;
+    const drop = E.back(Math.min(1, this.t / 0.55));
+    const y = -140 + drop * 60 - Math.max(0, k - 0.75) * 120;
+    const a = k > 0.75 ? 1 - (k - 0.75) / 0.25 : 1;
+    const r = 22;
+    Rough.boil(this.id, Math.floor(time * 6));
+    Rough.bloom(ctx, 0, y, r * 3, '#ffd24a', 0.7 * a);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#f2c230';
+    ctx.beginPath(); ctx.arc(0, y, r, 0, 7); ctx.fill();
+    ctx.restore();
+    Rough.circle(ctx, 0, y, r, { color: '#a5741b', width: 3, jitter: 1.2, wobble: 1.5, alpha: a });
+    Rough.circle(ctx, 0, y, r * 0.7, { color: '#c9921d', width: 2, jitter: 1, wobble: 1.2, alpha: a * 0.8 });
+    ctx.save();
+    ctx.globalAlpha = a;
+    Rough.text(ctx, '+' + this.n, 0, y + 1, 18, '#7a5212');
+    Rough.text(ctx, this.n === 1 ? 'coin' : 'coins', 0, y + r + 16, 16, '#a5741b');
+    ctx.restore();
+  }
+}

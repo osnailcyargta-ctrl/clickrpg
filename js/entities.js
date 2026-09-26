@@ -153,9 +153,7 @@ class Enemy {
       game.effects.push(new FloatText(this.x, this.y - this.r, 'it split', '#7a5cc4', 24, true));
     }
     game.onEnemyKilled(this);
-    game.effects.push(new DeathSplat(this.x, this.y, this.r, this.fill, this.boss));
-    game.effects.push(new KillPop(this.x, this.y, this.r, this.fill, this.boss, game));
-    if (this.boss) game.shake(14);
+    Deaths.play(this, game);           // each thing breaks the way it is made (js/deaths.js)
   }
 
   update(dt, game) {

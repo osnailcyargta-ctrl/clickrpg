@@ -9,14 +9,15 @@
    a beat while every eye turns the same way, winds up for a second backing
    away slowly with the drill screaming, then runs. Anything that hurts it
    mid-run stops it cold, and it has to wind up from the start. If it gets
-   there it goes through the wall: two segments, not one.
+   there it costs a segment, like anything else - it is meant to be horrible
+   to look at, not to be the hardest thing on the page.
 
    Its methods hang off Enemy, the way the Hive's do. */
 
 const AUGER_HALT = 0.3;          // the beat where it stops and looks
 const AUGER_WIND = 1.0;          // backing away with the drill spinning up
 const AUGER_BACK = 14;           // px/s it gives up while it winds
-const AUGER_DASH = 11;           // x its walking speed, on the run
+const AUGER_DASH = 7;            // x its walking speed, on the run
 
 Object.assign(Enemy.prototype, {
 
@@ -93,7 +94,7 @@ Object.assign(Enemy.prototype, {
     }
 
     if (a.mode === 'dash') {
-      const step = Math.max(240, this.speed * AUGER_DASH) * dt;
+      const step = Math.max(200, this.speed * AUGER_DASH) * dt;
       this.x += inX * step; this.y += inY * step;
       a.gait += step * 0.05;
       a.spin += dt * 70;
@@ -101,10 +102,8 @@ Object.assign(Enemy.prototype, {
       if (a.trail.length > 8) a.trail.pop();
       if (Math.random() < 0.6) game.effects.push(new Crumb(this.x - inX * this.r, this.y - inY * this.r, '#9a8f86'));
       if (d <= game.castleRadius + this.r * 0.6) {
-        // straight through the wall - two segments' worth
         game.castleHit(this);
-        if (game.castleHp > 0 && game.state === 'playing') game.castleHit(this);
-        game.shake(24);
+        game.shake(16);
         game.effects.push(new KillPop(this.x, this.y, this.r, '#7a1f1f', true, game));
         this.dead = true;
         game.effects.push(new DeathSplat(this.x, this.y, this.r, this.fill, true));
