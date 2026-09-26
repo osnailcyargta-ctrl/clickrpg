@@ -98,7 +98,7 @@ class Enemy {
     this.hp -= amount;
     if (this.kind === 'hive') {
       this.sinceSwarm += dealt;
-      while (this.sinceSwarm >= 25) {          // every 25 it lets eight out
+      while (this.sinceSwarm >= 25) {          // every 25 it lets three out
         this.sinceSwarm -= 25;
         this.releaseSwarm(game);
       }
@@ -204,10 +204,10 @@ class Enemy {
     }
   }
 
-  /* Eight bees out of the door, all of them making for the castle. */
+  /* Three bees out of the door, all of them making for the castle. */
   releaseSwarm(game) {
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + Math.random();
       const b = game.spawnMinion('bee', this.x + Math.cos(a) * (this.r + 8),
         this.y + Math.sin(a) * (this.r + 8), 0, game.waveSpec ? game.waveSpec.speed : 55);
       b.spawnT = 0.5;
@@ -257,8 +257,9 @@ class Enemy {
     const reach = (this.speed || 0) * dt;
 
     if (this.kind === 'hive') {
-      const half = Math.min(game.w, game.h) / 2;
-      if (!this.entered && Math.hypot(this.x, this.y) < half - this.r - 10) {
+      // it (and its haulers) cannot be touched until the nest's edge is
+      // three blocks off the green
+      if (!this.entered && d - this.r <= GROUND_RADIUS + BLOCK * 3) {
         this.entered = true;
         game.effects.push(new FloatText(this.x, this.y - this.r - 16, 'the hive lands', '#c9903a', 20, true));
         game.shake(12);

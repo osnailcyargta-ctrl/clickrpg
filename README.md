@@ -18,7 +18,14 @@ circling it:
 - **BESTIARY** opens a book of every enemy and boss: its picture, its stats,
   where it shows up, and a live preview of it attacking. The preview runs the
   enemy's real code in a small stand-in for the game with the sound off, so
-  the book always matches the game.
+  the book always matches the game. **You have to earn each page:**
+  - never met: a black silhouette, and the name, stats and description are
+    scrawled in a doctor's handwriting (`js/scrawl.js` - one pen stroke per
+    word, grown from the word itself, so every word looks different);
+  - met: the real picture in colour, its name and what it does; the numbers
+    and where it turns up are still scrawled;
+  - killed at least once: the whole page, and the live preview.
+  What you have met and killed is saved with your coins.
 - **SKIN** opens the skin shop.
 
 Every frame in the menus is drawn in crayon the same way the between-wave
@@ -74,12 +81,13 @@ its card between waves gets a spiky gold border.
   - The other half it's **the Hive**, which is three fights in a row:
     - **Phase 1 — the haul.** The nest does not fly. Ten **worker bees** (6 HP
       each) drag it in on strands, and *nothing in the group can be hit* until
-      the nest is all the way onto the page — clicks on it land as "not yet".
+      the nest's edge is three blocks off the green — clicks on it land as
+      "not yet".
       Once it is on, the haulers become fair game, and the nest keeps creeping
       toward the castle for as long as one of them is still pulling. Cut all
       ten and it stops dead.
     - **Phase 2 — the nest.** 200 HP, sitting still, and every **25 damage you
-      put into it lets eight bees out of the door**, all of them making
+      put into it lets three bees out of the door**, all of them making
       straight for the castle. Damage banks, so a big hit can let two doors'
       worth out at once. Burst it down fast and you eat the whole swarm at
       once; chip it and you fight the swarm the long way.
@@ -170,6 +178,7 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Storm Caller** | 2 | 15 clicks | A cloud gathers over a random enemy; half a second later the bolt lands for 50% of your click damage and splashes 4 into everything within a block of it. The Thunder Eagle is immune to all of it. |
 | **Horseshoe Magnet** | 2.5 | 12 clicks | Hauls everything within 4 blocks to the point you clicked, for 2 on the way, and leaves them stacked on top of each other for whatever you throw next. |
 | **Boomerang** | 3 | 10 clicks | The throw loops out five blocks and curves home again, cutting 3 into everything on the way out and 3 more on the way back — line the arc up and the same enemy pays twice. |
+| **Sledgehammer** | 2.5 | hold | A click does nothing. **Hold for at least a second** and let go: it comes down on everything within 1.5 blocks. Every full second more adds 20%, and at **3 seconds it comes down by itself** at +40%. A ring round the cursor fills while you hold. |
 | **Scissor Cursor** | 4 | — | Hardest click, no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Useless against a crowd. |
 
 ### Skills
@@ -187,6 +196,7 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Eraser** | SECOND DRAFT | The page is scrubbed back band by band and drawn again. Everything comes back **permanently** worse — 35% off max HP (half that on a boss), smaller, a quarter slower, plus 8 on the spot — and the castle comes back with a segment mended. The only skill that heals, and the only one that scales with how big the thing was. |
 | **Plain** | EXCLAMATION | One enormous mark slams down for a flat 45 in 2 blocks. The biggest single hit in the game, and the smallest area. |
 | **Magnet** | POLE REVERSAL | Hauls the whole board into one heap — never onto the castle — holds it, then flips and flings it: 8 plus 1.5 for every enemy in the pile, capped at ten. |
+| **Sledgehammer** | QUAKE | The ground heaves out from the castle to the edge of the screen: everything on screen is **stunned for 1s and knocked back a block** as the wave passes it. |
 | **Boomerang** | FLIGHT PATH | Nine of them launch from the castle, two laps each, the whole loop drifting round as it flies. 6 a pass, and a pass is easy to take twice. |
 
 Every cast opens the same way and runs about three and a half seconds: the
@@ -212,7 +222,7 @@ themselves around the castle, so they leave the cursor alone.
 | **Thick Paper** | One more castle segment, permanently — six instead of five — and the new one starts full. The castle is redrawn inside an uncoloured outer shell so you can see it. |
 | **Sentry Drill** | Upgrades whoever is standing in the sentry post, permanently. See below. |
 | **Double Trouble** | One side of the cursor is redrawn as another cursor, picked at random, and the charge fires both tricks from then on, taking it in turns. The most expensive thing on the page. |
-| **Afterimage** | A faded copy of the cursor trails a third of a second behind and repeats every click it saw, at half damage. It cannot crit and it charges nothing. |
+| **Afterimage** | A faded copy of the cursor trails a third of a second behind and repeats every click it saw (and every Sledgehammer slam), at half damage. It cannot crit and it charges nothing. |
 
 ### The sentry post
 
@@ -259,7 +269,10 @@ Everything is drawn live in crayon, with light on top: every landed click
 throws a spark, a crit spins a star open, deaths burst in the thing's own
 colour and throw droplets that leave stains on the page, the castle flashes
 and sheds chunks when it loses a segment, bosses glow, burning things glow,
-stunned things get stars circling their heads.
+stunned things get stars circling their heads. Every cursor trick flares
+where it goes off; every skill washes the page in its colour with ink
+speed-lines rushing in, and its big moments (a bolt landing, the Guillotine's
+cut, the Exclamation hitting) get a flare of their own (`js/flourish.js`).
 
 Glow is drawn from a cached sprite per colour rather than a fresh gradient
 every time, which is much cheaper. Even so, glow costs by the pixel, and a TV
@@ -322,6 +335,9 @@ js/skins.js       the skins, and everything the Star Caller draws
 js/doodle.js      crayon frames for the HTML menus
 js/menu.js        the title screen, its castle scene, the skin shop
 js/bestiary.js    the bestiary book and its live previews
+js/scrawl.js      the doctor's handwriting for bestiary pages you have not earned
+js/hammer.js      the Sledgehammer and its QUAKE
+js/flourish.js    decoration only: flares and page washes on every ability
 js/auger.js       the Auger, endless only
 js/trapper.js     the Trapper sentry
 js/skills.js      the cast cinematic and one payload per cursor

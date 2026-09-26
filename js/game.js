@@ -268,8 +268,15 @@ const Game = {
     if (this.oneshot.chalk) this.shield = 2;     // the ward is re-drawn every wave
     this.state = 'playing';
     Sfx.play('wave_start', { volume: 0.6 });
-    this.banner = this.waveSpec.boss
-      ? new WaveBanner('WAVE ' + this.wave, this.waveSpec.boss === 'warden' ? 'the warden is coming' : 'something big is coming', '#c8433a')
+    // which boss it is gets settled now, so the banner can name the right one
+    const boss = this.waveSpec.boss;
+    this.bossKind = !boss ? null
+      : boss === 'boss' ? (Math.random() < 0.5 ? 'eagle' : 'boss')
+        : boss === 'warden' ? (Math.random() < 0.5 ? 'hive' : 'warden')
+          : boss;
+    const BOSS_LINE = { warden: 'the warden is coming', hive: 'the hive is coming' };
+    this.banner = boss
+      ? new WaveBanner('WAVE ' + this.wave, BOSS_LINE[this.bossKind] || 'something big is coming', '#c8433a')
       : new WaveBanner('WAVE ' + this.wave,
         (!this.endless && this.wave === WAVES_PER_RUN) ? 'last one' : '', '#2b2b2b');
     UI.hideAll();
@@ -574,11 +581,7 @@ const Game = {
         stage === 3 ? ['blob', 'dart', 'brick'] :
           ['blob', 'dart', 'dart', 'brick', 'brick'];
     let kind = pool[Math.floor(Math.random() * pool.length)];
-    if (w.boss && this.spawnLeft === w.count - 2) {
-      if (w.boss === 'boss') kind = Math.random() < 0.5 ? 'eagle' : 'boss';
-      else if (w.boss === 'warden') kind = Math.random() < 0.5 ? 'hive' : 'warden';
-      else kind = w.boss;
-    }
+    if (w.boss && this.spawnLeft === w.count - 2) kind = this.bossKind || w.boss;
     if (this.augerAt && this.augerAt.includes(this.spawnLeft)) kind = 'auger';
 
     // just outside the visible paper, so they walk on screen right away

@@ -371,6 +371,7 @@ const SkillPayloads = {
           // gathering is the damage, but it cannot run away with itself
           const dmg = 8 + 1.5 * Math.min(10, caught.filter(c => !c.e.dead).length);
           game.effects.push(new MagnetBurst(cine.wx, cine.wy, caught, dmg, game));
+          game.effects.push(new Flare(cine.wx, cine.wy, { color: '#7a5cc4', r: 80, dur: 0.6, rays: 18, motes: 14, rings: 3 }));
           Sfx.play('magnet_burst', { volume: 1, rateVar: 0 });
         }
         return this.t < 1.1;
@@ -535,6 +536,7 @@ class LightningBolt {
       for (let i = 0; i < 8; i++) game.effects.push(new Crumb(this.x, this.y, '#8ea6ff'));
       game.effects.push(new Splash(this.x, this.y, 30));
       game.shake(this.damage > 0 ? 11 : 6);
+      if (!Fx.low) game.effects.push(new Flare(this.x, this.y, { color: '#8ea6ff', r: 30, dur: 0.35, rays: 7, motes: 5, rings: 1 }));
       Sfx.play('thunder_strike', { volume: 0.85, throttle: 40, voices: 6 });
     }
     return this.t < this.delay + this.dur;
@@ -741,6 +743,7 @@ class Guillotine {
           e.hurt(this.damage, game, { color: '#c8433a' });
         }
       }
+      game.effects.push(new SeamFlash(game, 0));
       game.shake(14);
     }
     return this.t < this.dur;
@@ -847,6 +850,7 @@ class BuzzBeams {
         e.hurt(this.damage, game, { color: '#b99a1c' });
         if (!e.dead) e.stun = Math.max(e.stun, 0.8 + game.statusBonus());
       }
+      game.effects.push(new Flare(this.x, this.y, { color: '#e8c33a', r: 60, dur: 0.5, rays: 16, motes: 10, rings: 2 }));
       game.shake(12);
     }
     return this.t < this.dur;
@@ -963,6 +967,7 @@ class ExclamationSlam {
       game.areaDamage(this.x, this.y, this.radius, this.damage, { color: '#2b2b2b' });
       game.shake(18);
       for (let i = 0; i < 18; i++) game.effects.push(new Crumb(this.x, this.y, '#2b2b2b'));
+      game.effects.push(new Flare(this.x, this.y, { color: '#e0562d', r: this.radius * 0.8, dur: 0.55, rays: 16, motes: 12, rings: 3 }));
     }
     return this.t < this.dur;
   }

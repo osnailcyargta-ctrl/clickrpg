@@ -22,19 +22,42 @@ CursorSprites.hammer = function (ctx, x, y, s, color, t) {
   const hold = (typeof Game !== 'undefined' && Game.hold) ? Game.hold.t : 0;
   const lift = Math.min(1, hold / HAMMER_MAX);
   const shake = hold > HAMMER_MIN ? (hold - HAMMER_MIN) * 1.2 : 0;
+  // A sledgehammer side-on: a long handle running off to the right, and at
+  // its end a heavy steel block standing upright, square to the handle, its
+  // bottom face sitting on the pointer. Held down, it swings up and back
+  // round the grip, the way you would haul one over your shoulder.
+  const L = 42 * s;                   // grip to the middle of the head
+  const hh = 16 * s, ht = 8 * s;      // head: half its length, half its thickness
   ctx.save();
-  ctx.translate(x + Rough.jit(shake), y + Rough.jit(shake));
-  ctx.rotate(-0.25 - lift * 0.9);             // raised back as it winds up
-  // the handle
-  const handle = [[4 * s, 5 * s], [30 * s, 26 * s], [27 * s, 29 * s], [1 * s, 8 * s]];
-  Rough.scribble(ctx, handle, { color: '#b58a52', spacing: 3.5, width: 3, overflow: 1.1 });
-  Rough.poly(ctx, handle, { color: '#2b2b2b', width: 1.8, jitter: 0.6 });
-  Rough.line(ctx, 22 * s, 20 * s, 27 * s, 25 * s, { color: '#6b4a2a', width: 2.2, jitter: 0.4, passes: 1 });
-  // the head: a heavy block across the end of it
-  const head = [[-9 * s, -4 * s], [9 * s, -12 * s], [14 * s, -1 * s], [-4 * s, 7 * s]];
-  Rough.scribble(ctx, head, { color: color, spacing: 3.5, width: 4, overflow: 1.12 });
-  Rough.poly(ctx, head, { color: '#2b2b2b', width: 2.2, jitter: 0.6 });
-  Rough.line(ctx, -6 * s, -2 * s, -1 * s, 5 * s, { color: '#fffdf4', width: 1.6, jitter: 0.4, passes: 1, alpha: 0.7 });
+  ctx.translate(x + L + Rough.jit(shake), y - hh - 2 * s + Rough.jit(shake));
+  ctx.rotate(lift * 1.15);
+  // the handle: long, straight, a touch thicker at the grip
+  const handle = [[-L + ht, -2.3 * s], [2 * s, -3.4 * s], [2 * s, 3.4 * s], [-L + ht, 2.3 * s]];
+  Rough.scribble(ctx, handle, { color: '#c69a5e', spacing: 3, width: 2.6, overflow: 1.1 });
+  Rough.poly(ctx, handle, { color: '#2b2b2b', width: 1.8, jitter: 0.5 });
+  Rough.line(ctx, -L + ht + 4 * s, 0.6 * s, -4 * s, 1.1 * s, { color: '#8a6238', width: 1.2, jitter: 0.4, passes: 1, alpha: 0.7 });
+  // grip tape round the end you hold
+  for (let i = 0; i < 4; i++) {
+    const gx = -1 * s - i * 3.6 * s;
+    Rough.line(ctx, gx - 1.2 * s, -3.4 * s, gx + 1.2 * s, 3.4 * s, { color: color, width: 2.4, jitter: 0.3, passes: 1 });
+  }
+  // the head: a solid steel block, square to the handle
+  const cx = -L;
+  const head = [[cx - ht, -hh + 2 * s], [cx + ht, -hh + 2 * s], [cx + ht, hh - 2 * s], [cx - ht, hh - 2 * s]];
+  Rough.scribble(ctx, head, { color: '#7d848c', spacing: 3, width: 4, overflow: 1.1 });
+  Rough.poly(ctx, head, { color: '#2b2b2b', width: 2.2, jitter: 0.5 });
+  // the two striking faces, a little proud of the block
+  for (const sgn of [-1, 1]) {
+    const y0 = sgn * (hh - 2 * s), y1 = sgn * hh;
+    const face = [[cx - ht - 1.2 * s, y0], [cx + ht + 1.2 * s, y0], [cx + ht + 0.6 * s, y1], [cx - ht - 0.6 * s, y1]];
+    Rough.scribble(ctx, face, { color: '#5a6068', spacing: 2.5, width: 3, overflow: 1.1 });
+    Rough.poly(ctx, face, { color: '#2b2b2b', width: 2, jitter: 0.4 });
+  }
+  // the eye the handle goes through, and a glint down the steel
+  Rough.poly(ctx, [[cx + ht, -3 * s], [cx + ht + 2.6 * s, -3.6 * s], [cx + ht + 2.6 * s, 3.6 * s], [cx + ht, 3 * s]],
+    { color: '#2b2b2b', width: 1.6, jitter: 0.3 });
+  Rough.line(ctx, cx - ht + 2.2 * s, -hh + 4.5 * s, cx - ht + 2.2 * s, hh - 5 * s,
+    { color: '#fffdf4', width: 1.8, jitter: 0.4, passes: 1, alpha: 0.75 });
   ctx.restore();
   if (hold > HAMMER_MIN) Rough.bloom(ctx, x, y, 14 + lift * 16, '#ff9a3d', 0.25 + lift * 0.35);
 };
