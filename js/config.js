@@ -12,11 +12,15 @@ const ENDLESS_BOSS_EVERY = 5;
 const SKILL_CHARGE = 50;        // clicks to charge a skill
 const SKILL_COOLDOWN = 30;      // seconds between casts, however fast you click
 const GROUND_RADIUS = BLOCK * 3;   // the coloured ground around the castle
-const AUGER_FROM_WAVE = 11;        // the Auger only exists out past the ten-wave run
+const AUGER_FROM_WAVE = 13;        // endless only, and not straight away - it is a lot
 const AUGER_STOP = GROUND_RADIUS + BLOCK * 4;   // where it halts to wind up
 const TRAPPER_BASE_DMG = 6;
 const TRAPPER_MAX_DMG = 10;
 const TRAPPER_RANGE = BLOCK * 4.5;
+const HAMMER_MIN = 1;              // seconds held before a let-go does anything
+const HAMMER_MAX = 3;              // at this it comes down on its own
+const HAMMER_STEP = 0.2;           // +20% for every full second past the first
+const HAMMER_RADIUS = BLOCK * 1.5;
 
 const DIFFICULTIES = {
   easy:   { name: 'EASY',   hpMul: 0.65, countMul: 0.65, speedMul: 0.85, intervalMul: 1.2,  color: '#4c9f70', reward: 0.9 },
@@ -107,7 +111,7 @@ const ENEMY_KINDS = {
   steroid: { r: 26, hpMul: 0, flatHp: 20,  speedMul: 0.8,  fill: '#b5823a' },
   lavaball: { r: 17, hpMul: 0, flatHp: 10, speedMul: 0,    fill: '#e0562d' },
 
-  // THE AUGER - endless only, wave 11 on, one or two a wave. Walks to four
+  // THE AUGER - endless only, wave 13 on, one or two a wave. Walks to four
   // blocks off the lawn, winds up backing away, then runs at the castle. A
   // hit mid-run stops it dead and it has to wind up all over again.
   auger:    { r: 24, hpMul: 1.5, speedMul: 0.8, fill: '#3a2436' }
@@ -172,6 +176,11 @@ const CURSORS = [
     id: 'scissor', name: 'Scissor Cursor', cost: 44, color: '#c8433a', every: 0, dmg: 4,
     desc: 'Snips anything that is nearly gone.',
     detail: 'The hardest click at 4, with no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Nothing here helps against a crowd.'
+  },
+  {
+    id: 'hammer', name: 'Sledgehammer', cost: 48, color: '#6b5a4a', every: 0, dmg: 2.5, hold: true,
+    desc: 'Hold it up. Let go to bring it down.',
+    detail: 'A click does nothing. Hold for at least a second and let go: it comes down on everything within a block and a half for 2.5 each. Every full second more you hold adds 20% - and at three seconds it comes down by itself, at +40%.'
   }
 ];
 
@@ -299,7 +308,8 @@ const SKILLS = {
   eraser:  { name: 'SECOND DRAFT', blurb: 'the page is scrubbed back and everything is redrawn worse - except the castle' },
   plain:   { name: 'EXCLAMATION', blurb: 'one enormous mark slams down where you point it' },
   magnet:  { name: 'POLE REVERSAL', blurb: 'the whole board is hauled into one heap, then flung apart' },
-  boomerang: { name: 'FLIGHT PATH', blurb: 'five of them criss-cross the page and none of them stop' }
+  boomerang: { name: 'FLIGHT PATH', blurb: 'five of them criss-cross the page and none of them stop' },
+  hammer:  { name: 'QUAKE', blurb: 'the ground heaves out from the castle and everything on the page is knocked flat' }
 };
 
 function skillFor(cursorId) { return SKILLS[cursorId] || SKILLS.plain; }

@@ -7,7 +7,7 @@
 
 const Save = {
   KEY: 'fandharn.save.v1',
-  data: { coins: 0, owned: [], equipped: {} },
+  data: { coins: 0, owned: [], equipped: {}, seen: [], killed: [] },
   persistent: true,
 
   load() {
@@ -20,6 +20,8 @@ const Save = {
         this.data.coins = Number.isFinite(d.coins) && d.coins >= 0 ? Math.floor(d.coins) : 0;
         this.data.owned = Array.isArray(d.owned) ? d.owned.filter(x => typeof x === 'string') : [];
         this.data.equipped = d.equipped && typeof d.equipped === 'object' ? d.equipped : {};
+        this.data.seen = Array.isArray(d.seen) ? d.seen.filter(x => typeof x === 'string') : [];
+        this.data.killed = Array.isArray(d.killed) ? d.killed.filter(x => typeof x === 'string') : [];
       }
     } catch (e) {
       this.persistent = false;
@@ -76,7 +78,26 @@ const Save = {
   },
 
   /* The skin id worn by a target such as 'cursor:storm', if any. */
-  wornBy(target) { return this.data.equipped[target] || null; }
+  wornBy(target) { return this.data.equipped[target] || null; },
+
+  /* ---- the bestiary: what you have met, and what you have put down.
+     Called every frame for everything on the field, so the already-known
+     case is one array lookup and writes nothing. */
+  see(kind) {
+    if (this.data.seen.includes(kind)) return;
+    this.data.seen.push(kind);
+    this.store();
+  },
+  kill(kind) {
+    this.see(kind);
+    if (this.data.killed.includes(kind)) return;
+    this.data.killed.push(kind);
+    this.store();
+  },
+  /* 0 never met, 1 met, 2 killed */
+  known(kind) {
+    return this.data.killed.includes(kind) ? 2 : this.data.seen.includes(kind) ? 1 : 0;
+  }
 };
 
 /* ---- how coins are earned ---------------------------------------------

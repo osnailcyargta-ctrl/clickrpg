@@ -683,6 +683,37 @@ def s_sk_starfall():
     return mix(rush * 0.9, hit)
 
 
+def s_hammer_lift():
+    # something heavy hauled up: a creak of wood and a scrape
+    creak = am(ring(noise(0.35), 420, 18) * swell(0.35, 0.5, 2.0), 22, 0.6)
+    scrape = sweep(noise(0.35) * swell(0.35, 0.4, 2.2), 900, 1800, 2.0)
+    return mix(creak * 1.0, scrape * 0.5)
+
+
+def s_hammer_tick():
+    # one notch of wind-up: a knock on wood
+    return mix(ring(noise(0.12), 620, 14) * env(0.12, 0.001, curve=7) * 1.2,
+               bp(noise(0.08), 1800, 1.4) * env(0.08, 0.0005, curve=9) * 0.6)
+
+
+def s_hammer_slam():
+    # it comes down: a deep thud, the page cracking, grit settling
+    thud = lp(noise(0.5), 150) * env(0.5, 0.001, curve=4.5)
+    body = ring(noise(0.4), 95, 6) * env(0.4, 0.002, curve=5)
+    crack = hp(noise(0.08), 1400) * env(0.08, 0.0005, curve=9)
+    grit = grains(0.5, 26, spread=0.4, length=0.01, band=(700, 3000), decay=2.0)
+    return mix(thud * 1.6, body * 1.0, crack * 0.9, grit * 0.6)
+
+
+def s_sk_quake():
+    # the ground heaving out from under the castle
+    rumble = am(lp(noise(2.0), 110) * swell(2.0, 0.15, 2.0), 9, 0.5)
+    crack = hp(noise(0.12), 1200) * env(0.12, 0.0005, curve=8)
+    rolling = sweep(noise(2.0) * swell(2.0, 0.2, 2.5), 400, 90, 1.2)
+    debris = grains(1.8, 60, spread=1.5, length=0.012, band=(500, 2600), decay=1.6)
+    return mix(rumble * 1.7, crack * 1.1, rolling * 0.8, debris * 0.6)
+
+
 SOUNDS = {
     'click_hit': s_click_hit, 'click_miss': s_click_miss, 'crit': s_crit,
     'kill': s_kill, 'kill_big': s_kill_big, 'castle_hit': s_castle_hit,
@@ -713,6 +744,7 @@ SOUNDS = {
     'auger_charge': s_auger_charge, 'auger_dash': s_auger_dash,
     'trap_dig': s_trap_dig, 'trap_emerge': s_trap_emerge, 'trap_snap': s_trap_snap,
     'star_fall': s_star_fall, 'star_hit': s_star_hit, 'sk_starfall': s_sk_starfall,
+    'hammer_lift': s_hammer_lift, 'hammer_tick': s_hammer_tick, 'hammer_slam': s_hammer_slam, 'sk_quake': s_sk_quake,
 }
 
 if __name__ == '__main__':

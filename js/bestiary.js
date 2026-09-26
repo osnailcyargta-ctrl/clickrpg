@@ -17,7 +17,7 @@ const BESTIARY = [
   { group: 'ENEMIES', kind: 'brick', name: 'Brick', where: 'from wave 5', castle: '1 segment',
     text: 'Slow and fat: nearly twice a blob\'s HP, at two thirds the pace. It holds up everything behind it.',
     scene: 'walk' },
-  { group: 'ENEMIES', kind: 'auger', name: 'The Auger', where: 'endless only, wave 11 on - one or two a wave', castle: '1 segment',
+  { group: 'ENEMIES', kind: 'auger', name: 'The Auger', where: 'endless only, wave 13 on - one or two a wave', castle: '1 segment',
     text: 'Stops four blocks off the lawn and every eye shuts, then opens on you. It backs away for a second with the drill screaming, then runs. Hit it while it is running and it stops dead and has to wind up again.',
     scene: 'auger' },
   // --- summoned by something bigger
@@ -251,6 +251,7 @@ const Bestiary = {
 
   open() {
     if (!this.built) this.build();
+    this.refresh();
     this.select(this.sel);
     cancelAnimationFrame(this.raf);
     this.last = performance.now();
@@ -277,19 +278,37 @@ const Bestiary = {
       const row = document.createElement('button');
       row.className = 'beast-row';
       row.dataset.doodle = 'ink'; row.dataset.when = 'on'; row.dataset.weight = '2.2';
-      row.appendChild(this.thumb(b.kind));
-      row.insertAdjacentHTML('beforeend', '<span>' + b.name + '</span>'
-        + (ENEMY_KINDS[b.kind].boss ? '<span class="boss-tag">BOSS</span>' : ''));
       row.addEventListener('click', () => { Sfx.play('card_draw', { volume: 0.5 }); this.select(i); });
       list.appendChild(row);
       b.row = row;
+      b.shown = -1;
     });
     Doodle.scan(list);
   },
 
-  /* A still portrait for the list: drawn big once, cropped to what was
-     actually inked, and fitted into the little box. */
-  thumb(kind) {
+  /* Bring every row up to what you know now: a black shape and a scrawl for
+     what you have never met, the real thing once you have. Only rows whose
+     state changed are redrawn. */
+  refresh() {
+    for (const b of BESTIARY) {
+      const known = Save.known(b.kind);
+      const state = known ? 1 : 0;             // the list only cares met / not met
+      if (b.shown === state) continue;
+      b.shown = state;
+      const row = b.row, dood = row._doodle;
+      for (const ch of [...row.childNodes]) if (ch !== (dood && dood.cv)) row.removeChild(ch);
+      row.appendChild(this.thumb(b.kind, !state));
+      if (state) row.insertAdjacentHTML('beforeend', '<span>' + b.name + '</span>');
+      else row.appendChild(Scrawl.render(b.name, 110, 13));
+      if (ENEMY_KINDS[b.kind].boss) row.insertAdjacentHTML('beforeend', '<span class="boss-tag">BOSS</span>');
+    }
+  },
+
+  /* A still portrait: drawn big once, cropped to what was actually inked,
+     and fitted into a `box`-pixel square. `dark` pours black over it - the
+     shape of a thing you have not met yet. */
+  thumb(kind, dark, box) {
+    box = box || 92;
     const big = document.createElement('canvas');
     big.width = big.height = 360;
     const g = big.getContext('2d');
@@ -305,10 +324,23 @@ const Bestiary = {
     }
     const out = document.createElement('canvas');
     out.className = 'thumb';
-    out.width = out.height = 92;
+    out.width = out.height = box;
     const o = out.getContext('2d');
-    const bw = Math.max(1, x1 - x0), bh = Math.max(1, y1 - y0), k = Math.min(84 / bw, 84 / bh, 2.4);
-    o.drawImage(big, x0, y0, bw, bh, 46 - bw * k / 2, 46 - bh * k / 2, bw * k, bh * k);
+    const bw = Math.max(1, x1 - x0), bh = Math.max(1, y1 - y0);
+    const k = Math.min(box * 0.91 / bw, box * 0.91 / bh, box / 38);
+    // drawn again at the size it will be seen, so a big portrait stays crisp
+    o.translate(box / 2 - ((x0 + x1) / 2 - 181) * k, box / 2 - ((y0 + y1) / 2 - 180) * k);
+    o.scale(k, k);
+    e.draw(o, 1.3);
+    o.setTransform(1, 0, 0, 1, 0, 0);
+    if (dark) {
+      o.globalCompositeOperation = 'source-in';
+      o.fillStyle = '#1b1b1b';
+      o.fillRect(0, 0, box, box);
+      // stacked on itself so the thin crayon bits go solid too
+      o.globalCompositeOperation = 'source-over';
+      o.drawImage(out, 0, 0); o.drawImage(out, 0, 0);
+    }
     return out;
   },
 
@@ -320,19 +352,37 @@ const Bestiary = {
       x.row.classList.toggle('on', j === i);
       if (x.row._doodle) Doodle.draw(x.row._doodle, true);
     });
+    // 0: never met - a black shape and a doctor's scrawl for everything
+    // 1: met - its look and what it does, the numbers still unreadable
+    // 2: killed - the whole page, and it moves
+    const known = Save.known(b.kind);
+    this.known = known;
     const k = ENEMY_KINDS[b.kind];
-    document.getElementById('beast-name').textContent = b.name;
-    document.getElementById('beast-where').textContent = b.where;
+    const put = (id, text, readable, size, width) => {
+      const el = document.getElementById(id);
+      el.textContent = '';
+      if (readable) { el.textContent = text; return; }
+      el.appendChild(Scrawl.render(text, width || el.clientWidth || 400, size, '#2b2b2b'));
+    };
+    const wide = document.getElementById('beast-text').clientWidth || 420;
+    put('beast-name', b.name, known > 0, 22, Math.min(wide, 260));
+    put('beast-where', b.where, known > 1, 12, wide);
     const hp = b.kind === 'boltshot' ? '1'
       : k.flatHp ? String(k.flatHp) + (k.boss ? '+' : '')
         : '×' + k.hpMul + ' wave';
     const speed = k.speedMul === 0 ? 'still' : '×' + k.speedMul;
-    const stat = (label, v) => '<div class="beast-stat" data-doodle="#b8b2a3" data-weight="2"><i>' + label + '</i><b>' + v + '</b></div>';
+    const stat = (label) => '<div class="beast-stat" data-doodle="#b8b2a3" data-weight="2"><i>' + label + '</i><b></b></div>';
     const stats = document.getElementById('beast-stats');
-    stats.innerHTML = stat('HP', hp) + stat('SPEED', speed) + stat('SIZE', k.r) + stat('CASTLE', b.castle);
+    const vals = [['HP', hp], ['SPEED', speed], ['SIZE', String(k.r)], ['CASTLE', String(b.castle)]];
+    stats.innerHTML = vals.map(v => stat(v[0])).join('');
+    [...stats.querySelectorAll('.beast-stat b')].forEach((el, j) => {
+      if (known > 1) el.textContent = vals[j][1];
+      else el.appendChild(Scrawl.render(vals[j][1] + (known ? '' : ' ' + vals[j][0].toLowerCase()), 64, 12, '#2b2b2b'));
+    });
     Doodle.scan(stats);
-    document.getElementById('beast-text').textContent = b.text;
-    this.sim = new BeastSim(b, this.leftFor(b));
+    put('beast-text', b.text, known > 0, 15, wide);
+    this.sim = known > 1 ? new BeastSim(b, this.leftFor(b)) : null;
+    this.still = known > 1 ? null : this.thumb(b.kind, known === 0, 230);
   },
 
   /* How close the page's camera sits. Small things up close; bosses, and
@@ -355,16 +405,24 @@ const Bestiary = {
   frame(dt) {
     const cv = document.getElementById('beast-canvas');
     const w = cv.clientWidth, h = cv.clientHeight;
-    if (!w || !h || !this.sim) return;
+    if (!w || !h || (!this.sim && !this.still)) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
     }
-    this.sim.update(dt);
     const ctx = cv.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = '#fffdf4';
     ctx.fillRect(0, 0, w, h);
+    if (!this.sim) {
+      // not earned yet: it only stands there, breathing a little
+      this.stillT = (this.stillT || 0) + dt;
+      const t = Math.floor(this.stillT * 3.5) / 3.5, s = Math.min(1, (h - 16) / 230);
+      const bob = Math.sin(t * 2.2) * 2;
+      ctx.drawImage(this.still, w / 2 - 115 * s, h / 2 - 115 * s + bob, 230 * s, 230 * s);
+      return;
+    }
+    this.sim.update(dt);
     // the castle on the right, the page's creature coming at it from the left
     const scale = this.zoomFor(this.sim.entry);
     ctx.save();

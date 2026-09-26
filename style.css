@@ -341,3 +341,8 @@ h1 { animation: titleIn 0.45s steps(4, end); }
 .popup .build-tag { position: absolute; right: 12px; bottom: 6px; margin: 0; }
 .popup h2 { margin: -6px 0 0; }
 .skins-popup { min-width: min(560px, 94vw); }
+
+/* the doctor's scrawl stands in for anything the bestiary has not let you read */
+canvas.scrawl { display: block; }
+.beast-row canvas.scrawl { display: inline-block; vertical-align: middle; }
+.beast-stat b canvas.scrawl { margin-top: 2px; }

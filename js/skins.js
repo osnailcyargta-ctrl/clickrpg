@@ -17,7 +17,7 @@ const SKINS = [
         power: 'star', payload: 'meteor',
         desc: 'Every 15 clicks a star comes down.',
         detail: '2 a click. A star lights up over a random enemy and falls, shrinking as it drops, and half a second later it lands for 50% of your click damage, splashing 4 into everything within a block. The Thunder Eagle still shrugs all of it off.',
-        skillName: 'STARFALL',
+        skillName: 'METEOR CALLER',   // the skill is a meteor; everything else stays Star Caller
         skillBlurb: 'the sky goes white and one enormous meteor comes down on the castle'
       }
     }
@@ -171,7 +171,7 @@ class StarBurst {
   }
 }
 
-/* ----------------------------------------------------- the skill: STARFALL */
+/* ------------------------------------------------ the skill: METEOR CALLER */
 
 /* The white-out and the meteor. The meteor comes down on the castle; the
    blast rolls out from it and strikes each target the THUNDERHEAD would have

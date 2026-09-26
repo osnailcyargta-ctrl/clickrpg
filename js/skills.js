@@ -272,7 +272,7 @@ const SkillPayloads = {
       Math.hypot(e.x - cine.wx, e.y - cine.wy) <= reach ||
       Math.hypot(e.x, e.y) <= GROUND_RADIUS + e.r));
 
-    // the Star Caller's STARFALL: the same targets and the same numbers,
+    // the Star Caller's METEOR CALLER: the same targets and the same numbers,
     // delivered by one meteor on the castle instead of a bolt apiece
     if (cursorLook('storm').payload === 'meteor') {
       const hits = targets.map(e => ({ x: e.x, y: e.y, damage: e.boss ? bossDmg : dmg, at: Math.hypot(e.x, e.y) }));

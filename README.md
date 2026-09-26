@@ -39,7 +39,7 @@ so a run that dies later keeps them.
 
 A skin changes a cursor's (or, later, a sentry's) name and look. **Star
 Caller** (4 coins) reskins the Storm Caller: the cursor is a star, its strike
-is a star that falls and shrinks onto its target, its skill is **STARFALL**
+is a star that falls and shrinks onto its target, its skill is **METEOR CALLER**
 (the page goes white and one enormous meteor comes down on the castle), and
 its card between waves gets a spiky gold border.
 
@@ -107,7 +107,7 @@ its card between waves gets a spiky gold border.
   else, so the whole fight keeps pace rather than melting. There is no victory
   screen out here; the run ends when the castle does, and the end card tells
   you which wave you reached.
-- **The Auger** — endless only, from wave 11, **one or two hidden in every
+- **The Auger** — endless only, from wave 13, **one or two hidden in every
   wave**. A spider that got the count wrong: three legs on its right, two
   heavier ones on its left and a bleeding stump where the third should be, a
   body crowded with eyes, and a drill where its mouth ought to be. It walks

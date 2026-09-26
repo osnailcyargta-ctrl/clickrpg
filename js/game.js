@@ -30,6 +30,7 @@ const Game = {
   doubleTurn: 0,            // which of the two fires next
   ghostTrail: [],           // Afterimage: where the cursor has been
   ghostQueue: [],           // and the clicks it still owes
+  hold: null,               // the Sledgehammer, while it is being held up
   sentry: null,
   sentryType: null,         // 'stick' or 'blobd' - there is only one post
   blotKilled: false,        // the Blot has gone down at least once this run
@@ -74,7 +75,7 @@ const Game = {
       if (e.button === 2) this.castSkill();    // right-click is the skill now
       else if (e.button === 0) this.press();
     });
-    c.addEventListener('mouseup', () => { this.pointer.down = 0; });
+    c.addEventListener('mouseup', e => { this.pointer.down = 0; if (e.button === 0) this.releaseHold(); });
     c.addEventListener('touchstart', e => {
       e.preventDefault();
       if (!this.touchMode) { this.touchMode = true; UI.showSkillButton(); }
@@ -87,7 +88,7 @@ const Game = {
       const t = e.changedTouches[0];
       this.movePointer(t.clientX, t.clientY);
     }, { passive: false });
-    c.addEventListener('touchend', e => { e.preventDefault(); this.pointer.down = 0; }, { passive: false });
+    c.addEventListener('touchend', e => { e.preventDefault(); this.pointer.down = 0; this.releaseHold(); }, { passive: false });
     c.addEventListener('contextmenu', e => e.preventDefault());
 
     Sfx.init();
@@ -215,6 +216,7 @@ const Game = {
     this.doubleTurn = 0;
     this.ghostTrail = [];
     this.ghostQueue = [];
+    this.hold = null;
     this.sentry = null;
     this.sentryType = null;
     this.blotKilled = false;
@@ -345,16 +347,76 @@ const Game = {
       return;
     }
     if (this.state !== 'playing') return;
-    this.click(this.pointer.x - this.w / 2, this.pointer.y - this.h / 2);
+    const x = this.pointer.x - this.w / 2, y = this.pointer.y - this.h / 2;
+    if (cursorById(this.cursorId).hold) {
+      // the Sledgehammer: a press only picks things up and starts the wind-up
+      this.stillT = 0;
+      if (this.pickup(x, y)) return;
+      this.hold = { t: 0, tier: -1 };
+      Sfx.play('hammer_lift', { volume: 0.6, throttle: 60 });
+      return;
+    }
+    this.click(x, y);
+    // Afterimage: the ghost repeats this click a third of a second later. It
+    // was drawn but never told about a click, so it never hit anything.
+    if (this.oneshot.afterimage) this.ghostQueue.push({ x, y, at: this.time + 0.33 });
+  },
+
+  /* Anything lying on the floor under the pointer gets picked up. */
+  pickup(x, y) {
+    for (const f of this.effects) {
+      if (f instanceof BlobdDrop && f.tryTake(x, y, this)) return true;
+      if (f instanceof BirdDrop && f.tryTake(x, y, this)) return true;
+    }
+    return false;
+  },
+
+  /* Let go of the Sledgehammer. Under a second it does nothing at all. */
+  releaseHold() {
+    const h = this.hold;
+    if (!h) return;
+    this.hold = null;
+    if (this.state !== 'playing' || this.paused) return;
+    const x = this.pointer.x - this.w / 2, y = this.pointer.y - this.h / 2;
+    const mult = hammerMult(h.t);
+    if (!mult) {
+      this.effects.push(new FloatText(x, y - 26, 'hold it', '#9a958a', 16, false));
+      Sfx.play('click_miss', { volume: 0.4, throttle: 40 });
+      return;
+    }
+    this.slam(x, y, mult, false);
+  },
+
+  /* The Sledgehammer coming down: everything within reach takes the hit. */
+  slam(x, y, mult, ghost) {
+    const tier = Math.round((mult - 1) / HAMMER_STEP);
+    if (!ghost) {                             // one slam is worth a few clicks of skill charge
+      this.cursorCharge++;
+      this.moltenCharge++;
+      this.skillCharge = Math.min(SKILL_CHARGE, this.skillCharge + 3 + tier);
+    }
+    const crit = !ghost && Math.random() < this.critChance();
+    const dmg = this.clickDamage() * mult * (crit ? CRIT_MULT : 1) * (ghost ? 0.5 : 1);
+    const R = HAMMER_RADIUS * this.aoeScale();
+    this.areaDamage(x, y, R, dmg, { crit, color: '#6b5a4a' });
+    this.effects.push(new HammerSlam(x, y, R, tier, this));
+    this.effects.push(new HitSpark(x, y, '#6b5a4a', crit || tier === 2));
+    this.shake(5 + tier * 4);
+    Sfx.play('hammer_slam', { volume: 0.75 + tier * 0.12, rateVar: 0.05, throttle: 40 });
+    if (!ghost && crit && this.oneshot.ink) {
+      this.effects.push(new InkPuddle(x, y, BLOCK * 1.4 * this.aoeScale(), this.aoeDamage(2), 4 + this.statusBonus()));
+    }
+    if (!ghost && this.oneshot.molten && this.moltenCharge % 5 === 0) {
+      this.effects.push(new FireBlast(x, y, BLOCK * 2 * this.aoeScale(), this.aoeDamage(this.clickDamage() / 2), this));
+      Sfx.play('fire_blast', { volume: 0.65, throttle: 90 });
+    }
+    if (!ghost && this.oneshot.afterimage) this.ghostQueue.push({ x, y, at: this.time + 0.33, mult });
+    UI.syncHud(this);
   },
 
   click(x, y, opts_ghost) {
     if (!opts_ghost) this.stillT = 0;        // clicking is not standing still
-    // anything lying on the floor gets picked up first
-    for (const f of this.effects) {
-      if (f instanceof BlobdDrop && f.tryTake(x, y, this)) return;
-      if (f instanceof BirdDrop && f.tryTake(x, y, this)) return;
-    }
+    if (this.pickup(x, y)) return;            // anything lying on the floor comes first
 
     const cursor = cursorById(this.cursorId);
     if (!opts_ghost) {                       // the ghost charges nothing
@@ -438,6 +500,7 @@ const Game = {
   },
 
   onEnemyKilled(e) {
+    Save.kill(e.kind);
     Sfx.play(e.boss || e.kind === 'brick' ? 'kill_big' : 'kill',
       { volume: e.boss ? 1 : 0.5, throttle: e.boss ? 0 : 45, voices: 4 });
     const credit = 1 + 0.05 * (this.stacking.credit || 0);      // Extra Credit
@@ -655,6 +718,18 @@ const Game = {
   update(dt) {
     if (this.state === 'menu') { MenuScene.update(dt); return; }
     if (this.paused) return;
+    if (this.hold) {
+      if (this.state !== 'playing') this.hold = null;
+      else {
+        this.hold.t += dt;
+        const tier = this.hold.t >= HAMMER_MIN ? Math.min(2, Math.floor(this.hold.t - HAMMER_MIN + 1e-6)) : -1;
+        if (tier !== this.hold.tier) {        // a notch for every step it gains
+          this.hold.tier = tier;
+          if (tier >= 0) Sfx.play('hammer_tick', { volume: 0.5 + tier * 0.15, rate: 1 + tier * 0.12, rateVar: 0 });
+        }
+        if (this.hold.t >= HAMMER_MAX) this.releaseHold();
+      }
+    }
     if (this.pointer.down > 0) this.pointer.down = Math.max(0, this.pointer.down - dt);
 
     // a hand that has not moved is winding the bird up
@@ -732,6 +807,7 @@ const Game = {
       }
     }
 
+    for (const e of this.enemies) if (!e.dead) Save.see(e.kind);
     if (!this.frozen) for (const e of this.enemies) if (!e.dead) e.update(dt, this);
     this.flushSpawns();
     this.enemies = this.enemies.filter(e => !e.dead);
@@ -743,7 +819,8 @@ const Game = {
       while (this.ghostTrail.length && this.time - this.ghostTrail[0].at > 0.45) this.ghostTrail.shift();
       while (this.ghostQueue.length && this.ghostQueue[0].at <= this.time) {
         const q = this.ghostQueue.shift();
-        this.click(q.x, q.y, true);
+        if (q.mult) this.slam(q.x, q.y, q.mult, true);
+        else this.click(q.x, q.y, true);
       }
     }
     if (this.sentry) this.sentry.update(dt, this);
@@ -829,6 +906,7 @@ const Game = {
         drawCursor(ctx, cursorById(this.cursorId), g.x, g.y, 0, 0, this.time - 0.33, null, true);
         ctx.restore();
       }
+      if (this.hold) drawHoldGauge(ctx, this);
       drawCursor(ctx, cursorById(this.cursorId), this.pointer.x, this.pointer.y,
         this.cursorCharge, this.pointer.down > 0 ? 1 : 0, this.time, this.oneshot,
         false, this.oneshot.double ? this.doubleId : null);

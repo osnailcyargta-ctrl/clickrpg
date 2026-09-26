@@ -1,6 +1,6 @@
 /* FANDHARN - THE AUGER.
 
-   Endless only, wave 11 and up, one or two a wave. A spider that got the
+   Endless only, wave 13 and up, one or two a wave. A spider that got the
    count wrong - three legs on its right, two on its left and a stump where
    the third should be - with a drill where its mouth ought to go and eyes
    over every inch of it.

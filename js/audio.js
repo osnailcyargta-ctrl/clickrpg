@@ -23,7 +23,8 @@ const Sfx = {
     'steroid_charge', 'lava_erupt', 'lava_land', 'grass_fire',
     'auger_screech', 'auger_chitter', 'auger_charge', 'auger_dash',
     'trap_dig', 'trap_emerge', 'trap_snap',
-    'star_fall', 'star_hit', 'sk_starfall'
+    'star_fall', 'star_hit', 'sk_starfall',
+    'hammer_lift', 'hammer_tick', 'hammer_slam', 'sk_quake'
   ],
   path: 'assets/sfx/',
   ver: (typeof window !== 'undefined' && window.BUILD_V) ? '?v=' + window.BUILD_V : '',
