@@ -14,7 +14,9 @@ const Fx = {
      a couple of seconds of evidence either way before it flips, so a single
      hitch never strips the effects and a single quiet moment never brings
      them back. */
+  forced: false,          // Settings' low graphics: held on, whatever the frame time
   sample(dt) {
+    if (this.forced) { this.low = true; return; }
     this.ema += (dt - this.ema) * 0.05;
     if (this.ema > 1 / 40) { this.slowFor += dt; this.fastFor = 0; }
     else if (this.ema < 1 / 52) { this.fastFor += dt; this.slowFor = 0; }

@@ -32,7 +32,10 @@ const Depth = {
 
   /* How far a layer is shifted on screen. The camera leans toward the
      cursor, so the world slides the other way. */
-  off(amount) { return { x: -this.cx * amount, y: -this.cy * amount }; },
+  off(amount) {
+    if (typeof Settings !== 'undefined' && !Settings.data.parallax) return { x: 0, y: 0 };
+    return { x: -this.cx * amount, y: -this.cy * amount };
+  },
 
   /* A world point under a screen point, on the actors' layer. */
   toWorld(game, sx, sy) {

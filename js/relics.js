@@ -22,13 +22,18 @@ const RELICS = [
     text: n => 'The skill comes back 5% sooner for each one held, up to 5. Now: ' + 5 * n + '% sooner.' },
   { id: 'crane', name: 'Paper Crane', color: '#d8ccb8', weight: 12, cap: 5,
     text: n => 'Whoever holds the sentry post shoots 6% faster for each one held, up to 5. Now: ' + 6 * n + '% faster.' },
+  { id: 'protector', name: 'Protector', color: '#4a7fb5', weight: 3, cap: 4,
+    text: n => 'A small shield circles your cursor and hits whatever it runs into for half your click damage. One more shield for each one held, up to 4. Now: ' + Math.max(1, n) + (Math.max(1, n) === 1 ? ' shield.' : ' shields.') },
   { id: 'tape', name: 'Roll of Tape', color: '#b58a52', weight: 4, cap: 1,
     text: () => 'The castle starts every run with one more segment.' }
 ];
 
 const CHEST_ODDS = { coins: 0.05, relic: 0.30 };          // the rest: nothing
 const SEARCH_MS = 4 * 3600e3;
-const FIND_MIN_MS = 1.5 * 3600e3, FIND_MAX_MS = 2.3 * 3600e3;
+const SEARCH_TICK_MS = 10 * 60e3;                          // every ten minutes of searching...
+const SEARCH_CHANCE = 0.07;                                // ...a 7% chance of a chest
+const BOOST_LUCK = 1.3, BOOST_MS = 3600e3;                 // a boost: +30% luck for an hour
+const PRICE = { chest: 3, boost: 3 };
 const STACK_MAX = 9999;                                    // per inventory slot
 
 function relicById(id) { return RELICS.find(r => r.id === id) || null; }
@@ -65,17 +70,57 @@ const Relics = {
   },
 
   /* ---- searching. All of it is timestamps, so it carries on with the tab
-     shut: coming back just works out where it would have got to. */
+     shut: coming back just works out where it would have got to. Every ten
+     minutes of it rolls a 7% chance of a chest (more under a luck boost).
+     The rolls come from the search's own seed, so the same search always
+     turns out the same however often you look at it. */
   startSearch(now) {
     if (Save.data.search) return false;
-    const finds = [];
-    let t = FIND_MIN_MS + Math.random() * (FIND_MAX_MS - FIND_MIN_MS);
-    while (t <= SEARCH_MS) {
-      finds.push(Math.round(t));
-      t += FIND_MIN_MS + Math.random() * (FIND_MAX_MS - FIND_MIN_MS);
-    }
-    Save.data.search = { start: now, finds };
+    Save.data.search = { start: now, seed: (Math.random() * 2 ** 31) | 0 };
     Save.store();
+    return true;
+  },
+
+  /* When, after the start, this search turns up its chests. */
+  findsOf(s) {
+    if (Array.isArray(s.finds)) return s.finds;           // a search from an older save
+    const out = [];
+    for (let k = 1; k * SEARCH_TICK_MS <= SEARCH_MS; k++) {
+      const at = k * SEARCH_TICK_MS;
+      let h = (s.seed ^ Math.imul(k, 0x9E3779B1)) >>> 0;   // one fixed roll per tick
+      h = Math.imul(h ^ (h >>> 16), 0x85EBCA6B) >>> 0;
+      h = Math.imul(h ^ (h >>> 13), 0xC2B2AE35) >>> 0;
+      const roll = ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+      const luck = this.boostedAt(s.start + at) ? BOOST_LUCK : 1;
+      if (roll < SEARCH_CHANCE * luck) out.push(at);
+    }
+    return out;
+  },
+
+  /* ---- the luck boost */
+  boostedAt(t) { return Save.data.boosts.some(b => t >= b.from && t < b.to); },
+  /* How long the luck lasts from now: hours bought back to back chain on. */
+  boostLeft(now) {
+    let end = now;
+    for (const b of Save.data.boosts.slice().sort((p, q) => p.from - q.from)) {
+      if (b.from <= end && b.to > end) end = b.to;
+    }
+    return Math.max(0, end - now);
+  },
+  /* Buy an hour of luck; bought while one is running, it adds on the end. */
+  buyBoost(now) {
+    if (!Save.spend(PRICE.boost)) return false;
+    const left = this.boostLeft(now);
+    const from = left ? now + left : now;
+    Save.data.boosts = Save.data.boosts.filter(b => b.to > now - SEARCH_MS);   // forget old ones
+    Save.data.boosts.push({ from, to: from + BOOST_MS });
+    Save.store();
+    return true;
+  },
+  buyChests(n) {
+    n = Math.max(1, Math.floor(n));
+    if (!Save.spend(PRICE.chest * n)) return false;
+    Save.addChests(n);
     return true;
   },
 
@@ -83,7 +128,7 @@ const Relics = {
     const s = Save.data.search;
     if (!s) return null;
     const elapsed = Math.max(0, now - s.start);
-    const found = s.finds.filter(f => f <= elapsed).length;
+    const found = this.findsOf(s).filter(f => f <= elapsed).length;
     return { elapsed, left: Math.max(0, SEARCH_MS - elapsed), found, done: elapsed >= SEARCH_MS };
   },
 
@@ -209,6 +254,7 @@ const ItemIcons = {
     }
     Rough.line(ctx, x - s * 0.9, y + s * 0.1, x - s * 1.0, y - s * 0.25, { color: '#2b2b2b', width: 1.8, jitter: 0.3, passes: 1 });
   },
+  protector(ctx, x, y, s) { drawShield(ctx, x, y, s / 9.5, 0, false); },
   tape(ctx, x, y, s) {
     Rough.circle(ctx, x, y, s * 0.85, { color: '#2b2b2b', width: 2, jitter: 0.4 });
     const ring = Rough.circlePts(x, y, s * 0.85, s * 0.03, 16);

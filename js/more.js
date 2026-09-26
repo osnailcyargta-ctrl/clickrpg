@@ -42,6 +42,8 @@ const More = {
     }
     const coin = document.getElementById('inv-coin-n');
     if (coin) coin.textContent = Save.coins;
+    const bl = document.getElementById('boost-left');
+    if (bl) { const left = Relics.boostLeft(Date.now()); if (left) bl.innerHTML = 'active &middot; ' + hms(left) + ' left'; else this.render(); }
   },
 
   render() {
@@ -54,6 +56,7 @@ const More = {
     if (this.view === 'ach') body.innerHTML = back + this.achHtml();
     if (this.view === 'relics') body.innerHTML = back + this.relicsHtml();
     if (this.view === 'inv') body.innerHTML = back + this.invHtml();
+    if (this.view === 'settings') body.innerHTML = back + '<h2>SETTINGS</h2><div id="more-settings" class="settings-body"></div>';
     const b = body.querySelector('.more-back');
     if (b) b.onclick = () => { Sfx.play('button', { volume: 0.6 }); this.show('home'); };
     body.querySelectorAll('[data-view]').forEach(el => el.onclick = () => {
@@ -62,6 +65,7 @@ const More = {
     if (this.view === 'ach') this.bindAch(body);
     if (this.view === 'relics') this.bindRelics(body);
     if (this.view === 'inv') this.bindInv(body);
+    if (this.view === 'settings') renderSettings(body.querySelector('#more-settings'));
     body.querySelectorAll('canvas[data-icon]').forEach(cv => paintIcon(cv));
     Doodle.scan(body);
   },
@@ -76,6 +80,7 @@ const More = {
       + '<button class="more-big" data-view="ach" data-doodle="#a5741b" data-paper="1"><b>ACHIEVEMENTS</b>' + dot(claim) + '</button>'
       + '<button class="more-big" data-view="relics" data-doodle="#9a6a36" data-paper="1"><b>RELICS</b>' + dot(chests) + '</button>'
       + '<button class="more-big" data-view="inv" data-doodle="ink" data-paper="1"><b>INVENTORY</b></button>'
+      + '<button class="more-big" data-view="settings" data-doodle="#6b6b6b" data-paper="1"><b>SETTINGS</b></button>'
       + '</div>';
   },
 
@@ -122,7 +127,7 @@ const More = {
     const st = Relics.searchState(now);
     let search = '<canvas id="search-canvas" class="search-canvas"></canvas>';
     if (!st) {
-      search += '<p>Send someone out to look. They are gone four hours, tab open or shut, and turn up a chest every hour and a half to two and a bit.</p>'
+      search += '<p>Send someone out to look for four hours, tab open or shut. Every ten minutes there is a 7% chance they turn up a chest.</p>'
         + '<button id="search-go" data-doodle="#4c9f70" data-fill="#4c9f70">SEARCH NOW</button>';
     } else {
       search += '<div class="search-bar" data-doodle="ink" data-weight="2"><div id="search-fill" class="search-fill" style="width:'
@@ -142,7 +147,23 @@ const More = {
       + '<div class="chest-count"><b>' + n + '</b> ' + (n === 1 ? 'chest' : 'chests') + '</div>'
       + '<button id="chest-open" data-doodle="#9a6a36" ' + (n ? '' : 'disabled') + '>OPEN A CHEST</button>'
       + '<p class="hint">won on Normal or Hard, every tenth Endless wave, or searched for</p></div>'
-      + '</div>';
+      + '</div>'
+      + this.shopHtml(now);
+  },
+
+  /* Under search and chests: spend coins on chests, or on luck. */
+  shopHtml(now) {
+    const coins = Save.coins, left = Relics.boostLeft(now);
+    const coin = '<i class="coin-inline" data-doodle="#a5741b" data-fill="#f2c230" data-shape="circle" data-weight="1.4"></i>';
+    return '<div class="relic-shop" data-doodle="#a5741b" data-paper="1" data-weight="2.4">'
+      + '<h3>SHOP</h3><div class="shop-purse">' + coins + ' ' + coin + '</div>'
+      + '<div class="shop-items">'
+      + '<div class="shop-item"><canvas data-icon="chest" width="84" height="66"></canvas><b>Chests</b><span>' + PRICE.chest + coin + ' each</span>'
+      + '<button id="buy-chests" data-doodle="#9a6a36" ' + (coins >= PRICE.chest ? '' : 'disabled') + '>BUY&hellip;</button></div>'
+      + '<div class="shop-item"><canvas data-icon="goldstar" width="84" height="66"></canvas><b>Luck boost</b><span>+30% chance to find a chest, 1 hour</span>'
+      + (left ? '<span class="boost-on" id="boost-left">active &middot; ' + hms(left) + ' left</span>' : '')
+      + '<button id="buy-boost" data-doodle="#e8a93a" ' + (coins >= PRICE.boost ? '' : 'disabled') + '>' + (left ? 'ADD AN HOUR' : 'BUY') + ' &middot; ' + PRICE.boost + coin + '</button></div>'
+      + '</div></div>';
   },
 
   bindRelics(body) {
@@ -158,6 +179,15 @@ const More = {
     };
     const open = body.querySelector('#chest-open');
     if (open) open.onclick = () => ChestModal.open(() => this.render());
+    const bc = body.querySelector('#buy-chests');
+    if (bc) bc.onclick = () => { Sfx.play('button', { volume: 0.7 }); BuyModal.open(() => this.render()); };
+    const bb = body.querySelector('#buy-boost');
+    if (bb) bb.onclick = () => {
+      if (!Relics.buyBoost(Date.now())) return;
+      Sfx.play('card_buy', { volume: 0.9, rateVar: 0 });
+      this.flash = 'luck boost: +30% for an hour';
+      this.render();
+    };
   },
 
   /* ---------------------------------------------------------- inventory */
@@ -273,7 +303,7 @@ const SearchAnim = {
     // what the blot of minute m finds: any chest turned up since the last
     // blot landed
     const landAt = m * 60000 + 10000;
-    const found = s.finds.some(f => f > landAt - 60000 && f <= landAt);
+    const found = Relics.findsOf(s).some(f => f > landAt - 60000 && f <= landAt);
     if (sec < 10) {
       // shoot, then sit still and look up
       const shot = sec < 1.2;
@@ -467,6 +497,56 @@ const ChestModal = {
   }
 };
 
+/* ---------------------------------------------------- buying chests
+   A popup with a wheel of numbers to scroll through: the one in the middle
+   is how many. */
+const BuyModal = {
+  n: 1,
+  open(after) {
+    this.after = after;
+    const max = Math.max(1, Math.min(99, Math.floor(Save.coins / PRICE.chest)));
+    this.max = max;
+    this.n = 1;
+    const wheel = document.getElementById('buy-wheel');
+    wheel.innerHTML = '<div class="wheel-pad"></div>';
+    for (let i = 1; i <= max; i++) wheel.insertAdjacentHTML('beforeend', '<div class="wheel-n" data-n="' + i + '">' + i + '</div>');
+    wheel.insertAdjacentHTML('beforeend', '<div class="wheel-pad"></div>');
+    wheel.scrollTop = 0;
+    wheel.onscroll = () => this.fromScroll();
+    wheel.querySelectorAll('.wheel-n').forEach(el => el.onclick = () => this.pick(+el.dataset.n));
+    document.getElementById('buy-modal').classList.remove('hidden');
+    Doodle.scan(document.getElementById('buy-modal'));
+    this.paint();
+  },
+  close() {
+    document.getElementById('buy-modal').classList.add('hidden');
+    if (this.after) this.after();
+  },
+  itemH() { const el = document.querySelector('#buy-wheel .wheel-n'); return el ? el.offsetHeight : 40; },
+  fromScroll() {
+    const n = Math.max(1, Math.min(this.max, Math.round(document.getElementById('buy-wheel').scrollTop / this.itemH()) + 1));
+    if (n !== this.n) { this.n = n; Sfx.play('button', { volume: 0.25, throttle: 40 }); this.paint(); }
+  },
+  pick(n) {
+    this.n = Math.max(1, Math.min(this.max, n));
+    document.getElementById('buy-wheel').scrollTo({ top: (this.n - 1) * this.itemH(), behavior: 'smooth' });
+    this.paint();
+  },
+  paint() {
+    document.querySelectorAll('#buy-wheel .wheel-n').forEach(el => el.classList.toggle('on', +el.dataset.n === this.n));
+    const cost = this.n * PRICE.chest;
+    document.getElementById('buy-total').textContent = this.n + (this.n === 1 ? ' chest' : ' chests') + ' = ' + cost + ' coins  (you have ' + Save.coins + ')';
+    const ok = document.getElementById('buy-ok');
+    ok.disabled = Save.coins < cost;
+  },
+  buy() {
+    if (!Relics.buyChests(this.n)) return;
+    Sfx.play('card_buy', { volume: 1, rateVar: 0 });
+    More.flash = '+' + this.n + (this.n === 1 ? ' chest' : ' chests');
+    this.close();
+  }
+};
+
 /* ------------------------------------------------- a skin pack's settings */
 const PackModal = {
   open(pack, after) {
@@ -523,6 +603,11 @@ window.addEventListener('load', () => {
   document.getElementById('chest-done').onclick = () => { Sfx.play('button', { volume: 0.6 }); ChestModal.close(); };
   document.getElementById('chest-again').onclick = () => ChestModal.open();
   document.getElementById('pack-close').onclick = () => { Sfx.play('button', { volume: 0.6 }); PackModal.close(); };
+  document.getElementById('buy-close').onclick = () => { Sfx.play('button', { volume: 0.6 }); BuyModal.close(); };
+  document.getElementById('buy-ok').onclick = () => BuyModal.buy();
+  document.getElementById('buy-minus').onclick = () => BuyModal.pick(BuyModal.n - 1);
+  document.getElementById('buy-plus').onclick = () => BuyModal.pick(BuyModal.n + 1);
+  document.getElementById('buy-modal').addEventListener('click', e => { if (e.target.id === 'buy-modal') BuyModal.close(); });
   // outside the popup closes it too; a chest only once it has been opened
   document.getElementById('pack-modal').addEventListener('click', e => {
     if (e.target.id === 'pack-modal') PackModal.close();

@@ -63,6 +63,7 @@ const Game = {
   init() {
     this.canvas = document.getElementById('game');
     this.ctx = this.canvas.getContext('2d');
+    Settings.load();
     this.resize();
     window.addEventListener('resize', () => this.resize());
 
@@ -98,7 +99,7 @@ const Game = {
   },
 
   resize() {
-    this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.dpr = Settings.data.low ? 1 : Math.min(2, window.devicePixelRatio || 1);   // low graphics: one pixel per pixel
     this.w = window.innerWidth;
     this.h = window.innerHeight;
     this.canvas.width = Math.floor(this.w * this.dpr);
@@ -238,6 +239,7 @@ const Game = {
     this.cinematic = null;
     this.slowT = 0;
     this.paused = false;
+    Protector.reset();
     // the worn relic, where it acts from the very start
     if (Relics.val('tape')) { this.maxHp += 1; this.castleHp += 1; this.hpShown += 1; }
     this.scribbles += 15 * Relics.val('bookmark');
@@ -729,6 +731,14 @@ const Game = {
     // runs spawn-ins backwards (an enemy with a negative size throws)
     let dt = Math.max(0, (now - this.last) / 1000);
     this.last = now;
+    // low graphics runs at a steady 30: every other frame is skipped whole,
+    // its time carried into the next, so nothing moves slower - just in
+    // fewer, evener steps, which on a weak phone beats a ragged 40
+    if (Settings.data.low) {
+      this.acc = (this.acc || 0) + dt;
+      if (this.acc < 1 / 31) { requestAnimationFrame(t => this.frame(t)); return; }
+      dt = this.acc; this.acc = 0;
+    }
     // the governor reads the real frame time, before it is capped - a tab
     // switch is clipped so one long gap cannot condemn the machine
     if (this.state === 'playing' && !this.paused) Fx.sample(Math.min(dt, 0.1));
@@ -848,6 +858,7 @@ const Game = {
       }
     }
     if (this.sentry) this.sentry.update(dt, this);
+    Protector.update(dt, this);            // the Protector relic's shields
 
     if (this.state === 'playing' && this.spawnLeft === 0 && this.enemies.length === 0) {
       this.banner = null;
@@ -943,6 +954,7 @@ const Game = {
       }
       if (this.hold) drawHoldGauge(ctx, this);
       Depth.cursorShadow(ctx, this);            // the top layer's shadow on the world
+      Protector.draw(ctx, this);
       drawCursor(ctx, cursorById(this.cursorId), this.pointer.x, this.pointer.y,
         this.cursorCharge, this.pointer.down > 0 ? 1 : 0, this.time, this.oneshot,
         false, this.oneshot.double ? this.doubleId : null);

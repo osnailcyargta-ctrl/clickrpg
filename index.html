@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Patrick+Hand&display=swap">
-<link rel="stylesheet" href="style.css?v=23">
+<link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -115,12 +115,39 @@
   </div>
 </div>
 
+<!-- buying chests: scroll to how many -->
+<div id="buy-modal" class="modal hidden">
+  <div class="popup buy-popup" data-doodle="ink" data-paper="1" data-weight="3.4">
+    <button class="popup-close" id="buy-close" aria-label="close" data-doodle="ink" data-paper="1">&times;</button>
+    <h2>BUY CHESTS</h2>
+    <div class="buy-row">
+      <button id="buy-minus" class="buy-step" data-doodle="ink">&minus;</button>
+      <div class="wheel-frame" data-doodle="#9a6a36" data-weight="2.4"><div id="buy-wheel" class="buy-wheel"></div></div>
+      <button id="buy-plus" class="buy-step" data-doodle="ink">+</button>
+    </div>
+    <div id="buy-total" class="buy-total"></div>
+    <button id="buy-ok" data-doodle="#9a6a36" data-fill="#9a6a36">BUY</button>
+  </div>
+</div>
+
 <!-- a skin pack's settings: which of its skins are worn -->
 <div id="pack-modal" class="modal hidden">
   <div class="popup pack-popup" data-doodle="ink" data-paper="1" data-weight="3.4">
     <button class="popup-close" id="pack-close" aria-label="close" data-doodle="ink" data-paper="1">&times;</button>
     <h2 id="pack-title">PACK</h2>
     <div id="pack-list" class="pack-list"></div>
+  </div>
+</div>
+
+<!-- on the pause screen: a way into the settings -->
+<button id="pause-settings" class="pause-settings hidden" data-doodle="ink" data-paper="1" data-weight="2.8">SETTINGS</button>
+
+<!-- settings, over the paused game -->
+<div id="settings-modal" class="modal hidden">
+  <div class="popup settings-popup" data-doodle="ink" data-paper="1" data-weight="3.4">
+    <button class="popup-close" id="settings-close" aria-label="close" data-doodle="ink" data-paper="1">&times;</button>
+    <h2>SETTINGS</h2>
+    <div id="settings-body" class="settings-body"></div>
   </div>
 </div>
 
@@ -131,36 +158,38 @@
 </div>
 
 <!-- BUILD: bump this (and the ?v= on every asset) to beat browser caches -->
-<script>window.BUILD_V = "23";</script>
-<script src="js/audio.js?v=23"></script>
-<script src="js/rough.js?v=23"></script>
-<script src="js/config.js?v=23"></script>
-<script src="js/save.js?v=23"></script>
-<script src="js/entities.js?v=23"></script>
-<script src="js/hive.js?v=23"></script>
-<script src="js/fx.js?v=23"></script>
-<script src="js/depth.js?v=23"></script>
-<script src="js/deaths.js?v=23"></script>
-<script src="js/auger.js?v=23"></script>
-<script src="js/trapper.js?v=23"></script>
-<script src="js/skills.js?v=23"></script>
-<script src="js/offers.js?v=23"></script>
-<script src="js/cursors.js?v=23"></script>
-<script src="js/skins.js?v=23"></script>
-<script src="js/cryo.js?v=23"></script>
-<script src="js/relics.js?v=23"></script>
-<script src="js/achievements.js?v=23"></script>
-<script src="js/hammer.js?v=23"></script>
-<script src="js/thunder.js?v=23"></script>
-<script src="js/drillgear.js?v=23"></script>
-<script src="js/mole.js?v=23"></script>
-<script src="js/flourish.js?v=23"></script>
-<script src="js/doodle.js?v=23"></script>
-<script src="js/scrawl.js?v=23"></script>
-<script src="js/bestiary.js?v=23"></script>
-<script src="js/menu.js?v=23"></script>
-<script src="js/more.js?v=23"></script>
-<script src="js/ui.js?v=23"></script>
-<script src="js/game.js?v=23"></script>
+<script>window.BUILD_V = "24";</script>
+<script src="js/audio.js?v=24"></script>
+<script src="js/rough.js?v=24"></script>
+<script src="js/config.js?v=24"></script>
+<script src="js/save.js?v=24"></script>
+<script src="js/entities.js?v=24"></script>
+<script src="js/hive.js?v=24"></script>
+<script src="js/fx.js?v=24"></script>
+<script src="js/depth.js?v=24"></script>
+<script src="js/deaths.js?v=24"></script>
+<script src="js/auger.js?v=24"></script>
+<script src="js/trapper.js?v=24"></script>
+<script src="js/skills.js?v=24"></script>
+<script src="js/offers.js?v=24"></script>
+<script src="js/cursors.js?v=24"></script>
+<script src="js/skins.js?v=24"></script>
+<script src="js/cryo.js?v=24"></script>
+<script src="js/relics.js?v=24"></script>
+<script src="js/achievements.js?v=24"></script>
+<script src="js/protector.js?v=24"></script>
+<script src="js/hammer.js?v=24"></script>
+<script src="js/thunder.js?v=24"></script>
+<script src="js/drillgear.js?v=24"></script>
+<script src="js/mole.js?v=24"></script>
+<script src="js/flourish.js?v=24"></script>
+<script src="js/doodle.js?v=24"></script>
+<script src="js/settings.js?v=24"></script>
+<script src="js/scrawl.js?v=24"></script>
+<script src="js/bestiary.js?v=24"></script>
+<script src="js/menu.js?v=24"></script>
+<script src="js/more.js?v=24"></script>
+<script src="js/ui.js?v=24"></script>
+<script src="js/game.js?v=24"></script>
 </body>
 </html>

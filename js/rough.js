@@ -41,9 +41,17 @@ const Rough = (function () {
      the ctx.globalAlpha they were called at - a wrapper fade is ignored. Every
      visual in the game was tuned by eye against that, so it stays; anything
      that wants to fade passes `alpha` explicitly. */
+  /* Low mode, for weak phones: one pencil pass instead of two, outlines and
+     crayon fills each drawn as a single path (one draw call instead of
+     dozens), fewer fill strokes, no paper grain and no glow. It still looks
+     drawn - just by someone in more of a hurry. */
+  let LOW = false;
+  function setLow(v) { LOW = !!v; }
+  function isLow() { return LOW; }
+
   function line(ctx, x1, y1, x2, y2, o) {
     o = o || {};
-    const w = o.width || 2.2, passes = o.passes || 2, j = o.jitter == null ? 1.6 : o.jitter;
+    const w = o.width || 2.2, passes = LOW ? 1 : (o.passes || 2), j = o.jitter == null ? 1.6 : o.jitter;
     ctx.save();
     ctx.strokeStyle = o.color || '#2b2b2b';
     ctx.lineWidth = w;
@@ -77,6 +85,31 @@ const Rough = (function () {
       segLen.push(l); total += l;
     }
     const want = total * (o.progress == null ? 1 : Math.max(0, Math.min(1, o.progress)));
+    if (LOW) {                               // the whole outline as one path
+      const j = o.jitter == null ? 1.6 : o.jitter;
+      ctx.save();
+      ctx.strokeStyle = o.color || '#2b2b2b';
+      ctx.lineWidth = o.width || 2.2;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.globalAlpha = o.alpha == null ? 1 : o.alpha;
+      ctx.beginPath();
+      let walkedL = 0;
+      ctx.moveTo(list[0][0] + jit(j), list[0][1] + jit(j));
+      for (let i = 0; i < list.length - 1; i++) {
+        if (walkedL >= want) break;
+        const t = Math.min(1, (want - walkedL) / (segLen[i] || 1));
+        const x2 = list[i][0] + (list[i + 1][0] - list[i][0]) * t, y2 = list[i][1] + (list[i + 1][1] - list[i][1]) * t;
+        const segs = Math.max(1, Math.round(segLen[i] * t / 18));
+        for (let k = 1; k <= segs; k++) {
+          const u = k / segs;
+          ctx.lineTo(list[i][0] + (x2 - list[i][0]) * u + jit(j), list[i][1] + (y2 - list[i][1]) * u + jit(j));
+        }
+        walkedL += segLen[i];
+      }
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
     let walked = 0;
     for (let i = 0; i < list.length - 1; i++) {
       if (walked >= want) break;
@@ -115,7 +148,7 @@ const Rough = (function () {
   function scribble(ctx, pts, o) {
     o = o || {};
     const overflow = o.overflow == null ? 1.07 : o.overflow;
-    const spacing = o.spacing || 7;
+    const spacing = (o.spacing || 7) * (LOW ? 1.6 : 1);
     const angle = o.angle == null ? -0.6 : o.angle;
     const progress = o.progress == null ? 1 : Math.max(0, Math.min(1, o.progress));
     if (progress <= 0) return;
@@ -138,6 +171,22 @@ const Rough = (function () {
     const cos = Math.cos(angle), sin = Math.sin(angle);
     const count = Math.max(1, Math.round(diag / spacing));
     const shown = Math.round(count * progress);
+    if (LOW) {                               // every stroke in one path, one draw call
+      ctx.globalAlpha = (o.alpha == null ? 0.85 : o.alpha) * 0.8;
+      ctx.lineWidth = o.width || 5;
+      ctx.beginPath();
+      const half = diag / 2;
+      for (let i = 0; i < shown; i++) {
+        const off = -diag / 2 + i * spacing;
+        const mx = cx + -sin * off, my = cy + cos * off;
+        ctx.moveTo(mx - cos * half + jit(3), my - sin * half + jit(3));
+        ctx.lineTo(mx + jit(3), my + jit(3));
+        ctx.lineTo(mx + cos * half + jit(3), my + sin * half + jit(3));
+      }
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
     for (let i = 0; i < shown; i++) {
       const off = -diag / 2 + i * spacing;
       const mx = cx + -sin * off, my = cy + cos * off;
@@ -203,6 +252,7 @@ const Rough = (function () {
 
   /* Crayon grain: sparse dots that break up a flat fill. */
   function grain(ctx, pts, color, density, seedVal) {
+    if (LOW) return;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const p of pts) {
       if (p[0] < minX) minX = p[0];
@@ -279,7 +329,7 @@ const Rough = (function () {
   }
 
   function bloom(ctx, x, y, r, color, alpha) {
-    if (!(r > 0.5)) return;
+    if (LOW || !(r > 0.5)) return;
     const a = (alpha == null ? 0.5 : alpha) * 0.55;
     if (a <= 0.004) return;
     // absolute alpha, like the strokes and like the gradient version always
@@ -320,5 +370,5 @@ const Rough = (function () {
     hold: (t, keep) => t <= keep ? 1 : Math.max(0, 1 - Math.pow((t - keep) / (1 - keep), 1.6))
   };
 
-  return { srand, rnd, jit, boil, line, poly, circle, circlePts, rectPts, scribble, blob, text, centroid, noisyRing, grain, arc, wrap, ease, bloom, vignette };
+  return { srand, rnd, jit, boil, line, poly, circle, circlePts, rectPts, scribble, blob, text, centroid, noisyRing, grain, arc, wrap, ease, bloom, vignette, setLow, isLow };
 })();

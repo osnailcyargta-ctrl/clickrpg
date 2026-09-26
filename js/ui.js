@@ -47,7 +47,12 @@ const UI = {
       mute.textContent = Sfx.muted ? 'SOUND OFF' : 'SOUND ON';
       mute.classList.toggle('off', Sfx.muted);
     };
+    this.paintMute = paint;                 // settings flips it too
     mute.addEventListener('click', e => { e.stopPropagation(); Sfx.toggleMute(); paint(); });
+    // settings, from the pause screen
+    document.getElementById('pause-settings').addEventListener('click', e => {
+      e.stopPropagation(); Sfx.play('button', { volume: 0.7 }); SettingsModal.open();
+    });
     window.addEventListener('keydown', e => {
       if (e.key === 'm' || e.key === 'M') { Sfx.toggleMute(); paint(); }
     });
@@ -69,6 +74,9 @@ const UI = {
   paintPause(on) {
     const b = document.getElementById('hud-pause');
     if (b) { b.textContent = on ? 'RESUME' : 'PAUSE'; b.classList.toggle('off', on); }
+    const s = document.getElementById('pause-settings');
+    if (s) { s.classList.toggle('hidden', !on); if (on) Doodle.scan(s.parentNode); }
+    if (!on && typeof SettingsModal !== 'undefined') SettingsModal.close();
   },
 
   hideSkillButton() {

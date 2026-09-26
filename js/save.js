@@ -15,7 +15,8 @@ const Save = {
     relics: {},         // relic id -> how many
     relicOrder: [],     // the order they were first found, for the inventory
     relicOn: null,      // the one relic worn, if any
-    search: null        // { start, finds: [ms after start] } while a search runs
+    search: null,       // { start, seed } while a search runs (old saves: { start, finds })
+    boosts: []          // [{ from, to }] - luck boosts bought, as clock times
   },
   persistent: true,
 
@@ -42,8 +43,11 @@ const Save = {
         for (const k of Object.keys(this.data.relics)) if (!this.data.relicOrder.includes(k)) this.data.relicOrder.push(k);
         this.data.relicOn = typeof d.relicOn === 'string' && this.data.relics[d.relicOn] ? d.relicOn : null;
         const sr = d.search;
-        this.data.search = sr && Number.isFinite(sr.start) && Array.isArray(sr.finds)
-          ? { start: sr.start, finds: sr.finds.filter(Number.isFinite) } : null;
+        this.data.search = !sr || !Number.isFinite(sr.start) ? null
+          : Array.isArray(sr.finds) ? { start: sr.start, finds: sr.finds.filter(Number.isFinite) }
+            : Number.isFinite(sr.seed) ? { start: sr.start, seed: sr.seed } : null;
+        this.data.boosts = Array.isArray(d.boosts)
+          ? d.boosts.filter(b => b && Number.isFinite(b.from) && Number.isFinite(b.to)) : [];
       }
     } catch (e) {
       this.persistent = false;
@@ -117,6 +121,14 @@ const Save = {
     this.store();
   },
   /* ---- chests and relics */
+  /* Spend coins on something that is not a skin. False if short. */
+  spend(n) {
+    if (!(n > 0) || this.data.coins < n) return false;
+    this.data.coins -= n;
+    this.store();
+    return true;
+  },
+
   addChests(n) {
     if (!(n > 0)) return;
     this.data.chests += n;

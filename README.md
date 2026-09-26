@@ -92,14 +92,18 @@ Like every skin, neither changes a number.
 | Hard Copy | Win on Hard | the Thunder Pack |
 
 **Chests** come from winning a Normal or Hard run, from every tenth wave of
-an Endless run on Normal or Hard, or from **searching**: start a search and
-it runs for four hours by the clock, tab open or shut, turning up a chest
-every 1.5 to 2.3 hours (so one or two a search). When the four hours are up
+an Endless run on Normal or Hard, from **searching**, or from the **shop**.
+A search runs for four hours by the clock, tab open or shut; every ten
+minutes of it has a **7% chance** of turning up a chest (about 1.7 a search). When the four hours are up
 the chests are handed over; you can call it off early and keep what it has
 found so far. The Blob'd-Tier does the looking: it hops about, lobs a blot
 into the sky every minute, and ten seconds later the blot comes down on
 either a chest or nothing - a chest exactly when the search really found one. A chest holds a **relic** 30% of the time, **4-6 coins** 5% of
 the time, and nothing the rest.
+
+**The shop** (under search and chests): **chests** at 3 coins each - a
+wheel to scroll to how many - and a **luck boost**, 3 coins for an hour of
++30% chance on every search roll (buy another and it adds an hour on the end).
 
 **Relics** - one can be worn at a time. Holding more than one of a kind
 makes most of them stronger, up to five:
@@ -113,6 +117,7 @@ makes most of them stronger, up to five:
 | Pocket Sharpener | the skill comes back 5% sooner |
 | Paper Crane | the sentry shoots 6% faster |
 | Roll of Tape | the castle starts with one more segment (only one counts) |
+| Protector (rare) | a small shield circles the cursor and hits what it runs into for half your click damage; one more shield for each held, up to 4 |
 
 The **inventory** is a 4x4 grid: the first slot is your coins, then chests
 (open them from there too), then relics (wear or take off from there). Once
@@ -332,6 +337,15 @@ instead of 3.
 | **Deep Ink** | +0.3s on every status you inflict, per level: burns, slows, stains, stuns. |
 | **Tape Patch** | Tapes one castle segment back together. Only offered while damaged. |
 
+## Settings
+
+In MORE, or from the pause screen: **3D parallax** on or off, **low
+graphics**, **sound** on or off and a ten-notch **volume**. Low graphics is
+for weak phones - the crayon is drawn in one pass with batched strokes and no
+glow, the decorative extras are off, the canvas drops to one pixel per pixel
+and the game runs at a steady 30 fps (about 2.5x cheaper to draw). On a first
+visit from what looks like a low-end phone it starts switched on.
+
 ## Depth
 
 The page is drawn in layers, like a pop-up book seen from above
@@ -420,6 +434,8 @@ js/entities.js    enemies, bosses, status effects, sentry, every flying doodle
 js/hive.js        the Hive fight's ground cracks, lava and burning lawn
 js/fx.js          decoration only: hit sparks, kill bursts, droplets, the frame governor
 js/depth.js       the layers, the camera lean (parallax), shadows
+js/settings.js    settings: parallax, low graphics, sound
+js/protector.js   the Protector relic's shields
 js/deaths.js      how each enemy breaks when it dies
 js/save.js        coins and skins, kept in localStorage
 js/skins.js       the skins, and everything the Star Caller draws
