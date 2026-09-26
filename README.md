@@ -60,7 +60,12 @@ everywhere, frost creeps in from the edges and everything caught is iced over
 for as long as it is slowed. Its card between waves is a bank of frozen cloud
 over a sheet of heavy rain.
 
-The shop scrolls sideways.
+**Moleman** (4 coins) reskins the Trapper: a mole with a little hand drill.
+He drills down into the ground, tunnels to the enemy under a ridge of dirt,
+bursts up underneath it drill-first, dives back into his hole, tunnels home
+and climbs out beside the castle - and every hole he leaves closes back up.
+
+The shop scrolls sideways; click outside a popup to close it.
 
 A **skin pack** is not bought - it is won, and you get every skin in it at
 once. Its card in the shop has a **SETTINGS** button instead of EQUIP, which
@@ -284,7 +289,7 @@ themselves around the castle, so they leave the cursor alone.
 | **Ink Overflow** | Every crit dumps a 1.4 block ink puddle for 4s: 30% slow, 2 damage a second. |
 | **Chalk Ward** | Two shield charges that eat a hit instead of your HP, re-drawn every wave. |
 | **Thick Paper** | One more castle segment, permanently — six instead of five — and the new one starts full. The castle is redrawn inside an uncoloured outer shell so you can see it. |
-| **Sentry Drill** | Upgrades whoever is standing in the sentry post, permanently. See below. |
+| **Sentry Drill** | Upgrades whoever is standing in the sentry post, permanently, and you can see it: the stick figure (and Zeus) wear a hard hat and shoot drill-tipped arrows, the Blob'd-Tier grows a spinning drill horn, the Electric Bird's beak becomes a drill bit, the Trapper sprouts one from its crown, and the Moleman's drill gets bigger and hotter under a hard hat. See below. |
 | **Double Trouble** | One side of the cursor is redrawn as another cursor, picked at random, and the charge fires both tricks from then on, taking it in turns. The most expensive thing on the page. |
 | **Afterimage** | A faded copy of the cursor trails a third of a second behind and repeats every click it saw (and every Sledgehammer slam), at half damage. It cannot crit and it charges nothing. |
 
@@ -411,6 +416,8 @@ js/achievements.js the three achievements and what they pay
 js/more.js        the MORE page, opening a chest, a skin pack's settings
 js/thunder.js     the Thunder Pack: Mjolnir and Zeus
 js/cryo.js        the Cryo Rain skin
+js/drillgear.js   how the Sentry Drill looks on each sentry
+js/mole.js        the Moleman skin
 js/hammer.js      the Sledgehammer and its QUAKE
 js/flourish.js    decoration only: flares and page washes on every ability
 js/auger.js       the Auger, endless only

@@ -179,7 +179,7 @@ const SkinShop = {
       const owned = Save.owns(skin.id), worn = Save.isEquipped(skin);
       card.insertAdjacentHTML('beforeend',
         '<h3 style="color:' + skin.color + '">' + skin.name + '</h3>'
-        + '<div class="skin-for">' + (Object.keys(skin.applies).length > 1 ? 'skin pack' : base.name + ' skin') + '</div>'
+        + '<div class="skin-for">' + (Object.keys(skin.applies).length > 1 ? 'skin pack' : targetName(target) + ' skin') + '</div>'
         + '<p>' + skin.blurb + '</p>');
       const btn = document.createElement('button');
       if (!owned) {
@@ -259,6 +259,7 @@ const SkinShop = {
       Rough.boil(c.skin.id.length * 31, Math.floor(t * 2));
       if (c.pack) { thunderPreview(ctx, w, h, t, dt, c); continue; }
       if (c.skin.id === 'cryo') { cryoPreview(ctx, w, h, t, dt, c); continue; }
+      if (c.skin.id === 'moleman') { molePreview(ctx, w, h, t, dt, c); continue; }
       for (let i = 0; i < 10; i++) {           // a few twinkles in the sky
         const sx = (i * 97 % 100) / 100 * w, sy = (i * 53 % 100) / 100 * h * 0.6;
         const k = 2 + Math.sin(t * 3 + i) * 1.5;

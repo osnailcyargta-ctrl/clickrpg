@@ -25,15 +25,16 @@ function buildOffers(game) {
       if (u.needsEagle && !game.eagleKilled) continue;
       if (u.stacks) {
         const next = game.trapperBuys === 0 ? TRAPPER_BASE_DMG : Math.min(TRAPPER_MAX_DMG, game.trapperDamage() + 1);
+        const tk = sentryLook(SENTRY_OF[u.id]);             // the Moleman renames it
         pool.push({
-          kind: 'oneshot', id: u.id, name: u.name, color: u.color,
+          kind: 'oneshot', id: u.id, name: tk ? tk.name : u.name, color: tk ? tk.color : u.color,
           // each one costs more than the last
           cost: offerCost(Math.round(u.cost * (1 + 0.3 * game.trapperBuys)), game.wave),
-          desc: holding ? 'Sharper teeth for the one in the post.' : u.desc,
+          desc: holding ? 'Sharper teeth for the one in the post.' : (tk ? tk.desc : u.desc),
           detail: holding
             ? 'The Trapper already holds the post. This one makes it bite for ' + next + ' instead of ' + game.trapperDamage() + '. It stops being offered once it bites for ' + TRAPPER_MAX_DMG + '.'
-            : u.detail + (game.trapperBuys ? ' Bought before this run, so it comes back biting for ' + next + '.' : ''),
-          tag: holding ? 'SENTRY \u00b7 BITE ' + next : 'SENTRY'
+            : (tk ? tk.detail : u.detail) + (game.trapperBuys ? ' Bought before this run, so it comes back biting for ' + next + '.' : ''),
+          tag: (holding ? 'SENTRY \u00b7 BITE ' + next : 'SENTRY') + (tk ? ' \u00b7 SKIN' : '')
         });
         continue;
       }

@@ -37,6 +37,18 @@ const SKINS = [
     }
   },
 
+  {
+    id: 'moleman', name: 'Moleman', price: 4, color: '#8a6a52',
+    blurb: 'The Trapper, but a mole with a drill.',
+    applies: {
+      'sentry:trapper': {
+        name: 'Moleman', color: '#8a6a52', sprite: 'mole',
+        desc: 'A mole with a drill takes the sentry post.',
+        detail: 'He does nothing until something walks inside 4.5 blocks, then drills down, tunnels under it, bursts up drill-first for 6 damage, a stun and a two-block knockback, dives back in and comes up again by the castle. Buy him again while he holds the post and he hits 1 harder, up to 10.'
+      }
+    }
+  },
+
   /* A pack is not bought: it is won, and comes whole. Its card in the shop
      opens settings to switch each skin in it on or off. */
   {
