@@ -12,9 +12,11 @@ const CursorPowers = {
   wet(game, x, y) {
     const r = 20 * game.aoeScale();
     const dmg = game.aoeDamage(3);
+    // Cryo Rain throws ice instead - the same hop, the same pop, the same numbers
+    const Drop = cursorLook('wet').power === 'ice' ? IceShard : WaterDrop;
     for (let i = 0; i < 6; i++) {
       const a = NINE_DIRS[Math.floor(Math.random() * NINE_DIRS.length)] + (Math.random() - 0.5) * 0.12;
-      game.effects.push(new WaterDrop(x, y, a, game, r, dmg));
+      game.effects.push(new Drop(x, y, a, game, r, dmg));
     }
   },
 

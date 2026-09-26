@@ -24,7 +24,8 @@ const Sfx = {
     'auger_screech', 'auger_chitter', 'auger_charge', 'auger_dash',
     'trap_dig', 'trap_emerge', 'trap_snap',
     'star_fall', 'star_hit', 'sk_starfall',
-    'hammer_lift', 'hammer_tick', 'hammer_slam', 'sk_quake'
+    'hammer_lift', 'hammer_tick', 'hammer_slam', 'sk_quake',
+    'ice_shatter', 'sk_hail'
   ],
   path: 'assets/sfx/',
   ver: (typeof window !== 'undefined' && window.BUILD_V) ? '?v=' + window.BUILD_V : '',

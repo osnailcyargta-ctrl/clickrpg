@@ -1,6 +1,6 @@
 /* FANDHARN - the Sledgehammer, and its skill QUAKE.
 
-   A click does nothing. Hold for at least 0.75s and let go, and it comes
+   A click does nothing. Hold for at least 0.4s and let go, and it comes
    down on everything within a block and a half. Every full second more you
    hold adds 20%, and at three seconds it comes down by itself at +40%.
 
@@ -9,7 +9,7 @@
    block back. */
 
 /* How much a hold of `t` seconds is worth: nothing under the minimum, then
-   1.0, 1.2, 1.4 a whole second apart (at 0.75s, 1.75s, 2.75s). */
+   1.0, 1.2, 1.4 a whole second apart (at 0.4s, 1.4s, 2.4s). */
 function hammerMult(t) {
   if (t < HAMMER_MIN) return 0;
   return 1 + HAMMER_STEP * Math.min(HAMMER_MAX - HAMMER_MIN, Math.floor(t - HAMMER_MIN + 1e-6));

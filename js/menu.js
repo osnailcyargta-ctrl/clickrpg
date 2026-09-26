@@ -158,8 +158,9 @@ const SkinShop = {
       const base = cursorById(baseId);
       const card = document.createElement('div');
       card.className = 'skin-card' + (look.card === 'spiky' ? ' spiky' : '');
-      // a skinned card wears the same spiky gold border it gets in the shop
-      card.dataset.doodle = look.card === 'spiky' ? '#e8a93a' : 'ink';
+      // a skinned card wears the same border it gets between waves
+      card.dataset.doodle = look.card === 'spiky' ? '#e8a93a' : look.card === 'cryo' ? '#5fa8e0' : 'ink';
+      if (look.card === 'cryo') card.dataset.weight = '3.2';
       card.dataset.paper = '1';
       if (look.card === 'spiky') { card.dataset.shape = 'spiky'; card.dataset.weight = '3'; }
       const view = document.createElement('div');
@@ -194,9 +195,11 @@ const SkinShop = {
       }
       card.appendChild(btn);
       list.appendChild(card);
-      Doodle.scan(card);
       this.cards.push({ cv, skin, look, stars: [], next: 0.3 });
     }
+    // the whole list, not card by card: scanning a card only finds what is
+    // inside it, and the card's own crayon frame was lost on every re-render
+    Doodle.scan(list);
   },
 
   /* A pack's card: won, never bought. Owned, its button opens the settings
@@ -231,7 +234,6 @@ const SkinShop = {
       card.insertAdjacentHTML('beforeend', '<div class="locked">achievement: ' + (a ? a.text : '') + '</div>');
     }
     list.appendChild(card);
-    Doodle.scan(card);
     this.cards.push({ cv, skin: pack, pack: true, next: 0.4, bolts: [] });
   },
 
@@ -250,6 +252,7 @@ const SkinShop = {
       ctx.fillStyle = '#fffdf4'; ctx.fillRect(0, 0, w, h);
       Rough.boil(c.skin.id.length * 31, Math.floor(t * 2));
       if (c.pack) { thunderPreview(ctx, w, h, t, dt, c); continue; }
+      if (c.skin.id === 'cryo') { cryoPreview(ctx, w, h, t, dt, c); continue; }
       for (let i = 0; i < 10; i++) {           // a few twinkles in the sky
         const sx = (i * 97 % 100) / 100 * w, sy = (i * 53 % 100) / 100 * h * 0.6;
         const k = 2 + Math.sin(t * 3 + i) * 1.5;

@@ -414,3 +414,12 @@ canvas.scrawl { display: block; }
 .pack-text span { font-size: 13px; opacity: 0.65; }
 .skin-card .pack-inside { font-size: 13px; color: #6f86d8; }
 .skin-card .locked { font-size: 14px; color: #8a8a8a; }
+
+/* the shop scrolls sideways instead of growing downwards; the padding keeps
+   the crayon frames (drawn a little outside each card) inside the scroller */
+.skin-list { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; overflow-y: hidden;
+  max-width: min(900px, 86vw); padding: 18px 16px 20px; scroll-snap-type: x proximity; }
+.skin-list .skin-card { flex: none; scroll-snap-align: center; }
+.skin-list::-webkit-scrollbar { height: 10px; }
+.skin-list::-webkit-scrollbar-thumb { background: repeating-linear-gradient(-55deg, #b8b2a3 0 4px, transparent 4px 7px); border: 2px solid #2b2b2b; }
+.search-canvas { width: 240px; height: 130px; display: block; }

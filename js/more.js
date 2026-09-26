@@ -12,7 +12,7 @@ const More = {
     this.timer = setInterval(() => this.tick(), 1000);
   },
 
-  close() { clearInterval(this.timer); this.timer = 0; },
+  close() { clearInterval(this.timer); this.timer = 0; SearchAnim.stop(); },
 
   /* A search that finished while nobody was looking hands its chests over. */
   settle() {
@@ -45,6 +45,7 @@ const More = {
   },
 
   render() {
+    SearchAnim.stop();
     const body = document.getElementById('more-body');
     body.innerHTML = '';
     const back = this.view === 'home' ? '' :
@@ -119,12 +120,12 @@ const More = {
   relicsHtml() {
     const now = Date.now();
     const st = Relics.searchState(now);
-    let search;
+    let search = '<canvas id="search-canvas" class="search-canvas"></canvas>';
     if (!st) {
-      search = '<p>Send someone out to look. They are gone four hours, tab open or shut, and turn up a chest every hour and a half to two and a bit.</p>'
+      search += '<p>Send someone out to look. They are gone four hours, tab open or shut, and turn up a chest every hour and a half to two and a bit.</p>'
         + '<button id="search-go" data-doodle="#4c9f70" data-fill="#4c9f70">SEARCH NOW</button>';
     } else {
-      search = '<div class="search-bar" data-doodle="ink" data-weight="2"><div id="search-fill" class="search-fill" style="width:'
+      search += '<div class="search-bar" data-doodle="ink" data-weight="2"><div id="search-fill" class="search-fill" style="width:'
         + (100 * st.elapsed / SEARCH_MS).toFixed(2) + '%"></div></div>'
         + '<div class="search-line"><span id="search-clock">' + hms(st.left) + ' left</span>'
         + '<span>found so far: <b id="search-found">' + st.found + '</b></span></div>'
@@ -145,6 +146,7 @@ const More = {
   },
 
   bindRelics(body) {
+    SearchAnim.start(body.querySelector('#search-canvas'));
     const go = body.querySelector('#search-go');
     if (go) go.onclick = () => { Relics.startSearch(Date.now()); Sfx.play('card_draw', { volume: 0.7 }); this.render(); };
     const stop = body.querySelector('#search-stop');
@@ -218,6 +220,130 @@ const More = {
       Sfx.play('card_buy', { volume: 0.6 });
       this.render();
     };
+  }
+};
+
+/* ------------------------------------------------ who does the searching
+   The Blob'd-Tier, out on the page. It hops about; on every minute of the
+   search it lobs a blot straight up out of sight and sits and waits; ten
+   seconds later the blot comes down and where it lands there is either a
+   chest or nothing. It lands on a chest exactly when the search really did
+   turn one up since the last blot came down. */
+const SearchAnim = {
+  raf: 0, cv: null,
+  start(cv) {
+    this.stop();
+    if (!cv) return;
+    this.cv = cv;
+    const loop = () => { this.draw(); this.raf = requestAnimationFrame(loop); };
+    this.raf = requestAnimationFrame(loop);
+  },
+  stop() { cancelAnimationFrame(this.raf); this.raf = 0; this.cv = null; },
+
+  draw() {
+    const cv = this.cv;
+    if (!cv || !cv.isConnected) return this.stop();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = cv.clientWidth || 240, h = cv.clientHeight || 130;
+    if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const now = Date.now(), t = now / 1000;
+    const ground = h - 18;
+    Rough.boil(4242, Math.floor(t * 3.5));
+    Rough.line(ctx, 6, ground + 12, w - 6, ground + 12, { color: '#b8b2a3', width: 1.6, jitter: 0.8, passes: 1 });
+    const s = Save.data.search;
+    const blob = { id: 4242, recoil: 0, wob: 0, x: w * 0.3, y: ground, aim: -Math.PI / 2 };
+    if (!s) {
+      // nobody out looking: it naps
+      blob.recoil = 0.5 + Math.sin(t * 1.5) * 0.3;
+      this.blob(ctx, blob, t, true);
+      for (let i = 0; i < 3; i++) {
+        const k = (t * 0.5 + i / 3) % 1;
+        ctx.save(); ctx.globalAlpha = Math.sin(k * Math.PI);
+        Rough.text(ctx, 'z', blob.x + 18 + k * 20, blob.y - 30 - k * 26, 12 + k * 8, '#8a8a8a');
+        ctx.restore();
+      }
+      return;
+    }
+    const E0 = Math.max(0, now - s.start);
+    const m = Math.floor(E0 / 60000), sec = (E0 % 60000) / 1000;
+    const landX = w * (0.45 + ((m * 0.618) % 1) * 0.4);
+    // what the blot of minute m finds: any chest turned up since the last
+    // blot landed
+    const landAt = m * 60000 + 10000;
+    const found = s.finds.some(f => f > landAt - 60000 && f <= landAt);
+    if (sec < 10) {
+      // shoot, then sit still and look up
+      const shot = sec < 1.2;
+      blob.recoil = shot ? Math.max(0, 1 - sec / 0.4) : 0;
+      blob.x = w * 0.3;
+      this.blob(ctx, blob, t, false);
+      if (shot) {
+        const k = sec / 1.2;
+        const bx = blob.x + (landX - blob.x) * k * 0.3, by = blob.y - 14 - k * k * (h + 30);   // slow off the mark, then gone
+        Rough.line(ctx, bx, by + 6, bx, by + 20, { color: '#6b4fb0', width: 2, jitter: 0.6, passes: 1, alpha: 0.5 });
+        Rough.blob(ctx, bx, by, 5, '#6b4fb0', '#2b2b2b', { spacing: 3, fillWidth: 3, sides: 7, width: 1.6 });
+      } else {
+        // waiting: a little '...' over its head
+        const dots = 1 + Math.floor(sec * 2) % 3;
+        Rough.text(ctx, '.'.repeat(dots), blob.x, blob.y - 36, 16, '#6b4fb0');
+      }
+      return;
+    }
+    // the blot comes down, then whatever was under it
+    const since = sec - 10;
+    if (since < 0.7) {
+      const k = E.clamp01(since / 0.5);
+      const by = -10 + (ground - 4 + 10) * k * k;
+      Rough.blob(ctx, landX, by, 5, '#6b4fb0', '#2b2b2b', { spacing: 3, fillWidth: 3, sides: 7, width: 1.6 });
+      if (k >= 1) Rough.circle(ctx, landX, ground, 6 + (since - 0.5) * 60, { color: '#6b4fb0', width: 2, jitter: 1, alpha: 1 - (since - 0.5) / 0.2 });
+    } else if (since < 8) {
+      const a = since > 6.5 ? 1 - (since - 6.5) / 1.5 : 1;
+      const pop = E.back(E.clamp01((since - 0.7) / 0.35));
+      if (found) {
+        Rough.bloom(ctx, landX, ground - 10, 34, '#f2c230', 0.7 * a);
+        ctx.save(); ctx.globalAlpha = a;
+        ItemIcons.chest(ctx, landX, ground - 8 * pop, 15 * pop, since < 2);
+        ctx.restore();
+        for (let i = 0; i < 4; i++) {
+          const ang = -Math.PI / 2 + (i - 1.5) * 0.5;
+          Rough.line(ctx, landX + Math.cos(ang) * 20, ground - 12 + Math.sin(ang) * 20, landX + Math.cos(ang) * 28, ground - 12 + Math.sin(ang) * 28,
+            { color: '#e8a93a', width: 2, jitter: 0.3, passes: 1, alpha: a });
+        }
+      } else {
+        ctx.save(); ctx.globalAlpha = 0.35 * a * (1 - pop * 0.5);
+        ctx.fillStyle = '#b8ad9c';
+        for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(landX + (i - 1) * 9, ground - 4 - pop * 4, 6 + pop * 4, 0, 7); ctx.fill(); }
+        ctx.restore();
+        ctx.save(); ctx.globalAlpha = a * 0.8;
+        Rough.text(ctx, 'nothing', landX, ground - 22, 12, '#8a8a8a');
+        ctx.restore();
+      }
+    }
+    // and in between shots it hops about
+    const hopT = t * 1.6;
+    const ph = hopT % 1;
+    blob.x = w * 0.3 + Math.sin(t * 0.7) * w * 0.14;
+    blob.y = ground - Math.sin(ph * Math.PI) * 14;
+    blob.recoil = ph < 0.15 ? 1 - ph / 0.15 : 0;
+    blob.aim = Math.cos(t * 0.7) > 0 ? 0 : Math.PI;
+    if (since < 1) { blob.x = w * 0.3; blob.y = ground; blob.aim = Math.atan2(-10, landX - blob.x); blob.recoil = 0; }
+    this.blob(ctx, blob, t, false);
+  },
+
+  blob(ctx, b, t, asleep) {
+    ctx.save();
+    ctx.translate(b.x, b.y - 12);
+    ctx.scale(1.25, 1.25);
+    Sentry.prototype.drawBlobd.call(Object.assign({}, b, { x: 0, y: 0 }), ctx, t);
+    if (asleep) {                                  // eye shut
+      ctx.fillStyle = '#6b4fb0';
+      ctx.beginPath(); ctx.ellipse(0, -2, 6.5, 6.5, 0, 0, 7); ctx.fill();
+      Rough.line(ctx, -4, -2, 4, -2, { color: '#2b2b2b', width: 1.6, jitter: 0.3, passes: 1 });
+    }
+    ctx.restore();
   }
 };
 

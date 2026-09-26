@@ -23,6 +23,20 @@ const SKINS = [
     }
   },
 
+  {
+    id: 'cryo', name: 'Cryo Rain', price: 6, color: '#5fa8e0',
+    blurb: 'The Wet Cursor, left out overnight.',
+    applies: {
+      'cursor:wet': {
+        name: 'Cryo Rain', color: '#5fa8e0', sprite: 'cryo', card: 'cryo', power: 'ice', payload: 'hail',
+        desc: 'Every 15 clicks it throws 6 shards of ice.',
+        detail: '2.5 a click. Each shard hops one block in one of 9 random directions and shatters for 3 damage, freezing the ground where it lands.',
+        skillName: 'HAILSTORM',
+        skillBlurb: 'a frozen cloud rolls over the page and hail comes down on everything'
+      }
+    }
+  },
+
   /* A pack is not bought: it is won, and comes whole. Its card in the shop
      opens settings to switch each skin in it on or off. */
   {
@@ -36,7 +50,8 @@ const SKINS = [
       'cursor:hammer': {
         name: 'Mjolnir', color: '#6f86d8', sprite: 'mjolnir', slam: 'lightning', payload: 'thunder',
         desc: 'Hold it up. Let go and the sky comes down with it.',
-        detail: 'A click does nothing. Hold for at least 0.75s and let go: lightning follows it down onto everything within a block and a half for 10 each. Every full second more you hold adds 20% - and at three seconds it comes down by itself, at +40%.',
+        detail: 'A click does nothing. Hold for at least 0.4s and let go: lightning follows it down onto everything within a block and a half for 10 each. Every full second more you hold adds 20% - and at three seconds it comes down by itself, at +40%.',
+        skillName: 'THUNDERFALL',
         skillBlurb: 'a storm gathers over the castle and one bolt splits the ground open'
       }
     }
@@ -221,18 +236,74 @@ class Meteor {
     this.R = 100;                     // enormous, as asked
     this.reach = Math.max(reach, ...hits.map(h => h.at), 200);
     this.dur = this.fall + this.reach / this.ringSpeed + 1.1;
+    // the night it comes out of, a few stars in it
+    this.sky = [];
+    for (let i = 0; i < 26; i++) this.sky.push({ x: (Math.random() - 0.5) * game.w, y: (Math.random() - 0.5) * game.h, ph: Math.random() * 6, s: 2 + Math.random() * 3 });
+    // glowing cracks across the rock's face, in its own frame
+    this.cracks = [];
+    for (let i = 0; i < 5; i++) {
+      const a = Math.random() * Math.PI * 2, pts = [[Math.cos(a) * 20, Math.sin(a) * 20]];
+      let px = pts[0][0], py = pts[0][1];
+      for (let k = 0; k < 3; k++) { px += Math.cos(a + Rough.jit(0.8)) * 22; py += Math.sin(a + Rough.jit(0.8)) * 22; pts.push([px, py]); }
+      this.cracks.push(pts);
+    }
+    this.smoke = []; this.embers = []; this.sparks = [];
     Sfx.play('sk_starfall', { volume: 1, rateVar: 0 });
+  }
+  pos(k) {
+    const e = Math.pow(k, 1.6);
+    return { x: this.from.x * (1 - e), y: this.from.y * (1 - e) };
   }
   update(dt, game) {
     this.t += dt;
+    if (!this.landed) {
+      // smoke and embers shed off it as it comes
+      const k = Math.min(1, this.t / this.fall), p = this.pos(k);
+      const back = Math.atan2(this.from.y, this.from.x);
+      if (!Fx.low || Math.random() < 0.4) {
+        this.smoke.push({ x: p.x + Rough.jit(30), y: p.y + Rough.jit(30), vx: Math.cos(back) * 60, vy: Math.sin(back) * 60, r: 26 + Math.random() * 20, life: 0.7 });
+        for (let i = 0; i < 3; i++) {
+          const a = back + Rough.jit(0.9);
+          this.embers.push({ x: p.x + Rough.jit(40), y: p.y + Rough.jit(40), vx: Math.cos(a) * (160 + Math.random() * 200), vy: Math.sin(a) * (160 + Math.random() * 200), life: 0.45 });
+        }
+      }
+    }
+    for (const list of [this.smoke, this.embers, this.sparks]) {
+      for (let i = list.length - 1; i >= 0; i--) {
+        const q = list[i];
+        q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt;
+        if (q.r) q.r += dt * 50;
+        if (q.spin != null) { q.spin += dt * 6; q.vx *= 1 - dt * 1.6; q.vy *= 1 - dt * 1.6; }
+        if (q.life <= 0) list.splice(i, 1);
+      }
+    }
     if (!this.landed && this.t >= this.fall) {
       this.landed = true;
-      game.shake(24);
+      game.shake(26);
+      game.effects.push(new MeteorCrater(game));
       for (let i = 0; i < Fx.n(26); i++) {
         const c = new Crumb(Rough.jit(40), Rough.jit(30), i % 3 === 0 ? '#2b2b2b' : (i % 3 === 1 ? '#e0562d' : '#ffd24a'));
         c.size += 3; game.effects.push(c);
       }
+      if (typeof Chunk !== 'undefined') {
+        for (let i = 0; i < Fx.n(16); i++) {
+          game.effects.push(new Chunk(Rough.jit(30), Rough.jit(20), { shape: 'gob', color: '#3a2418', ink: '#1a0c08', size: 6 + Math.random() * 5, speed: 320, up: 420, life: 1.4 }));
+        }
+        if (!Fx.low) for (let i = 0; i < 10; i++) game.effects.push(new Dust(Rough.jit(60), Rough.jit(40), 90, '#5a4a5a'));
+      }
       for (let i = 0; i < Fx.n(12); i++) game.effects.push(new Droplet(0, 0, '#e0562d', 2.2));
+      // little gold stars thrown out of the blast - it came from the sky, after all
+      for (let i = 0; i < Fx.n(18); i++) {
+        const a = Math.random() * Math.PI * 2, v = 300 + Math.random() * 420;
+        this.sparks.push({ x: 0, y: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.9 + Math.random() * 0.4, spin: Math.random() * 6, s: 6 + Math.random() * 6 });
+      }
+      this.arcs = [];
+      let a = Math.random();
+      while (a < Math.PI * 2 + 0.2) {
+        const len = 0.22 + Math.random() * 0.3;
+        this.arcs.push({ a0: a, a1: a + len, off: Rough.jit(8), w: 4 + Math.random() * 4 });
+        a += len + 0.05 + Math.random() * 0.08;
+      }
     }
     if (this.landed) {
       const ring = (this.t - this.fall) * this.ringSpeed;
@@ -245,37 +316,80 @@ class Meteor {
     }
     return this.t < this.dur;
   }
+  drawBits(ctx) {
+    for (const s of this.smoke) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, s.life / 0.7) * 0.35;
+      ctx.fillStyle = '#4a3a4a';
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 7); ctx.fill();
+      ctx.restore();
+    }
+    for (const e of this.embers) {
+      const a = Math.max(0, e.life / 0.45);
+      Rough.line(ctx, e.x, e.y, e.x - e.vx * 0.03, e.y - e.vy * 0.03, { color: a > 0.5 ? '#ffd24a' : '#e0562d', width: 2.4, jitter: 0.3, passes: 1, alpha: a });
+    }
+    for (const s of this.sparks) {
+      const a = Math.min(1, s.life / 0.5);
+      drawStar(ctx, s.x, s.y, s.s * (0.6 + a * 0.4), s.spin, a);
+    }
+  }
   draw(ctx, time) {
-    const g = this.game;
+    const g = this.game, w = g.w, h = g.h;
     Rough.boil(this.id, Math.floor(time * 14));
     if (!this.landed) {
-      const k = Math.min(1, this.t / this.fall), e = Math.pow(k, 1.6);
-      const x = this.from.x * (1 - e), y = this.from.y * (1 - e);
-      // its shadow swelling on the ground where it is going to land
+      const k = Math.min(1, this.t / this.fall);
+      const { x, y } = this.pos(k);
+      // the page goes to night under it, stars coming out
+      ctx.save();
+      ctx.globalAlpha = 0.3 * k;
+      ctx.fillStyle = '#1a1b3a';
+      ctx.fillRect(-w / 2 - 40, -h / 2 - 40, w + 80, h + 80);
+      ctx.restore();
+      for (const st of this.sky) {
+        const tw = 0.5 + Math.sin(time * 5 + st.ph) * 0.5;
+        Rough.line(ctx, st.x - st.s, st.y, st.x + st.s, st.y, { color: '#fff4c8', width: 1.4, jitter: 0.2, passes: 1, alpha: k * tw });
+        Rough.line(ctx, st.x, st.y - st.s, st.x, st.y + st.s, { color: '#fff4c8', width: 1.4, jitter: 0.2, passes: 1, alpha: k * tw });
+      }
+      // where it will land: its shadow swelling, and a gold ring closing in
       ctx.save();
       ctx.globalAlpha = 0.15 + k * 0.35;
       ctx.fillStyle = '#1a1020';
       ctx.beginPath(); ctx.ellipse(0, 10, this.R * (0.4 + k * 1.1), this.R * (0.25 + k * 0.6), 0, 0, 7); ctx.fill();
       ctx.restore();
-      // the tail: a long burning smear back along its path
-      for (let i = 0; i < 7; i++) {
-        const b = Math.max(0, k - 0.05 - i * 0.05), eb = Math.pow(b, 1.6);
-        const px = this.from.x * (1 - eb), py = this.from.y * (1 - eb);
-        Rough.line(ctx, px, py, x, y, { color: ['#fff4c8', '#ffd24a', '#e0562d', '#7a1f1f'][i % 4],
-          width: this.R * (1.2 - i * 0.14), jitter: 6, passes: 1, alpha: 0.55 - i * 0.06 });
+      const rr = this.R * (2.6 - k * 1.4);
+      Rough.circle(ctx, 0, 0, rr, { color: '#ffd24a', width: 3, jitter: 1, wobble: 2, passes: 1, alpha: 0.4 + k * 0.5 });
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2 + time * 1.5;
+        drawStar(ctx, Math.cos(a) * rr, Math.sin(a) * rr, 9, time * 3, 0.5 + k * 0.5);
       }
-      Rough.bloom(ctx, x, y, this.R * 3, '#ff9a3d', 0.9);
-      // growing as it comes closer
+      this.drawBits(ctx);
+      // the tail: a tapering cone of fire back along its path
+      const back = Math.atan2(this.from.y - y, this.from.x - x);
+      const px = -Math.sin(back), py = Math.cos(back);
+      const s = 0.75 + k * 0.25, R = this.R * s;
+      for (const [len, wid, col, al] of [[5.5, 1.0, '#7a1f1f', 0.5], [4.6, 0.85, '#e0562d', 0.7], [3.4, 0.6, '#ffb347', 0.8], [2.2, 0.35, '#fff4c8', 0.9]]) {
+        const tip = [x + Math.cos(back) * R * len, y + Math.sin(back) * R * len];
+        const cone = [[x + px * R * wid, y + py * R * wid], tip, [x - px * R * wid, y - py * R * wid]];
+        Rough.scribble(ctx, cone, { color: col, spacing: 9, width: 7, overflow: 1.02, alpha: al, angle: back + 0.3 });
+      }
+      Rough.bloom(ctx, x, y, R * 3, '#ff9a3d', 0.9);
+      // the rock, turning as it falls, cracked through with fire
       ctx.save();
-      ctx.translate(x, y); ctx.scale(0.75 + k * 0.25, 0.75 + k * 0.25); ctx.translate(-x, -y);
-      // the rock: a lumpy dark body with a molten face
-      const pts = Rough.noisyRing(x, y, this.R, this.id, 18, 0.18);
-      ctx.fillStyle = '#3a2418';
+      ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(this.t * 1.4);
+      const pts = Rough.noisyRing(0, 0, this.R, this.id, 18, 0.18);
+      ctx.fillStyle = '#2e1c14';
       ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.fill();
-      Rough.scribble(ctx, pts, { color: '#e0562d', spacing: 9, width: 8, overflow: 1.02, alpha: 0.7, angle: 0.8 });
-      Rough.scribble(ctx, pts, { color: '#ffd24a', spacing: 14, width: 6, overflow: 0.8, alpha: 0.6, angle: -0.4 });
+      Rough.scribble(ctx, pts, { color: '#5a3424', spacing: 10, width: 6, overflow: 0.95, alpha: 0.8, angle: 0.8 });
+      for (const c of this.cracks) {
+        Rough.poly(ctx, c, { color: '#e0562d', width: 7, jitter: 1, closed: false, passes: 1, alpha: 0.7 });
+        Rough.poly(ctx, c, { color: '#ffd24a', width: 3, jitter: 0.8, closed: false, passes: 1 });
+      }
       Rough.poly(ctx, pts, { color: '#1a0c08', width: 4, jitter: 2 });
       ctx.restore();
+      // the face it is falling on white-hot
+      const fwd = back + Math.PI;
+      Rough.arc(ctx, x, y, R * 0.98, fwd - 1.1, fwd + 1.1, { color: '#ffd24a', width: 12, jitter: 2, passes: 1, alpha: 0.7 });
+      Rough.arc(ctx, x, y, R * 0.96, fwd - 0.8, fwd + 0.8, { color: '#fff4c8', width: 5, jitter: 1.5, passes: 1 });
       return;
     }
     const since = this.t - this.fall;
@@ -292,21 +406,66 @@ class Meteor {
     }
     Rough.bloom(ctx, 0, 0, 160 + since * 500, '#ffd24a', fade * 0.9);
     Rough.bloom(ctx, 0, 0, 90 + since * 160, '#ffffff', fade * 0.8);
-    // a scorched ring burnt round the castle - around it, not over it
-    const scorch = Rough.noisyRing(0, 4, this.game.castleRadius * 1.9, this.id + 7, 26, 0.18);
-    Rough.poly(ctx, scorch, { color: '#3a2418', width: 9, jitter: 3, alpha: 0.5 * fade });
-    Rough.poly(ctx, scorch, { color: '#e0562d', width: 3, jitter: 3, alpha: 0.6 * fade * white });
-    // the blast rolling out, and the rays thrown ahead of it
-    for (const [off, col, w] of [[0, '#e0562d', 7], [-40, '#ffd24a', 4], [-90, '#fff4c8', 3]]) {
-      const rr = Math.max(0, ring + off);
-      if (rr <= 0 || rr > this.reach + 160) continue;
-      Rough.circle(ctx, 0, 0, rr, { color: col, width: w, jitter: 5, wobble: 9, alpha: fade * 0.8 });
+    // the blast rolling out: a warm band behind a broken ink edge
+    if (ring < this.reach + 200) {
+      ctx.save();
+      ctx.globalAlpha = 0.3 * fade;
+      ctx.strokeStyle = '#ffb347';
+      ctx.lineWidth = 34;
+      ctx.beginPath(); ctx.arc(0, 0, Math.max(1, ring - 20), 0, 7); ctx.stroke();
+      ctx.restore();
+      for (const ar of this.arcs) {
+        Rough.arc(ctx, 0, 0, ring + ar.off, ar.a0, ar.a1, { color: '#e0562d', width: ar.w + 3, jitter: 1, passes: 1, alpha: 0.6 * fade });
+        Rough.arc(ctx, 0, 0, ring + ar.off, ar.a0, ar.a1, { color: '#2b2b2b', width: ar.w * 0.5, jitter: 0.8, passes: 1, alpha: 0.85 * fade });
+      }
     }
     for (let i = 0; i < 16; i++) {
       const a = (i / 16) * Math.PI * 2 + this.id;
-      const r0 = this.R * 0.9 + since * 120, r1 = r0 + 60 + since * 260;
+      const r0 = this.R * 0.9 + since * 140, r1 = r0 + 70 + since * 280;
       Rough.line(ctx, Math.cos(a) * r0, Math.sin(a) * r0, Math.cos(a) * r1, Math.sin(a) * r1,
-        { color: '#ffd24a', width: 3, jitter: 2, passes: 1, alpha: fade * 0.6 });
+        { color: i % 2 ? '#ffd24a' : '#fff4c8', width: 4, jitter: 1.5, passes: 1, alpha: fade * 0.7 });
+    }
+    this.drawBits(ctx);
+  }
+}
+
+/* What the meteor leaves round the castle: scorched ground in a ring, and
+   cracks glowing with heat that cool from orange to black. Under everything. */
+class MeteorCrater {
+  constructor(game) {
+    this.id = nextId(); this.under = true; this.game = game;
+    this.life = this.max = 3.6;
+    const r0 = game.castleRadius * 1.3;
+    this.burns = [];
+    for (let i = 0; i < 70; i++) {
+      const a = Math.random() * Math.PI * 2, d = r0 + Math.random() * r0 * 0.9;
+      this.burns.push({ a, d, len: 10 + Math.random() * 28 });
+    }
+    this.cracks = [];
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + Math.random() * 0.4;
+      const pts = [[Math.cos(a) * r0, Math.sin(a) * r0]];
+      let px = pts[0][0], py = pts[0][1];
+      for (let k = 0; k < 5; k++) { const aa = a + Rough.jit(0.5); px += Math.cos(aa) * 26; py += Math.sin(aa) * 26; pts.push([px, py]); }
+      this.cracks.push(pts);
+    }
+  }
+  update(dt) { this.life -= dt; return this.life > 0; }
+  draw(ctx) {
+    const age = 1 - this.life / this.max;
+    const a = age < 0.6 ? 1 : 1 - (age - 0.6) / 0.4;
+    const heat = Math.max(0, 1 - age * 1.6);           // orange, cooling to black
+    Rough.boil(this.id, 0);
+    for (const b of this.burns) {
+      const c = Math.cos(b.a), s = Math.sin(b.a);
+      Rough.line(ctx, c * b.d, s * b.d, c * (b.d + b.len), s * (b.d + b.len), { color: '#2e1c14', width: 4, jitter: 1, passes: 1, alpha: 0.45 * a });
+    }
+    for (const c of this.cracks) {
+      Rough.poly(ctx, c, { color: '#1a0c08', width: 4, jitter: 0.6, closed: false, passes: 1, alpha: 0.8 * a });
+      if (heat > 0) {
+        Rough.poly(ctx, c, { color: heat > 0.5 ? '#ffd24a' : '#e0562d', width: 2, jitter: 0.4, closed: false, passes: 1, alpha: heat * a });
+        if (!Fx.low) Rough.bloom(ctx, c[c.length - 1][0], c[c.length - 1][1], 30, '#e0562d', heat * 0.6);
+      }
     }
   }
 }

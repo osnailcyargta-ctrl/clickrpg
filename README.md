@@ -52,14 +52,24 @@ is a star that falls and shrinks onto its target, its skill is **METEOR CALLER**
 (the page goes white and one enormous meteor comes down on the castle), and
 its card between waves gets a spiky gold border.
 
+**Cryo Rain** (6 coins) reskins the Wet Cursor: an icy pointer that throws
+shards of ice instead of drops; where each shard shatters, the ground in its
+splash freezes over for a few seconds and melts back. Its skill is
+**HAILSTORM** - a frozen cloud rolls over the page, hail comes down
+everywhere, frost creeps in from the edges and everything caught is iced over
+for as long as it is slowed. Its card between waves is a bank of frozen cloud
+over a sheet of heavy rain.
+
+The shop scrolls sideways.
+
 A **skin pack** is not bought - it is won, and you get every skin in it at
 once. Its card in the shop has a **SETTINGS** button instead of EQUIP, which
 opens a list where each skin in the pack is switched on or off by itself.
 
 - **Thunder Pack** (win on Hard):
   - **Mjolnir** reskins the Sledgehammer: lightning comes down with every
-    slam, and its skill banks a storm over the castle and splits the ground
-    with one enormous bolt before the QUAKE rolls out.
+    slam, and its skill, **THUNDERFALL**, banks a storm over the castle and
+    splits the ground with one enormous bolt before the quake rolls out.
   - **Zeus** reskins the Stick Sentry: a bearded stick figure with a
     thunderbolt, who throws it instead of an arrow; a little cloud strikes
     wherever it lands.
@@ -81,7 +91,9 @@ an Endless run on Normal or Hard, or from **searching**: start a search and
 it runs for four hours by the clock, tab open or shut, turning up a chest
 every 1.5 to 2.3 hours (so one or two a search). When the four hours are up
 the chests are handed over; you can call it off early and keep what it has
-found so far. A chest holds a **relic** 30% of the time, **4-6 coins** 5% of
+found so far. The Blob'd-Tier does the looking: it hops about, lobs a blot
+into the sky every minute, and ten seconds later the blot comes down on
+either a chest or nothing - a chest exactly when the search really found one. A chest holds a **relic** 30% of the time, **4-6 coins** 5% of
 the time, and nothing the rest.
 
 **Relics** - one can be worn at a time. Holding more than one of a kind
@@ -230,7 +242,7 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Storm Caller** | 2 | 15 clicks | A cloud gathers over a random enemy; half a second later the bolt lands for 50% of your click damage and splashes 4 into everything within a block of it. The Thunder Eagle is immune to all of it. |
 | **Horseshoe Magnet** | 2.5 | 12 clicks | Hauls everything within 4 blocks to the point you clicked, for 2 on the way, and leaves them stacked on top of each other for whatever you throw next. |
 | **Boomerang** | 3 | 10 clicks | The throw loops out five blocks and curves home again, cutting 3 into everything on the way out and 3 more on the way back — line the arc up and the same enemy pays twice. |
-| **Sledgehammer** | 10 | hold | A click does nothing. **Hold for at least 0.75s** and let go: it comes down on everything within 1.5 blocks. Every full second more adds 20%, and at **3 seconds it comes down by itself** at +40%. A ring round the cursor fills while you hold. |
+| **Sledgehammer** | 10 | hold | A click does nothing. **Hold for at least 0.4s** and let go: it comes down on everything within 1.5 blocks. Every full second more adds 20%, and at **3 seconds it comes down by itself** at +40%. A ring round the cursor fills while you hold. |
 | **Scissor Cursor** | 4 | — | Hardest click, no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Useless against a crowd. |
 
 ### Skills
@@ -398,6 +410,7 @@ js/relics.js      relics, chests, the four-hour search, the inventory
 js/achievements.js the three achievements and what they pay
 js/more.js        the MORE page, opening a chest, a skin pack's settings
 js/thunder.js     the Thunder Pack: Mjolnir and Zeus
+js/cryo.js        the Cryo Rain skin
 js/hammer.js      the Sledgehammer and its QUAKE
 js/flourish.js    decoration only: flares and page washes on every ability
 js/auger.js       the Auger, endless only

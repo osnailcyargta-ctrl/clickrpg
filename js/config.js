@@ -17,7 +17,7 @@ const AUGER_STOP = GROUND_RADIUS + BLOCK * 4;   // where it halts to wind up
 const TRAPPER_BASE_DMG = 6;
 const TRAPPER_MAX_DMG = 10;
 const TRAPPER_RANGE = BLOCK * 4.5;
-const HAMMER_MIN = 0.75;           // seconds held before a let-go does anything
+const HAMMER_MIN = 0.4;            // seconds held before a let-go does anything
 const HAMMER_MAX = 3;              // at this it comes down on its own
 const HAMMER_STEP = 0.2;           // +20% for every full second past the minimum
 const HAMMER_RADIUS = BLOCK * 1.5;
@@ -180,7 +180,7 @@ const CURSORS = [
   {
     id: 'hammer', name: 'Sledgehammer', cost: 48, color: '#6b5a4a', every: 0, dmg: 10, hold: true,
     desc: 'Hold it up. Let go to bring it down.',
-    detail: 'A click does nothing. Hold for at least 0.75s and let go: it comes down on everything within a block and a half for 10 each. Every full second more you hold adds 20% - and at three seconds it comes down by itself, at +40%.'
+    detail: 'A click does nothing. Hold for at least 0.4s and let go: it comes down on everything within a block and a half for 10 each. Every full second more you hold adds 20% - and at three seconds it comes down by itself, at +40%.'
   }
 ];
 

@@ -193,6 +193,7 @@ WEIGHT = {
     'star_hit': (0.18, 160, 60, 0.6, 0), 'sk_starfall': (1.2, 90, 25, 1.2, 0.55),
     'hammer_tick': (0.06, 240, 140, 0.3, 0), 'hammer_slam': (0.5, 110, 34, 1.3, 0),
     'sk_quake': (1.4, 70, 24, 1.3, 0),
+    'ice_shatter': (0.05, 260, 140, 0.18, 0), 'sk_hail': (0.3, 110, 40, 0.6, 0.45),
 }
 
 # How much room each sound gets: (size 0..1, wet level). Quick UI sounds
@@ -840,6 +841,25 @@ def s_sk_quake():
     return mix(rumble * 1.7, crack * 1.1, rolling * 0.8, debris * 0.6, slam * 1.2, groan * 0.6)
 
 
+def s_ice_shatter():
+    # a shard of ice breaking on the paper: a glassy snap and a tinkle
+    snap = hp(noise(0.05), 2600) * env(0.05, 0.0003, curve=10)
+    ring1 = ring(noise(0.3), 3300, 28) * env(0.3, 0.0008, curve=6)
+    ring2 = ring(noise(0.25), 4900, 30) * env(0.25, 0.0008, curve=7) * 0.7
+    tinkle = grains(0.35, 14, spread=0.25, length=0.006, band=(4500, 9000), decay=1.8)
+    return mix(snap * 1.1, ring1 * 0.5, ring2 * 0.4, tinkle * 0.7)
+
+
+def s_sk_hail():
+    # a cold wind, then hail coming down on everything at once
+    wind = am(sweep(noise(1.7) * swell(1.7, 0.25, 1.8), 600, 1800, 1.4), 5, 0.4)
+    hits = grains(1.6, 110, spread=1.3, length=0.006, band=(1400, 5200), decay=0.6)
+    knocks = grains(1.6, 40, spread=1.3, length=0.02, band=(300, 900), decay=0.7)
+    crack = np.pad(hp(noise(0.1), 2400) * env(0.1, 0.0004, curve=8), (int(SR * 0.45), 0))
+    glass = np.pad(ring(noise(0.6), 3800, 24) * env(0.6, 0.002, curve=5), (int(SR * 0.45), 0))
+    return mix(wind * 0.7, hits * 0.9, knocks * 0.6, crack * 1.0, glass * 0.35)
+
+
 SOUNDS = {
     'click_hit': s_click_hit, 'click_miss': s_click_miss, 'crit': s_crit,
     'kill': s_kill, 'kill_big': s_kill_big, 'castle_hit': s_castle_hit,
@@ -871,6 +891,7 @@ SOUNDS = {
     'trap_dig': s_trap_dig, 'trap_emerge': s_trap_emerge, 'trap_snap': s_trap_snap,
     'star_fall': s_star_fall, 'star_hit': s_star_hit, 'sk_starfall': s_sk_starfall,
     'hammer_lift': s_hammer_lift, 'hammer_tick': s_hammer_tick, 'hammer_slam': s_hammer_slam, 'sk_quake': s_sk_quake,
+    'ice_shatter': s_ice_shatter, 'sk_hail': s_sk_hail,
 }
 
 if __name__ == '__main__':

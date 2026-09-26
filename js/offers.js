@@ -272,7 +272,9 @@ class OfferScreen {
     ctx.fillRect(c.x - 3, c.y - 3, c.w + 6, c.h + 6);
     ctx.restore();
 
-    if (pr.fill > 0) {
+    if (off.card === 'cryo') {
+      drawCryoCard(ctx, c, time, pr.fill, pr.outline);    // cloud and rain in place of the crayon fill
+    } else if (pr.fill > 0) {
       Rough.boil(this.id * 91 + i, 0);      // frozen seed: strokes stay put as they pile up
       Rough.scribble(ctx, pts, {
         color: off.color, spacing: L.stack ? 9 : 8, width: 7,
@@ -282,7 +284,9 @@ class OfferScreen {
       Rough.grain(ctx, pts, off.color, 0.0015, this.id + i);
     }
     Rough.boil(this.id * 17 + i, time * 0.5);
-    if (off.card === 'spiky') {
+    if (off.card === 'cryo') {
+      // its icy outline was drawn with the card
+    } else if (off.card === 'spiky') {
       // a skinned card: a gold star-burst border, glowing, with a star in
       // each corner, drawn on over the same outline beat as a plain card
       Rough.bloom(ctx, c.x + c.w / 2, c.y + c.h / 2, Math.max(c.w, c.h) * 0.7, '#ffd24a', 0.25 * pr.outline);
@@ -314,9 +318,11 @@ class OfferScreen {
         lines.slice(0, 2).forEach((ln, k) => Rough.text(ctx, ln, c.x + pad, c.y + 62 + k * 17, 13, '#4a4a4a', 'left'));
         this.drawPrice(ctx, c.x + c.w - pad - 26, c.y + c.h / 2, off, afford);
       } else {
-        Rough.text(ctx, off.tag, c.x + c.w / 2, c.y + 24, 11, '#8a8a8a');
+        const iced = off.card === 'cryo';           // light lettering on the dark cloud
+        const halo = iced ? '#1f3350' : undefined;
+        Rough.text(ctx, off.tag, c.x + c.w / 2, c.y + 24, 11, iced ? '#cfe6f7' : '#8a8a8a', 'center', halo);
         const nameLines = Rough.wrap(ctx, off.name, 20, c.w - pad * 2);
-        nameLines.forEach((ln, k) => Rough.text(ctx, ln, c.x + c.w / 2, c.y + 50 + k * 22, 20, off.color));
+        nameLines.forEach((ln, k) => Rough.text(ctx, ln, c.x + c.w / 2, c.y + 50 + k * 22, 20, iced ? '#f2faff' : off.color, 'center', halo));
         const dy = c.y + 50 + nameLines.length * 22;
         Rough.wrap(ctx, off.desc, 14, c.w - pad * 2).slice(0, 3)
           .forEach((ln, k) => Rough.text(ctx, ln, c.x + c.w / 2, dy + 8 + k * 18, 14, '#3a3a3a'));

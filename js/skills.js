@@ -333,6 +333,10 @@ const SkillPayloads = {
 
   /* CLOUDBURST - the page floods. */
   wet(game, cine) {
+    if (cursorLook('wet').payload === 'hail') {        // Cryo Rain: the same storm, as hail
+      game.effects.push(new Hailstorm(game, 12));
+      return 1.6;
+    }
     game.effects.push(new Cloudburst(game, 12));
     Sfx.play('sk_cloudburst', { volume: 1, rateVar: 0 });
     return 1.6;

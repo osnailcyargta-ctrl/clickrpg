@@ -166,13 +166,15 @@ const Rough = (function () {
     return pts;
   }
 
-  function text(ctx, str, x, y, size, color, align) {
+  /* `halo` is the edge drawn round the letters so they read over a drawing:
+     paper by default, or something dark for light letters on a dark ground */
+  function text(ctx, str, x, y, size, color, align, halo) {
     ctx.save();
     ctx.font = size + 'px ' + HAND_FONT;
     ctx.textAlign = align || 'center';
     ctx.textBaseline = 'middle';
     ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(255,253,244,0.9)';
+    ctx.strokeStyle = halo || 'rgba(255,253,244,0.9)';
     ctx.strokeText(str, x, y);
     ctx.fillStyle = color || '#2b2b2b';
     ctx.fillText(str, x, y);
