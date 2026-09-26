@@ -316,18 +316,32 @@ class Hailstorm extends Cloudburst {
 }
 
 /* ---------------------------------------------------- the offer card */
-/* The Wet Cursor's card under Cryo Rain: the top quarter a frozen bank of
-   dark blue cloud with icicles hanging off it, and everything under it a
-   sheet of heavy rain coming down. Drawn in place of the plain crayon fill. */
+/* The puffs of the cloud over a card, as fractions: [x of width, y of
+   height, radius]. It hangs over the top and spills past both sides. */
+const CRYO_PUFFS = [
+  [-0.05, 0.08, 0.15], [0.13, 0.03, 0.2], [0.36, 0.06, 0.21], [0.6, 0.02, 0.2],
+  [0.82, 0.06, 0.19], [1.04, 0.09, 0.14], [0.25, 0.14, 0.12], [0.48, 0.15, 0.12],
+  [0.71, 0.14, 0.12], [0.03, 0.15, 0.09], [0.94, 0.15, 0.09]
+];
+
+/* The Wet Cursor's card under Cryo Rain: a big bank of frozen cloud over
+   the top of it - bigger than the card, out past its edges - and under it a
+   sheet of heavy rain. Where the cloud is, the card's outline is not: the
+   cloud has its own outline, round its own shape. Drawn in place of the
+   plain crayon fill and outline. */
 function drawCryoCard(ctx, c, time, reveal, outline) {
-  const top = c.h * 0.25;
-  const rain = [c.x, c.y + top * 0.7, c.w, c.h - top * 0.7];
+  const k = Math.min(c.w, c.h * 0.9) * 0.95;
+  const puffs = CRYO_PUFFS.map(([fx, fy, fr], i) => ({
+    x: c.x + fx * c.w, y: c.y + fy * c.h, r: fr * k, i
+  }));
+  const low = Math.max(...puffs.map(p => p.y + p.r * 0.7));
+  // the rain sheet, from under the cloud to the bottom of the card
+  const rain = [c.x, c.y + c.h * 0.08, c.w, c.h * 0.92];
   ctx.save();
   ctx.globalAlpha = reveal * 0.55;
   ctx.fillStyle = '#cfe2f3';
   ctx.fillRect(rain[0], rain[1], rain[2], rain[3]);
   ctx.restore();
-  // heavy rain, slanting, clipped to the sheet
   ctx.save();
   ctx.beginPath(); ctx.rect(rain[0], rain[1], rain[2], rain[3]); ctx.clip();
   Rough.boil(c.x | 0, Math.floor(time * 7));
@@ -340,56 +354,52 @@ function drawCryoCard(ctx, c, time, reveal, outline) {
     Rough.line(ctx, x, y, x - 4, y - 18, { color: i % 3 ? '#4f86b8' : ICE.mid, width: 1.7, jitter: 0.2, passes: 1, alpha: 0.5 * reveal });
   }
   ctx.restore();
-  // the frozen cloud across the top quarter: a solid band, its underside
-  // scalloped into puffs, frost catching the top of each
-  const band = top * 0.72;
-  const bumps = Math.max(4, Math.round(c.w / 34));
-  const bw = c.w / bumps;
-  ctx.save();
-  ctx.globalAlpha = reveal * 0.96;
-  ctx.fillStyle = ICE.deep;
-  ctx.beginPath();
-  ctx.moveTo(c.x, c.y);
-  ctx.lineTo(c.x + c.w, c.y);
-  ctx.lineTo(c.x + c.w, c.y + band);
-  for (let i = bumps - 1; i >= 0; i--) {
-    const cx = c.x + (i + 0.5) * bw;
-    ctx.arc(cx, c.y + band, bw / 2, 0, Math.PI, false);
-  }
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-  Rough.boil(c.x * 3 | 0, Math.floor(time * 3.5));
-  const edge = [];
-  for (let i = bumps - 1; i >= 0; i--) {
-    const cx = c.x + (i + 0.5) * bw;
-    for (let k = 0; k <= 6; k++) {
-      const a = (k / 6) * Math.PI;
-      edge.push([cx + Math.cos(a) * bw / 2, c.y + band + Math.sin(a) * bw / 2]);
-    }
-  }
-  Rough.poly(ctx, edge, { color: '#16263a', width: 2.2, jitter: 0.6, closed: false, passes: 1, alpha: reveal });
-  // crayon texture on the cloud, lighter strokes over the dark
-  const bandPts = [[c.x, c.y], [c.x + c.w, c.y], [c.x + c.w, c.y + band], [c.x, c.y + band]];
-  Rough.scribble(ctx, bandPts, { color: '#3d6690', spacing: 9, width: 3, overflow: 1, alpha: 0.5 * reveal, angle: 0.5 });
-  for (let i = 0; i < bumps; i++) {
-    const cx = c.x + (i + 0.5) * bw;
-    // icicles under every other puff
-    if (i % 2 === 0) {
-      const iy = c.y + band + bw / 2 - 1;
-      const tri = [[cx - 3, iy], [cx + 3, iy], [cx, iy + 9 + (i % 3) * 3]];
-      Rough.scribble(ctx, tri, { color: ICE.pale, spacing: 2, width: 2, overflow: 1.1, alpha: reveal });
-      Rough.poly(ctx, tri, { color: ICE.ink, width: 1.2, jitter: 0.2, alpha: reveal });
-    }
-    Rough.arc(ctx, cx, c.y + band - 2, bw * 0.32, Math.PI * 1.15, Math.PI * 1.75, { color: ICE.white, width: 1.4, jitter: 0.3, passes: 1, alpha: 0.35 * reveal });
-  }
-  // an icy outline over the ink one
+
+  // the card's own icy outline - the cloud will be laid over the top of it
   const pts = Rough.rectPts(c.x, c.y, c.w, c.h);
   Rough.bloom(ctx, c.x + c.w / 2, c.y + c.h / 2, Math.max(c.w, c.h) * 0.7, ICE.glow, 0.22 * outline);
+  Rough.boil(c.x * 5 | 0, Math.floor(time * 3.5));
   Rough.poly(ctx, pts, { color: '#7fb8e6', width: 3.4, jitter: 1.2, progress: outline });
-  for (const [sx, sy] of [[c.x, c.y], [c.x + c.w, c.y], [c.x, c.y + c.h], [c.x + c.w, c.y + c.h]]) {
+  for (const [sx, sy] of [[c.x, c.y + c.h], [c.x + c.w, c.y + c.h]]) {
     if (outline >= 1) iceGlint(ctx, sx, sy, 4 + Math.sin(time * 3 + sx) * 1.5, 1);
   }
+
+  // the cloud: every puff stroked first, then every puff filled over the
+  // strokes - only the outer edge of the whole shape keeps its line, and the
+  // fill covers the card's outline wherever the cloud is
+  Rough.boil(c.x * 3 | 0, Math.floor(time * 3.5));
+  const shapes = puffs.map(p => Rough.circlePts(p.x, p.y, p.r, p.r * 0.07, Math.max(12, Math.round(p.r / 2.4))));
+  const path = (g, sh) => { g.moveTo(sh[0][0], sh[0][1]); for (let i = 1; i < sh.length; i++) g.lineTo(sh[i][0], sh[i][1]); g.closePath(); };
+  ctx.save();
+  ctx.globalAlpha = reveal;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#16263a'; ctx.lineWidth = 5;
+  for (const sh of shapes) { ctx.beginPath(); path(ctx, sh); ctx.stroke(); }
+  ctx.fillStyle = ICE.deep;
+  ctx.beginPath(); for (const sh of shapes) path(ctx, sh); ctx.fill();
+  // crayon texture inside the shape only
+  ctx.beginPath(); for (const sh of shapes) path(ctx, sh); ctx.clip();
+  ctx.globalAlpha = 1;
+  const box = [[c.x - c.w * 0.2, c.y - c.h * 0.2], [c.x + c.w * 1.2, c.y - c.h * 0.2], [c.x + c.w * 1.2, low + 10], [c.x - c.w * 0.2, low + 10]];
+  Rough.scribble(ctx, box, { color: '#3d6690', spacing: 8, width: 3, overflow: 1, alpha: 0.45 * reveal, angle: 0.5 });
+  Rough.scribble(ctx, box, { color: '#23405f', spacing: 13, width: 3, overflow: 1, alpha: 0.4 * reveal, angle: -0.7 });
+  ctx.restore();
+  // frost catching the tops of the high puffs, icicles off the low ones
+  for (const p of puffs) {
+    if (p.y < c.y + c.h * 0.06) {
+      Rough.arc(ctx, p.x, p.y, p.r * 0.72, Math.PI * 1.12, Math.PI * 1.72, { color: ICE.white, width: 1.8, jitter: 0.4, passes: 1, alpha: 0.55 * reveal });
+    }
+    if (p.y > c.y + c.h * 0.1 && p.x > c.x && p.x < c.x + c.w) {
+      const iy = p.y + p.r * 0.93, ix = p.x + Rough.jit(3);
+      for (const [dx, len] of [[-p.r * 0.35, 8], [0, 13], [p.r * 0.35, 9]]) {
+        const tri = [[ix + dx - 3, iy - 2], [ix + dx + 3, iy - 2], [ix + dx, iy + len]];
+        Rough.scribble(ctx, tri, { color: ICE.pale, spacing: 2, width: 2, overflow: 1.1, alpha: reveal });
+        Rough.poly(ctx, tri, { color: ICE.ink, width: 1.2, jitter: 0.2, alpha: reveal });
+      }
+    }
+  }
+  const tw = Math.max(0, Math.sin(time * 2.5));
+  iceGlint(ctx, puffs[3].x + puffs[3].r * 0.3, puffs[3].y - puffs[3].r * 0.3, 2 + tw * 3, tw * reveal);
 }
 
 /* ------------------------------------------------------ the shop card */

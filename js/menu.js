@@ -16,6 +16,12 @@ const Menu = {
       const to = b.dataset.go;
       this.go(to === 'play' ? 'menu' : to);
     }));
+    // a click on the dimmed page around a popup (not on the popup) closes it
+    document.querySelectorAll('.popup-screen, .book-screen').forEach(scr => scr.addEventListener('click', e => {
+      if (e.target !== scr || this.current === 'front') return;
+      Sfx.play('button', { volume: 0.5 });
+      this.go('front');
+    }));
     window.addEventListener('keydown', e => {
       if (e.key === 'Escape' && this.game.state === 'menu' && this.current !== 'front') this.go('front');
     });

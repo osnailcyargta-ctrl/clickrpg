@@ -423,3 +423,18 @@ canvas.scrawl { display: block; }
 .skin-list::-webkit-scrollbar { height: 10px; }
 .skin-list::-webkit-scrollbar-thumb { background: repeating-linear-gradient(-55deg, #b8b2a3 0 4px, transparent 4px 7px); border: 2px solid #2b2b2b; }
 .search-canvas { width: 240px; height: 130px; display: block; }
+
+/* the newer popups: shorter, and the close mark tucked into the corner
+   instead of sitting up over the top edge */
+.skins-popup { gap: 8px; padding: 24px 22px 14px; }
+.skins-popup h2 { font-size: clamp(24px, 5vw, 34px); }
+.skins-popup .skin-card { width: 240px; padding: 10px; }
+.skins-popup .skin-card canvas.skin-preview { height: 124px; }
+.skins-popup .skin-card p { font-size: 13px; }
+.skins-popup .coin-purse b { font-size: 24px; }
+.skins-popup .skin-list { padding: 14px 14px 16px; }
+.more-popup, .skins-popup, .pack-popup { padding-top: 30px; }
+.more-popup .popup-close.doodled, .skins-popup .popup-close.doodled, .pack-popup .popup-close.doodled { top: 8px; right: 8px; }
+.more-popup .popup-close, .skins-popup .popup-close, .pack-popup .popup-close { width: 36px; height: 36px; font-size: 22px; }
+.more-popup { max-height: 86vh; }
+.more-body { max-height: calc(86vh - 60px); }

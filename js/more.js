@@ -523,5 +523,12 @@ window.addEventListener('load', () => {
   document.getElementById('chest-done').onclick = () => { Sfx.play('button', { volume: 0.6 }); ChestModal.close(); };
   document.getElementById('chest-again').onclick = () => ChestModal.open();
   document.getElementById('pack-close').onclick = () => { Sfx.play('button', { volume: 0.6 }); PackModal.close(); };
+  // outside the popup closes it too; a chest only once it has been opened
+  document.getElementById('pack-modal').addEventListener('click', e => {
+    if (e.target.id === 'pack-modal') PackModal.close();
+  });
+  document.getElementById('chest-modal').addEventListener('click', e => {
+    if (e.target.id === 'chest-modal' && !document.getElementById('chest-done').classList.contains('hidden')) ChestModal.close();
+  });
   More.settle();
 });

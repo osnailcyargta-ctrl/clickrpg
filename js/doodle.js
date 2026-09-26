@@ -59,8 +59,11 @@ const Doodle = {
     const w = el.offsetWidth, h = el.offsetHeight;
     if (!w || !h) return;
     const P = this.PAD, dpr = Math.min(2, window.devicePixelRatio || 1);
-    if (w !== it.w || h !== it.h) {
-      it.w = w; it.h = h;
+    // browser zoom changes the pixel ratio without changing the CSS size:
+    // the canvas has to be re-made for it too, or the old frame is left
+    // behind at the old scale and the button shows two outlines
+    if (w !== it.w || h !== it.h || dpr !== it.dpr) {
+      it.w = w; it.h = h; it.dpr = dpr;
       it.cv.width = Math.round((w + P * 2) * dpr);
       it.cv.height = Math.round((h + P * 2) * dpr);
       it.cv.style.width = (w + P * 2) + 'px';
@@ -68,8 +71,9 @@ const Doodle = {
     }
     const d = el.dataset;
     const ctx = it.cv.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, it.cv.width, it.cv.height);      // the whole bitmap, whatever the scale
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w + P * 2, h + P * 2);
     const on = d.when === 'on' ? el.classList.contains('on') : true;
     if (!on && !it.hover) return;
 
