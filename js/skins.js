@@ -21,6 +21,35 @@ const SKINS = [
         skillBlurb: 'the sky goes white and one enormous meteor comes down on the castle'
       }
     }
+  },
+
+  /* A pack is not bought: it is won, and comes whole. Its card in the shop
+     opens settings to switch each skin in it on or off. */
+  {
+    id: 'thunder', name: 'Thunder Pack', pack: true, color: '#6f86d8', unlock: 'hardwin',
+    blurb: 'The Sledgehammer and the Stick Sentry, both struck by lightning.',
+    skins: ['mjolnir', 'zeus'], applies: {}
+  },
+  {
+    id: 'mjolnir', inPack: 'thunder', name: 'Mjolnir', color: '#6f86d8',
+    applies: {
+      'cursor:hammer': {
+        name: 'Mjolnir', color: '#6f86d8', sprite: 'mjolnir', slam: 'lightning', payload: 'thunder',
+        desc: 'Hold it up. Let go and the sky comes down with it.',
+        detail: 'A click does nothing. Hold for at least 0.75s and let go: lightning follows it down onto everything within a block and a half for 10 each. Every full second more you hold adds 20% - and at three seconds it comes down by itself, at +40%.',
+        skillBlurb: 'a storm gathers over the castle and one bolt splits the ground open'
+      }
+    }
+  },
+  {
+    id: 'zeus', inPack: 'thunder', name: 'Zeus', color: '#e8c33a',
+    applies: {
+      'sentry:stick': {
+        name: 'Zeus', color: '#e8c33a', shot: 'bolt',
+        desc: 'A stick figure with a thunderbolt takes the sentry post.',
+        detail: 'Zeus stands by the castle and hurls a thunderbolt at the nearest enemy every 1.6s for 3 damage. There is only one post, so taking this evicts whatever was standing in it.'
+      }
+    }
   }
 ];
 
@@ -41,9 +70,12 @@ function cursorLook(id) {
   if (!s) return Object.assign({ sprite: c.id, skinned: false }, c);
   return Object.assign({}, c, {
     name: s.name, color: s.color, desc: s.desc || c.desc, detail: s.detail || c.detail,
-    sprite: s.sprite || c.id, card: s.card, power: s.power, payload: s.payload, skinned: true
+    sprite: s.sprite || c.id, card: s.card, power: s.power, payload: s.payload, slam: s.slam, skinned: true
   });
 }
+
+/* A sentry's worn look ('stick', 'bird', ...), or null. */
+function sentryLook(type) { return skinLook('sentry:' + type); }
 
 function skillLook(cursorId) {
   const base = skillFor(cursorId);

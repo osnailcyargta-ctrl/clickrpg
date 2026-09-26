@@ -7,7 +7,7 @@
 
 const Menu = {
   current: 'front',
-  ids: ['front', 'menu', 'bestiary', 'skins'],
+  ids: ['front', 'menu', 'bestiary', 'skins', 'more'],
 
   bind(game) {
     this.game = game;
@@ -26,12 +26,25 @@ const Menu = {
     for (const id of this.ids) document.getElementById(id).classList.toggle('hidden', id !== name);
     if (name === 'bestiary') Bestiary.open(); else Bestiary.close();
     if (name === 'skins') SkinShop.open(); else SkinShop.close();
+    if (name === 'more') More.open(); else More.close();
+    if (name === 'front') this.syncDot();
     Doodle.scan(document.getElementById(name));
+  },
+
+  /* A dot on MORE when there is something waiting in it: an achievement to
+     claim, a chest to open, or a search that has come back. */
+  syncDot() {
+    const dot = document.getElementById('more-dot');
+    if (!dot) return;
+    const st = Relics.searchState(Date.now());
+    const waiting = ACHIEVEMENTS.some(a => Achievements.state(a.id) === 'done')
+      || Save.data.chests > 0 || (st && st.done);
+    dot.classList.toggle('hidden', !waiting);
   },
 
   hideAll() {
     for (const id of this.ids) document.getElementById(id).classList.add('hidden');
-    Bestiary.close(); SkinShop.close();
+    Bestiary.close(); SkinShop.close(); More.close();
   }
 };
 
@@ -137,6 +150,8 @@ const SkinShop = {
     list.innerHTML = '';
     this.cards = [];
     for (const skin of SKINS) {
+      if (skin.inPack) continue;                 // shown inside their pack
+      if (skin.pack) { this.packCard(skin, list); continue; }
       const target = Object.keys(skin.applies)[0];
       const look = skin.applies[target];
       const baseId = target.split(':')[1];
@@ -184,6 +199,42 @@ const SkinShop = {
     }
   },
 
+  /* A pack's card: won, never bought. Owned, its button opens the settings
+     where each skin in it is switched on or off. */
+  packCard(pack, list) {
+    const card = document.createElement('div');
+    card.className = 'skin-card spiky';
+    card.dataset.doodle = pack.color; card.dataset.paper = '1';
+    card.dataset.shape = 'spiky'; card.dataset.weight = '3';
+    const view = document.createElement('div');
+    view.className = 'skin-view';
+    view.dataset.doodle = 'ink'; view.dataset.paper = '1'; view.dataset.weight = '2';
+    const cv = document.createElement('canvas');
+    cv.className = 'skin-preview';
+    view.appendChild(cv);
+    card.appendChild(view);
+    const owned = Save.owns(pack.id);
+    const inside = pack.skins.map(id => skinById(id).name).join(' + ');
+    card.insertAdjacentHTML('beforeend',
+      '<h3 style="color:' + pack.color + '">' + pack.name + '</h3>'
+      + '<div class="skin-for">skin pack</div>'
+      + '<div class="pack-inside">' + inside + '</div>'
+      + '<p>' + pack.blurb + '</p>');
+    if (owned) {
+      const btn = document.createElement('button');
+      btn.textContent = 'SETTINGS';
+      btn.dataset.doodle = pack.color;
+      btn.onclick = () => { Sfx.play('button', { volume: 0.7 }); PackModal.open(pack, () => this.render()); };
+      card.appendChild(btn);
+    } else {
+      const a = achievementById(pack.unlock);
+      card.insertAdjacentHTML('beforeend', '<div class="locked">achievement: ' + (a ? a.text : '') + '</div>');
+    }
+    list.appendChild(card);
+    Doodle.scan(card);
+    this.cards.push({ cv, skin: pack, pack: true, next: 0.4, bolts: [] });
+  },
+
   /* each card plays its skin: the cursor itself, and the strike it throws */
   animate(t) {
     const dt = this.lastT ? Math.max(0, Math.min(0.05, t - this.lastT)) : 1 / 60;
@@ -198,6 +249,7 @@ const SkinShop = {
       // on paper, like the game - the crayon is drawn for it
       ctx.fillStyle = '#fffdf4'; ctx.fillRect(0, 0, w, h);
       Rough.boil(c.skin.id.length * 31, Math.floor(t * 2));
+      if (c.pack) { thunderPreview(ctx, w, h, t, dt, c); continue; }
       for (let i = 0; i < 10; i++) {           // a few twinkles in the sky
         const sx = (i * 97 % 100) / 100 * w, sy = (i * 53 % 100) / 100 * h * 0.6;
         const k = 2 + Math.sin(t * 3 + i) * 1.5;

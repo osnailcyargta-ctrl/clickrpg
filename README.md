@@ -27,6 +27,8 @@ circling it:
   - killed at least once: the whole page, and the live preview.
   What you have met and killed is saved with your coins.
 - **SKIN** opens the skin shop.
+- **MORE** opens achievements, relics and the inventory (see below). A red
+  dot on it means something is waiting there.
 
 Every frame in the menus is drawn in crayon the same way the between-wave
 cards are (`js/doodle.js`): straight wobbly lines that re-draw a few times a
@@ -49,6 +51,56 @@ Caller** (4 coins) reskins the Storm Caller: the cursor is a star, its strike
 is a star that falls and shrinks onto its target, its skill is **METEOR CALLER**
 (the page goes white and one enormous meteor comes down on the castle), and
 its card between waves gets a spiky gold border.
+
+A **skin pack** is not bought - it is won, and you get every skin in it at
+once. Its card in the shop has a **SETTINGS** button instead of EQUIP, which
+opens a list where each skin in the pack is switched on or off by itself.
+
+- **Thunder Pack** (win on Hard):
+  - **Mjolnir** reskins the Sledgehammer: lightning comes down with every
+    slam, and its skill banks a storm over the castle and splits the ground
+    with one enormous bolt before the QUAKE rolls out.
+  - **Zeus** reskins the Stick Sentry: a bearded stick figure with a
+    thunderbolt, who throws it instead of an arrow; a little cloud strikes
+    wherever it lands.
+
+Like every skin, neither changes a number.
+
+## More: achievements, relics, the inventory
+
+**Achievements** - done once, then claimed from MORE:
+
+| Achievement | What | Pays |
+|---|---|---|
+| Big Game | Kill 3 bosses in one Endless run (the count starts over when the castle falls) | 3 coins |
+| Just the Arrow | Win on Normal or Hard with only the Plain Cursor | 5 coins |
+| Hard Copy | Win on Hard | the Thunder Pack |
+
+**Chests** come from winning a Normal or Hard run, from every tenth wave of
+an Endless run on Normal or Hard, or from **searching**: start a search and
+it runs for four hours by the clock, tab open or shut, turning up a chest
+every 1.5 to 2.3 hours (so one or two a search). When the four hours are up
+the chests are handed over; you can call it off early and keep what it has
+found so far. A chest holds a **relic** 30% of the time, **4-6 coins** 5% of
+the time, and nothing the rest.
+
+**Relics** - one can be worn at a time. Holding more than one of a kind
+makes most of them stronger, up to five:
+
+| Relic | Each one held |
+|---|---|
+| Lucky Pebble | +2% crit chance |
+| Spare Lead | +0.3 click damage |
+| Gold Star | +4% scribbles from kills |
+| Old Bookmark | start every run with 15 scribbles |
+| Pocket Sharpener | the skill comes back 5% sooner |
+| Paper Crane | the sentry shoots 6% faster |
+| Roll of Tape | the castle starts with one more segment (only one counts) |
+
+The **inventory** is a 4x4 grid: the first slot is your coins, then chests
+(open them from there too), then relics (wear or take off from there). Once
+the fourth row has anything in it, every row you fill opens another under it,
+so it never runs out.
 
 ## Rules
 
@@ -342,6 +394,10 @@ js/doodle.js      crayon frames for the HTML menus
 js/menu.js        the title screen, its castle scene, the skin shop
 js/bestiary.js    the bestiary book and its live previews
 js/scrawl.js      the doctor's handwriting for bestiary pages you have not earned
+js/relics.js      relics, chests, the four-hour search, the inventory
+js/achievements.js the three achievements and what they pay
+js/more.js        the MORE page, opening a chest, a skin pack's settings
+js/thunder.js     the Thunder Pack: Mjolnir and Zeus
 js/hammer.js      the Sledgehammer and its QUAKE
 js/flourish.js    decoration only: flares and page washes on every ability
 js/auger.js       the Auger, endless only

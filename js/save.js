@@ -7,7 +7,16 @@
 
 const Save = {
   KEY: 'fandharn.save.v1',
-  data: { coins: 0, owned: [], equipped: {}, seen: [], killed: [] },
+  data: {
+    coins: 0, owned: [], equipped: {}, seen: [], killed: [],
+    ach: {},            // achievement id -> 'done' | 'claimed'
+    achBest: {},        // the best a run has got towards one, for the progress line
+    chests: 0,
+    relics: {},         // relic id -> how many
+    relicOrder: [],     // the order they were first found, for the inventory
+    relicOn: null,      // the one relic worn, if any
+    search: null        // { start, finds: [ms after start] } while a search runs
+  },
   persistent: true,
 
   load() {
@@ -22,6 +31,19 @@ const Save = {
         this.data.equipped = d.equipped && typeof d.equipped === 'object' ? d.equipped : {};
         this.data.seen = Array.isArray(d.seen) ? d.seen.filter(x => typeof x === 'string') : [];
         this.data.killed = Array.isArray(d.killed) ? d.killed.filter(x => typeof x === 'string') : [];
+        const obj = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+        const whole = v => Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
+        this.data.ach = obj(d.ach);
+        this.data.achBest = obj(d.achBest);
+        this.data.chests = whole(d.chests);
+        this.data.relics = {};
+        for (const [k, v] of Object.entries(obj(d.relics))) if (whole(v) > 0) this.data.relics[k] = whole(v);
+        this.data.relicOrder = Array.isArray(d.relicOrder) ? d.relicOrder.filter(k => this.data.relics[k]) : [];
+        for (const k of Object.keys(this.data.relics)) if (!this.data.relicOrder.includes(k)) this.data.relicOrder.push(k);
+        this.data.relicOn = typeof d.relicOn === 'string' && this.data.relics[d.relicOn] ? d.relicOn : null;
+        const sr = d.search;
+        this.data.search = sr && Number.isFinite(sr.start) && Array.isArray(sr.finds)
+          ? { start: sr.start, finds: sr.finds.filter(Number.isFinite) } : null;
       }
     } catch (e) {
       this.persistent = false;
@@ -94,6 +116,35 @@ const Save = {
     this.data.killed.push(kind);
     this.store();
   },
+  /* ---- chests and relics */
+  addChests(n) {
+    if (!(n > 0)) return;
+    this.data.chests += n;
+    this.store();
+  },
+  takeChest() {
+    if (this.data.chests <= 0) return false;
+    this.data.chests--;
+    this.store();
+    return true;
+  },
+  addRelic(id, n) {
+    n = n || 1;
+    this.data.relics[id] = (this.data.relics[id] || 0) + n;
+    if (!this.data.relicOrder.includes(id)) this.data.relicOrder.push(id);
+    this.store();
+  },
+  wearRelic(id) {
+    this.data.relicOn = id && this.data.relics[id] ? id : null;
+    this.store();
+  },
+
+  /* ---- skins that come whole in a pack, handed over rather than bought */
+  grant(skinIds) {
+    for (const id of skinIds) if (!this.data.owned.includes(id)) this.data.owned.push(id);
+    this.store();
+  },
+
   /* 0 never met, 1 met, 2 killed */
   known(kind) {
     return this.data.killed.includes(kind) ? 2 : this.data.seen.includes(kind) ? 1 : 0;

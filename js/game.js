@@ -223,6 +223,10 @@ const Game = {
     this.eagleKilled = false;
     this.trapperBuys = 0;
     this.coinsRun = 0;
+    this.chestsRun = 0;
+    this.runBosses = 0;          // bosses down this run, for the Endless achievement
+    this.onlyPlain = true;       // no other cursor picked up this run
+    this.achRun = [];
     this.stillT = 0;
     this.lawnBurnt = false;
     this.spawnQueue = [];
@@ -234,6 +238,9 @@ const Game = {
     this.cinematic = null;
     this.slowT = 0;
     this.paused = false;
+    // the worn relic, where it acts from the very start
+    if (Relics.val('tape')) { this.maxHp += 1; this.castleHp += 1; this.hpShown += 1; }
+    this.scribbles += 15 * Relics.val('bookmark');
     UI.hideAll();
     this.startWave();
   },
@@ -284,8 +291,8 @@ const Game = {
   },
 
   /* --------------------------------------------------------------- stats */
-  clickDamage() { return cursorById(this.cursorId).dmg + 0.5 * (this.stacking.lead || 0); },
-  critChance() { return BASE_CRIT_CHANCE + 0.03 * (this.stacking.nib || 0); },
+  clickDamage() { return cursorById(this.cursorId).dmg + 0.5 * (this.stacking.lead || 0) + 0.3 * Relics.val('lead'); },
+  critChance() { return BASE_CRIT_CHANCE + 0.03 * (this.stacking.nib || 0) + 0.02 * Relics.val('pebble'); },
   aoeScale() { return 1 + 0.12 * (this.stacking.wax || 0); },
   aoeDamage(base) { return base * (1 + 0.10 * (this.stacking.wax || 0)); },
   statusBonus() { return 0.3 * (this.stacking.deepink || 0); },   // Deep Ink
@@ -295,6 +302,7 @@ const Game = {
     this.scribbles -= off.cost;
     if (off.kind === 'cursor') {
       this.cursorId = off.id;                 // the old cursor is gone for good
+      this.onlyPlain = false;
       this.cursorCharge = 0;
       this.skillAnnounced = false;            // a new cursor means a new skill
       this.penTrail = off.id === 'pen' ? new PenTrail() : null;
@@ -302,7 +310,7 @@ const Game = {
       // a sentry is not owned, it is employed - the post can change hands
       if (!SENTRY_OF[off.id]) this.oneshot[off.id] = true;
       if (off.id === 'chalk') this.shield = 2;
-      if (off.id === 'double') this.rollDouble();
+      if (off.id === 'double') { this.rollDouble(); this.onlyPlain = false; }
       if (off.id === 'sentry') this.installSentry('stick');
       if (off.id === 'blobd') this.installSentry('blobd');
       if (off.id === 'bird') this.installSentry('bird');
@@ -406,7 +414,9 @@ const Game = {
     const dmg = this.clickDamage() * mult * (crit ? CRIT_MULT : 1) * (ghost ? 0.5 : 1);
     const R = HAMMER_RADIUS * this.aoeScale();
     this.areaDamage(x, y, R, dmg, { crit, color: '#6b5a4a' });
-    this.effects.push(new HammerSlam(x, y, R, tier, this));
+    // Mjolnir brings lightning down with it; the hit above is the same either way
+    const Look = cursorLook('hammer').slam === 'lightning' ? MjolnirStrike : HammerSlam;
+    this.effects.push(new Look(x, y, R, tier, this));
     this.effects.push(new HitSpark(x, y, '#6b5a4a', crit || tier === 2));
     this.shake(5 + tier * 4);
     Sfx.play('hammer_slam', { volume: 0.75 + tier * 0.12, rateVar: 0.05, throttle: 40 });
@@ -490,7 +500,7 @@ const Game = {
       return;
     }
     this.skillCharge = 0;
-    this.skillCd = SKILL_COOLDOWN;
+    this.skillCd = SKILL_COOLDOWN * (1 - 0.05 * Relics.val('sharpener'));
     this.skillAnnounced = false;
     this.cinematic = new SkillCinematic(this, this.cursorId,
       this.pointer.x - this.w / 2, this.pointer.y - this.h / 2);
@@ -510,7 +520,8 @@ const Game = {
     Save.kill(e.kind);
     Sfx.play(e.boss || e.kind === 'brick' ? 'kill_big' : 'kill',
       { volume: e.boss ? 1 : 0.5, throttle: e.boss ? 0 : 45, voices: 4 });
-    const credit = 1 + 0.05 * (this.stacking.credit || 0);      // Extra Credit
+    if (ENEMY_KINDS[e.kind] && ENEMY_KINDS[e.kind].boss) Achievements.onBossKilled(this);
+    const credit = (1 + 0.05 * (this.stacking.credit || 0)) * (1 + 0.04 * Relics.val('goldstar'));
     const gain = Math.max(1, Math.round((1 + e.maxHp / 5) * DIFFICULTIES[this.difficulty].reward * credit));
     this.scribbles += gain;
     this.effects.push(new FloatText(e.x + 10, e.y + 6, '+' + gain, '#d99a26', 15, false));
@@ -642,6 +653,14 @@ const Game = {
     this.coinsRun += n;
     this.effects.push(new CoinPop(n));
     Sfx.play('card_buy', { volume: 0.9, rateVar: 0 });
+  },
+
+  /* Chests go into the save the moment they are earned, like coins. */
+  earnChest(n) {
+    if (!(n > 0)) return;
+    Save.addChests(n);
+    this.chestsRun += n;
+    this.effects.push(new FloatText(0, -this.h * 0.24, '+' + n + ' chest', '#9a6a36', 24, true));
   },
 
   /* How hard the Trapper bites: 6 for the first one bought, 1 more for every
@@ -835,9 +854,12 @@ const Game = {
       // that dies at wave 27 keeps what it earned at 10 and 20
       if (this.endless && this.wave % COIN_RULES.every === 0) {
         this.earnCoins(coinsForEndlessMilestone(this.difficulty, this.wave / COIN_RULES.every));
+        if (this.difficulty !== 'easy') this.earnChest(1);
       }
       if (!this.endless && this.wave >= WAVES_PER_RUN) {   // nothing left to spend it on
         this.earnCoins(coinsForVictory(this.difficulty));
+        if (this.difficulty !== 'easy') this.earnChest(1);
+        Achievements.onVictory(this);
         this.state = 'victory';
         UI.showEnd(this, true);
       } else {

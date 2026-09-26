@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Patrick+Hand&display=swap">
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -43,6 +43,7 @@
     <button class="front-btn play" data-go="play" data-doodle="#c8433a" data-fill="#c8433a" data-paper="1" data-weight="3.2"><b>PLAY</b></button>
     <button class="front-btn" data-go="bestiary" data-doodle="ink" data-paper="1"><b>BESTIARY</b></button>
     <button class="front-btn" data-go="skins" data-doodle="ink" data-paper="1"><b>SKIN</b></button>
+    <button class="front-btn" data-go="more" data-doodle="ink" data-paper="1"><b>MORE</b><i id="more-dot" class="more-dot hidden"></i></button>
   </div>
 </div>
 
@@ -94,6 +95,35 @@
   </div>
 </div>
 
+<!-- MORE: achievements, relics and chests, the inventory -->
+<div id="more" class="screen popup-screen hidden">
+  <div class="popup more-popup" data-doodle="ink" data-paper="1" data-weight="3.4">
+    <button class="popup-close" data-go="front" aria-label="close" data-doodle="ink" data-paper="1">&times;</button>
+    <div id="more-body" class="more-body"></div>
+  </div>
+</div>
+
+<!-- opening a chest, over whatever is open -->
+<div id="chest-modal" class="modal hidden">
+  <div class="popup chest-popup" data-doodle="ink" data-paper="1" data-weight="3.4">
+    <canvas id="chest-canvas" class="chest-canvas"></canvas>
+    <div id="chest-result" class="chest-result"></div>
+    <div class="chest-buttons">
+      <button id="chest-again" data-doodle="#9a6a36">OPEN ANOTHER <span id="chest-left"></span></button>
+      <button id="chest-done" data-doodle="ink">DONE</button>
+    </div>
+  </div>
+</div>
+
+<!-- a skin pack's settings: which of its skins are worn -->
+<div id="pack-modal" class="modal hidden">
+  <div class="popup pack-popup" data-doodle="ink" data-paper="1" data-weight="3.4">
+    <button class="popup-close" id="pack-close" aria-label="close" data-doodle="ink" data-paper="1">&times;</button>
+    <h2 id="pack-title">PACK</h2>
+    <div id="pack-list" class="pack-list"></div>
+  </div>
+</div>
+
 <div id="end" class="screen hidden">
   <h2 id="end-title">THE CASTLE FELL</h2>
   <div id="end-body" class="end-body"></div>
@@ -101,28 +131,32 @@
 </div>
 
 <!-- BUILD: bump this (and the ?v= on every asset) to beat browser caches -->
-<script>window.BUILD_V = "19";</script>
-<script src="js/audio.js?v=19"></script>
-<script src="js/rough.js?v=19"></script>
-<script src="js/config.js?v=19"></script>
-<script src="js/save.js?v=19"></script>
-<script src="js/entities.js?v=19"></script>
-<script src="js/hive.js?v=19"></script>
-<script src="js/fx.js?v=19"></script>
-<script src="js/deaths.js?v=19"></script>
-<script src="js/auger.js?v=19"></script>
-<script src="js/trapper.js?v=19"></script>
-<script src="js/skills.js?v=19"></script>
-<script src="js/offers.js?v=19"></script>
-<script src="js/cursors.js?v=19"></script>
-<script src="js/skins.js?v=19"></script>
-<script src="js/hammer.js?v=19"></script>
-<script src="js/flourish.js?v=19"></script>
-<script src="js/doodle.js?v=19"></script>
-<script src="js/scrawl.js?v=19"></script>
-<script src="js/bestiary.js?v=19"></script>
-<script src="js/menu.js?v=19"></script>
-<script src="js/ui.js?v=19"></script>
-<script src="js/game.js?v=19"></script>
+<script>window.BUILD_V = "20";</script>
+<script src="js/audio.js?v=20"></script>
+<script src="js/rough.js?v=20"></script>
+<script src="js/config.js?v=20"></script>
+<script src="js/save.js?v=20"></script>
+<script src="js/entities.js?v=20"></script>
+<script src="js/hive.js?v=20"></script>
+<script src="js/fx.js?v=20"></script>
+<script src="js/deaths.js?v=20"></script>
+<script src="js/auger.js?v=20"></script>
+<script src="js/trapper.js?v=20"></script>
+<script src="js/skills.js?v=20"></script>
+<script src="js/offers.js?v=20"></script>
+<script src="js/cursors.js?v=20"></script>
+<script src="js/skins.js?v=20"></script>
+<script src="js/relics.js?v=20"></script>
+<script src="js/achievements.js?v=20"></script>
+<script src="js/hammer.js?v=20"></script>
+<script src="js/thunder.js?v=20"></script>
+<script src="js/flourish.js?v=20"></script>
+<script src="js/doodle.js?v=20"></script>
+<script src="js/scrawl.js?v=20"></script>
+<script src="js/bestiary.js?v=20"></script>
+<script src="js/menu.js?v=20"></script>
+<script src="js/more.js?v=20"></script>
+<script src="js/ui.js?v=20"></script>
+<script src="js/game.js?v=20"></script>
 </body>
 </html>

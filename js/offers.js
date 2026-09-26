@@ -38,7 +38,11 @@ function buildOffers(game) {
         continue;
       }
     } else if (game.oneshot[u.id]) continue;
-    pool.push({ kind: 'oneshot', id: u.id, name: u.name, color: u.color, cost: offerCost(u.cost, game.wave), desc: u.desc, detail: u.detail, tag: u.sentry ? 'SENTRY' : 'ONE-SHOT' });
+    // a worn sentry skin renames it on the card, the way a cursor skin does
+    const sk = u.sentry && SENTRY_OF[u.id] ? sentryLook(SENTRY_OF[u.id]) : null;
+    pool.push({ kind: 'oneshot', id: u.id, name: sk ? sk.name : u.name, color: sk ? sk.color : u.color,
+      cost: offerCost(u.cost, game.wave), desc: sk ? sk.desc : u.desc, detail: sk ? sk.detail : u.detail,
+      tag: u.sentry ? 'SENTRY' + (sk ? ' \u00b7 SKIN' : '') : 'ONE-SHOT' });
   }
   for (const u of STACKING) {
     if (u.id === 'patch' && game.castleHp >= game.maxHp) continue;    // nothing to tape

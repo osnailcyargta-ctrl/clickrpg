@@ -1528,7 +1528,7 @@ class Sentry {
 
   update(dt, game) {
     if (this.type === 'trapper') return this.trapperUpdate(dt, game);
-    this.cool -= dt;
+    this.cool -= dt * (1 + 0.06 * Relics.val('crane'));     // the Paper Crane relic
     if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt / 0.25);
 
     // shots the Drill put on a delay
@@ -1538,7 +1538,7 @@ class Sentry {
       if (q.at <= 0) {
         this.queued.splice(i, 1);
         if (q.target && !q.target.dead) {
-          game.effects.push(new Arrow(this.x, this.y, q.target, q.dmg));
+          game.effects.push(sentryArrow(this.x, this.y, q.target, q.dmg));
           Sfx.play('sentry_shot', { volume: 0.3, throttle: 40 });
         }
       }
@@ -1573,7 +1573,7 @@ class Sentry {
           Sfx.play('zap', { volume: 0.32, throttle: 60 });
         } else {
           this.cool = 1.6;
-          game.effects.push(new Arrow(this.x, this.y, best, 3));
+          game.effects.push(sentryArrow(this.x, this.y, best, 3));
           // the Drill looses a second one a beat behind the first
           if (game.oneshot.drill) this.queued.push({ at: 0.28, target: best, dmg: 3 });
           Sfx.play('sentry_shot', { volume: 0.4 });
@@ -1625,6 +1625,7 @@ class Sentry {
     if (this.type === 'blobd') return this.drawBlobd(ctx, t);
     if (this.type === 'bird') return this.drawBird(ctx, t);
     if (this.type === 'trapper') return this.drawTrapper(ctx, t);
+    if (this.type === 'stick' && sentryLook('stick')) return this.drawZeus(ctx, t);   // the Zeus skin
     Rough.boil(this.id, t * 0.6);
     const bob = Math.sin(t * 2 + this.bob) * 1.5;
     const x = this.x, y = this.y + bob;
@@ -1962,6 +1963,13 @@ class Arrow {
     Rough.line(ctx, this.x - Math.cos(a) * 8, this.y - Math.sin(a) * 8, this.x, this.y,
       { color: '#2f6f4f', width: 2.4, jitter: 0.8, passes: 1 });
   }
+}
+
+/* The stick sentry's shot: an arrow, or under the Zeus skin a thunderbolt
+   that flies and hits exactly the same. */
+function sentryArrow(x, y, target, dmg) {
+  const look = sentryLook('stick');
+  return look && look.shot === 'bolt' ? new ZeusBolt(x, y, target, dmg) : new Arrow(x, y, target, dmg);
 }
 
 /* ---------------------------------------------------------------- effects */

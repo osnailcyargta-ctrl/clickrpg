@@ -360,6 +360,12 @@ class QuakeRing {
 }
 
 SkillPayloads.hammer = function (game) {
+  // Mjolnir's storm strikes first and then sets off the very same quake
+  if (cursorLook('hammer').payload === 'thunder') {
+    const st = new MjolnirStorm(game);
+    game.effects.push(st);
+    return st.dur;
+  }
   const q = new QuakeRing(game);
   game.effects.push(q);
   Sfx.play('sk_quake', { volume: 1, rateVar: 0 });
