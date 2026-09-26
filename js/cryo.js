@@ -364,25 +364,23 @@ function drawCryoCard(ctx, c, time, reveal, outline) {
     if (outline >= 1) iceGlint(ctx, sx, sy, 4 + Math.sin(time * 3 + sx) * 1.5, 1);
   }
 
-  // the cloud: every puff stroked first, then every puff filled over the
-  // strokes - only the outer edge of the whole shape keeps its line, and the
-  // fill covers the card's outline wherever the cloud is
+  // the cloud, in crayon like everything else: each puff's edge drawn in
+  // wobbly ink, then paper laid over the inside of the whole shape (so only
+  // its outer edge keeps a line, and the card's outline under it is gone),
+  // then the inside scribbled in dark blue, past the edges a little
   Rough.boil(c.x * 3 | 0, Math.floor(time * 3.5));
-  const shapes = puffs.map(p => Rough.circlePts(p.x, p.y, p.r, p.r * 0.07, Math.max(12, Math.round(p.r / 2.4))));
+  const shapes = puffs.map(p => Rough.circlePts(p.x, p.y, p.r, p.r * 0.13, Math.max(10, Math.round(p.r / 3))));
   const path = (g, sh) => { g.moveTo(sh[0][0], sh[0][1]); for (let i = 1; i < sh.length; i++) g.lineTo(sh[i][0], sh[i][1]); g.closePath(); };
+  for (const sh of shapes) Rough.poly(ctx, sh, { color: '#16263a', width: 4.2, jitter: 1.6, passes: 2, alpha: reveal });
   ctx.save();
   ctx.globalAlpha = reveal;
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = '#16263a'; ctx.lineWidth = 5;
-  for (const sh of shapes) { ctx.beginPath(); path(ctx, sh); ctx.stroke(); }
-  ctx.fillStyle = ICE.deep;
+  ctx.fillStyle = '#fffdf4';
   ctx.beginPath(); for (const sh of shapes) path(ctx, sh); ctx.fill();
-  // crayon texture inside the shape only
   ctx.beginPath(); for (const sh of shapes) path(ctx, sh); ctx.clip();
-  ctx.globalAlpha = 1;
   const box = [[c.x - c.w * 0.2, c.y - c.h * 0.2], [c.x + c.w * 1.2, c.y - c.h * 0.2], [c.x + c.w * 1.2, low + 10], [c.x - c.w * 0.2, low + 10]];
-  Rough.scribble(ctx, box, { color: '#3d6690', spacing: 8, width: 3, overflow: 1, alpha: 0.45 * reveal, angle: 0.5 });
-  Rough.scribble(ctx, box, { color: '#23405f', spacing: 13, width: 3, overflow: 1, alpha: 0.4 * reveal, angle: -0.7 });
+  Rough.scribble(ctx, box, { color: ICE.deep, spacing: 4, width: 5, overflow: 1, alpha: 0.95 * reveal, angle: 0.5 });
+  Rough.scribble(ctx, box, { color: '#16263a', spacing: 9, width: 3.5, overflow: 1, alpha: 0.55 * reveal, angle: -0.8 });
+  Rough.scribble(ctx, box, { color: '#4a78a8', spacing: 14, width: 2.6, overflow: 1, alpha: 0.5 * reveal, angle: 1.2 });
   ctx.restore();
   // frost catching the tops of the high puffs, icicles off the low ones
   for (const p of puffs) {

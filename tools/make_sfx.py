@@ -193,7 +193,7 @@ WEIGHT = {
     'star_hit': (0.18, 160, 60, 0.6, 0), 'sk_starfall': (1.2, 90, 25, 1.2, 0.55),
     'hammer_tick': (0.06, 240, 140, 0.3, 0), 'hammer_slam': (0.5, 110, 34, 1.3, 0),
     'sk_quake': (1.4, 70, 24, 1.3, 0),
-    'ice_shatter': (0.05, 260, 140, 0.18, 0), 'sk_hail': (0.3, 110, 40, 0.6, 0.45),
+    'sk_hail': (0.3, 110, 40, 0.6, 0.45),
 }
 
 # How much room each sound gets: (size 0..1, wet level). Quick UI sounds
@@ -207,6 +207,7 @@ ROOM = {
     'eagle_screech': (0.6, 0.2), 'queen_screech': (0.6, 0.2), 'auger_screech': (0.6, 0.2),
     'thunder_strike': (0.55, 0.2), 'thunder_roll': (0.6, 0.18),
     'hammer_slam': (0.4, 0.16), 'sk_quake': (0.7, 0.2),
+    'ice_shatter': (0.14, 0.1),
 }
 
 
@@ -842,12 +843,24 @@ def s_sk_quake():
 
 
 def s_ice_shatter():
-    # a shard of ice breaking on the paper: a glassy snap and a tinkle
-    snap = hp(noise(0.05), 2600) * env(0.05, 0.0003, curve=10)
-    ring1 = ring(noise(0.3), 3300, 28) * env(0.3, 0.0008, curve=6)
-    ring2 = ring(noise(0.25), 4900, 30) * env(0.25, 0.0008, curve=7) * 0.7
-    tinkle = grains(0.35, 14, spread=0.25, length=0.006, band=(4500, 9000), decay=1.8)
-    return mix(snap * 1.1, ring1 * 0.5, ring2 * 0.4, tinkle * 0.7)
+    # a shard of ice snapping on the paper: crisp, crunchy and glassy.
+    # A double crack right at the front, a dense crunch of tiny grains, a
+    # handful of bright out-of-tune partials that ring like a struck crystal,
+    # and a few pings of pieces skittering away - all of it kept high, no mud.
+    crack = mix(hp(noise(0.03), 5000) * env(0.03, 0.0002, curve=16),
+                np.pad(hp(noise(0.025), 6500) * env(0.025, 0.0002, curve=16) * 0.7, (int(SR * 0.012), 0)))
+    crunch = grains(0.11, 46, spread=0.07, length=0.0025, band=(3000, 11000), jitter=0.6, decay=2.2)
+    partials = []
+    for f, d, g in [(2870, 0.3, 0.5), (4130, 0.25, 0.45), (5510, 0.2, 0.4), (7240, 0.16, 0.35), (9380, 0.12, 0.3)]:
+        partials.append(ring(noise(d), f, 55) * env(d, 0.0004, curve=6) * g)
+    pings = []
+    for i in range(8):
+        at = rng.uniform(0.03, 0.3)
+        f = rng.uniform(5200, 10500)
+        pg = ring(noise(0.06), f, 60) * env(0.06, 0.0003, curve=9) * rng.uniform(0.3, 0.7)
+        pings.append(np.pad(pg, (int(SR * at), 0)))
+    out = mix(crack * 1.2, crunch * 1.1, *partials, *pings)
+    return hp(out, 1500, 3)
 
 
 def s_sk_hail():
