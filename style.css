@@ -280,8 +280,9 @@ button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1
   border-radius: 0 !important; box-shadow: none !important;
   transition: none !important;
 }
-.doodle-bg { position: absolute; left: -10px; top: -10px; z-index: -1; pointer-events: none; }
-button.doodled:hover:not(:disabled) { transform: translateY(-2px) !important; box-shadow: none !important; }
+.doodle-bg { position: absolute; left: -16px; top: -16px; z-index: -1; pointer-events: none; }
+/* the buttons are on the top layer with the cursor: hovered, one lifts up off the page toward you */
+button.doodled:hover:not(:disabled) { transform: translate(-2px, -7px) !important; box-shadow: none !important; transition: transform 0.12s steps(2, end) !important; }
 button.doodled:active:not(:disabled) { transform: translate(1px, 1px) !important; }
 
 /* straight, not tilted */

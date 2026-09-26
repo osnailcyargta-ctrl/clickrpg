@@ -56,7 +56,7 @@ class IceShard extends WaterDrop {
       game.areaDamage(this.x, this.y, this.radius, this.damage, { color: ICE.mid });
       game.effects.push(new FrostPatch(this.x, this.y, this.radius));
       game.effects.push(new IceBurst(this.x, this.y, this.radius, game));
-      Sfx.play('ice_shatter', { volume: 0.45, throttle: 35, voices: 6 });
+      Sfx.play('ice_shatter', { volume: 0.8, throttle: 30, voices: 8 });
       return false;
     }
     return p < 1;

@@ -20,7 +20,7 @@ const Doodle = {
   raf: 0,
   step: -1,
   RATE: 3.5,          // re-draws a second, like Rough.boil(time * 0.5) on the cards
-  PAD: 10,            // room around the element for the crayon to spill into
+  PAD: 16,            // room around the element for the crayon (and a lifted button's shadow) to spill into
 
   /* Frame every element under `root` that asks for it and does not have one. */
   scan(root) {
@@ -92,6 +92,14 @@ const Doodle = {
       pts = spikyOutline({ x: P, y: P - lift, w, h }, 1.5);
     } else {
       pts = Rough.rectPts(P, P - lift, w, h).map(p => [p[0] + Rough.jit(2.2), p[1] + Rough.jit(2.2)]);
+    }
+    // a button lifts toward you when hovered (in CSS); its shadow stays on
+    // the page underneath, set off the way the lift moved it
+    if (it.hover && el.tagName === 'BUTTON' && !disabled) {
+      const sh = pts.map(p => [p[0] + 6, p[1] + 12]);
+      Rough.boil(it.seed + 3, 0);
+      Rough.scribble(ctx, sh, { color: '#2b2b2b', spacing: 5, width: 3, overflow: 1, alpha: 0.16, angle: -0.8 });
+      Rough.boil(it.seed, this.step / 7);
     }
     if (d.paper) {                          // opaque paper, so nothing behind shows through
       ctx.fillStyle = '#fffdf4';

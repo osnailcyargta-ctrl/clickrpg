@@ -350,7 +350,8 @@ const Game = {
     if (this.state === 'offers' && this.offerScreen) {
       this.offerScreen.move(this.pointer.x, this.pointer.y, this.w, this.h);
     } else if (this.state === 'playing' && this.penTrail) {
-      this.penTrail.add(this.pointer.x - this.w / 2, this.pointer.y - this.h / 2);
+      const pw = Depth.toWorld(this, this.pointer.x, this.pointer.y);
+      this.penTrail.add(pw.x, pw.y);
     }
   },
 
@@ -362,7 +363,7 @@ const Game = {
       return;
     }
     if (this.state !== 'playing') return;
-    const x = this.pointer.x - this.w / 2, y = this.pointer.y - this.h / 2;
+    const { x, y } = Depth.toWorld(this, this.pointer.x, this.pointer.y);   // through the same shift as the drawing
     if (cursorById(this.cursorId).hold) {
       // the Sledgehammer: a press only picks things up and starts the wind-up
       this.stillT = 0;
@@ -392,7 +393,7 @@ const Game = {
     if (!h) return;
     this.hold = null;
     if (this.state !== 'playing' || this.paused) return;
-    const x = this.pointer.x - this.w / 2, y = this.pointer.y - this.h / 2;
+    const { x, y } = Depth.toWorld(this, this.pointer.x, this.pointer.y);
     const mult = hammerMult(h.t);
     if (!mult) {
       this.effects.push(new FloatText(x, y - 26, 'hold it', '#9a958a', 16, false));
@@ -495,7 +496,8 @@ const Game = {
     if (!this.skillReady()) {
       Sfx.play('click_miss', { volume: 0.5 });
       const why = this.skillCd > 0 ? Math.ceil(this.skillCd) + 's' : (SKILL_CHARGE - this.skillCharge) + ' clicks';
-      this.effects.push(new FloatText(this.pointer.x - this.w / 2, this.pointer.y - this.h / 2 - 20,
+      const pw = Depth.toWorld(this, this.pointer.x, this.pointer.y);
+      this.effects.push(new FloatText(pw.x, pw.y - 20,
         why, '#b8b2a3', 16, false));
       return;
     }
@@ -503,7 +505,7 @@ const Game = {
     this.skillCd = SKILL_COOLDOWN * (1 - 0.05 * Relics.val('sharpener'));
     this.skillAnnounced = false;
     this.cinematic = new SkillCinematic(this, this.cursorId,
-      this.pointer.x - this.w / 2, this.pointer.y - this.h / 2);
+      Depth.toWorld(this, this.pointer.x, this.pointer.y).x, Depth.toWorld(this, this.pointer.x, this.pointer.y).y);
     Sfx.play('skill_charge', { volume: 0.95, rateVar: 0 });
     UI.syncHud(this);
   },
@@ -873,10 +875,13 @@ const Game = {
   draw() {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.w, this.h);
-    if (this.bg) ctx.drawImage(this.bg, 0, 0, this.w, this.h);
+    // the layers (js/depth.js): paper, ground, actors, and the cursor on top
+    Depth.update(this);
+    const P = Depth.off(Depth.PAPER), G = Depth.off(Depth.GROUND), A = Depth.off(Depth.ACTORS);
+    if (this.bg) ctx.drawImage(this.bg, P.x - 8, P.y - 8, this.w + 16, this.h + 16);
 
     ctx.save();
-    ctx.translate(this.w / 2 + this.shakeX, this.h / 2 + this.shakeY);
+    ctx.translate(this.w / 2 + this.shakeX + G.x, this.h / 2 + this.shakeY + G.y);
 
     if (this.state !== 'menu') {
       const wrecked = this.state === 'collapsing' || (this.state === 'gameover' && this.collapse > 0);
@@ -886,6 +891,10 @@ const Game = {
         ctx.drawImage(this.ground.canvas, -s / 2, -s / 2, s, s);
       }
       for (const f of this.effects) if (f instanceof InkPuddle || f.under) f.draw(ctx, this.time);
+      // everything standing up leaves a shadow on the ground layer, then
+      // the camera moves on to the nearer layer to draw the things themselves
+      ctx.translate(A.x - G.x, A.y - G.y);
+      Depth.shadows(ctx, this);
       if (this.penTrail) this.penTrail.draw(ctx, this.time);
       this.drawCastle(ctx);
       if (this.sentry) this.sentry.draw(ctx, this.time);
@@ -893,6 +902,7 @@ const Game = {
       if (this.sentry && this.sentry.type === 'trapper') this.sentry.drawTrapperOver(ctx, this.time);
       for (const f of this.effects) if (!(f instanceof InkPuddle) && !f.under) f.draw(ctx, this.time);
     } else {
+      ctx.translate((A.x - G.x) * 0.5, (A.y - G.y) * 0.5);
       MenuScene.draw(ctx, this);
     }
     ctx.restore();
@@ -932,6 +942,7 @@ const Game = {
         ctx.restore();
       }
       if (this.hold) drawHoldGauge(ctx, this);
+      Depth.cursorShadow(ctx, this);            // the top layer's shadow on the world
       drawCursor(ctx, cursorById(this.cursorId), this.pointer.x, this.pointer.y,
         this.cursorCharge, this.pointer.down > 0 ? 1 : 0, this.time, this.oneshot,
         false, this.oneshot.double ? this.doubleId : null);

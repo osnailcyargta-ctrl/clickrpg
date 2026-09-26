@@ -332,6 +332,19 @@ instead of 3.
 | **Deep Ink** | +0.3s on every status you inflict, per level: burns, slows, stains, stuns. |
 | **Tape Patch** | Tapes one castle segment back together. Only offered while damaged. |
 
+## Depth
+
+The page is drawn in layers, like a pop-up book seen from above
+(`js/depth.js`): the paper at the back, then the ground (lawn, stains,
+frost, holes), then everything standing on it (castle, enemies, the sentry,
+every effect), and on top the cursor and the buttons. The camera leans a
+little toward wherever the cursor is, and nearer layers slide further, so
+the world has thickness. Things standing on the ground cast a shadow on it;
+the cursor casts one on the world - further away while it hovers, closer
+while you press - and a hovered button lifts off the page toward you,
+leaving its shadow behind. Clicks go through the same shift as the drawing,
+so you hit exactly what you see under the cursor.
+
 ## Effects, and slow machines
 
 Everything is drawn live in crayon, with light on top: every landed click
@@ -372,6 +385,8 @@ just plays the files.
 - Web Audio is used when available; opening `index.html` straight off the disk
   blocks `fetch()` on `file://` URLs, so it falls back to `<audio>` elements
   there. Both paths work.
+- Everything plays louder than the files themselves, through a limiter so a
+  pile-up of sounds stays clean; the ice shard shattering gets extra.
 - **M** toggles sound, or use the chip in the top-right. The setting is
   remembered.
 
@@ -404,6 +419,7 @@ js/audio.js       mp3 playback: Web Audio with an <audio> fallback
 js/entities.js    enemies, bosses, status effects, sentry, every flying doodle
 js/hive.js        the Hive fight's ground cracks, lava and burning lawn
 js/fx.js          decoration only: hit sparks, kill bursts, droplets, the frame governor
+js/depth.js       the layers, the camera lean (parallax), shadows
 js/deaths.js      how each enemy breaks when it dies
 js/save.js        coins and skins, kept in localStorage
 js/skins.js       the skins, and everything the Star Caller draws

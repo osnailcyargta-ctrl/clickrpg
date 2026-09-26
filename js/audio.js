@@ -38,6 +38,9 @@ const Sfx = {
   lastAt: {},         // name -> when it last started, for throttling
   mode: 'idle',       // idle | webaudio | element | off
   volume: 0.7,
+  BOOST: 1.8,         // everything louder than the files; the limiter below keeps it clean
+  // a few sounds get a lift of their own on top of that
+  GAIN: { ice_shatter: 2.2 },
   muted: false,
   ready: false,
 
@@ -66,8 +69,14 @@ const Sfx = {
     try {
       this.ctx = new AC();
       this.master = this.ctx.createGain();
-      this.master.gain.value = this.muted ? 0 : this.volume;
-      this.master.connect(this.ctx.destination);
+      this.master.gain.value = this.muted ? 0 : this.volume * this.BOOST;
+      // a limiter last in the chain: the boost can stack a lot of sounds at
+      // once, and this stops them adding up past full scale into crackle
+      const lim = this.ctx.createDynamicsCompressor();
+      lim.threshold.value = -8; lim.knee.value = 6; lim.ratio.value = 14;
+      lim.attack.value = 0.002; lim.release.value = 0.12;
+      this.master.connect(lim);
+      lim.connect(this.ctx.destination);
       this.ctx.resume();
       this.mode = 'webaudio';
       this.loadBuffers();
@@ -101,13 +110,13 @@ const Sfx = {
 
   setVolume(v) {
     this.volume = Math.max(0, Math.min(1, v));
-    if (this.master) this.master.gain.value = this.muted ? 0 : this.volume;
+    if (this.master) this.master.gain.value = this.muted ? 0 : this.volume * this.BOOST;
     try { localStorage.setItem('fandharn.volume', String(this.volume)); } catch (e) { }
   },
 
   toggleMute() {
     this.muted = !this.muted;
-    if (this.master) this.master.gain.value = this.muted ? 0 : this.volume;
+    if (this.master) this.master.gain.value = this.muted ? 0 : this.volume * this.BOOST;
     try { localStorage.setItem('fandharn.muted', this.muted ? '1' : '0'); } catch (e) { }
     return this.muted;
   },
@@ -126,7 +135,7 @@ const Sfx = {
     // a little pitch drift so a repeated sound never machine-guns
     const variance = o.rateVar == null ? 0.07 : o.rateVar;
     const rate = (o.rate || 1) * (1 + (Math.random() * 2 - 1) * variance);
-    const vol = o.volume == null ? 1 : o.volume;
+    const vol = (o.volume == null ? 1 : o.volume) * (this.GAIN[name] || 1);
 
     if (this.mode === 'webaudio' && this.buffers[name]) {
       const src = this.ctx.createBufferSource();
@@ -149,7 +158,7 @@ const Sfx = {
       el = pool[0].cloneNode();
       pool.push(el);
     }
-    el.volume = Math.max(0, Math.min(1, vol * this.volume));
+    el.volume = Math.max(0, Math.min(1, vol * this.volume * this.BOOST));
     el.playbackRate = rate;
     try { el.currentTime = 0; el.play().catch(() => { }); } catch (e) { }
   }

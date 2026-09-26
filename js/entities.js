@@ -1609,7 +1609,7 @@ class Sentry {
     this.dashCool -= dt;
     if (this.dashCool > 0) return;
     this.dashCool = this.dashWait(game);
-    const px = game.pointer.x - game.w / 2, py = game.pointer.y - game.h / 2;
+    const pw = Depth.toWorld(game, game.pointer.x, game.pointer.y), px = pw.x, py = pw.y;
     const dx = px - this.homeX, dy = py - this.homeY;
     const d = Math.hypot(dx, dy) || 1;
     const reach = Math.min(BLOCK * 6, d);            // to the cursor, or six blocks at it

@@ -64,7 +64,8 @@ class SkillCinematic {
   draw(ctx, w, h, time) {
     const p = this.t;
     const wind = E.clamp01(p / this.windup);
-    const cx = w / 2 + this.wx, cy = h / 2 + this.wy;
+    const lean = Depth.off(Depth.ACTORS);          // drawn where the world is, on screen
+    const cx = w / 2 + this.wx + lean.x, cy = h / 2 + this.wy + lean.y;
     const col = this.cursor.color;
 
     // darkness comes in fast and lifts slowly
