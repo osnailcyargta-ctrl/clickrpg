@@ -194,6 +194,9 @@ WEIGHT = {
     'hammer_tick': (0.06, 240, 140, 0.3, 0), 'hammer_slam': (0.5, 110, 34, 1.3, 0),
     'sk_quake': (1.4, 70, 24, 1.3, 0),
     'sk_hail': (0.3, 110, 40, 0.6, 0.45),
+    'ignis_roar': (0.6, 80, 30, 0.8, 0.02), 'ignis_thrust': (0.2, 140, 50, 0.7, 0.2),
+    'ignis_slam': (0.8, 90, 26, 1.2, 0), 'ignis_death': (1.0, 80, 24, 1.0, 2.9),
+    'bones_fall': (0.25, 130, 50, 0.5, 0), 'ignis_reform': (0.6, 90, 28, 0.9, 1.0),
 }
 
 # How much room each sound gets: (size 0..1, wet level). Quick UI sounds
@@ -208,6 +211,7 @@ ROOM = {
     'thunder_strike': (0.55, 0.2), 'thunder_roll': (0.6, 0.18),
     'hammer_slam': (0.4, 0.16), 'sk_quake': (0.7, 0.2),
     'ice_shatter': (0.14, 0.1),
+    'ignis_roar': (0.7, 0.22), 'ignis_death': (0.8, 0.22), 'ignis_rise': (0.6, 0.2), 'ignis_slam': (0.5, 0.18),
 }
 
 
@@ -873,6 +877,108 @@ def s_sk_hail():
     return mix(wind * 0.7, hits * 0.9, knocks * 0.6, crack * 1.0, glass * 0.35)
 
 
+# ---- IGNIS, the last attacker ------------------------------------------
+def s_ignis_rise():
+    # the ground splitting and something climbing out: a long grinding
+    # rumble, stone cracking, bones knocking together as they come up
+    rumble = lp(noise(2.6), 90, 3) * swell(2.6, 0.35, 1.6)
+    grind = am(bp(noise(2.6), 180, 1.6) * swell(2.6, 0.4, 1.8), 6, 0.5)
+    cracks = grains(2.4, 22, spread=2.0, length=0.02, band=(500, 2600), decay=0.6)
+    clatter = np.pad(grains(1.6, 40, spread=1.4, length=0.006, band=(1800, 5200), decay=0.8), (int(SR * 0.9), 0))
+    return mix(rumble * 1.4, grind * 0.8, cracks * 0.6, clatter * 0.5)
+
+
+def s_ignis_roar():
+    # a skull with fire in it, roaring: a deep throat, a rasp riding on it,
+    # and a hot rush of air
+    throat = am(sweep(noise(1.4) * swell(1.4, 0.2, 1.8), 140, 90, 3.0), 28, 0.6)
+    rasp = am(bp(noise(1.4), 700, 1.4) * swell(1.4, 0.18, 2.0), 53, 0.75)
+    fire = hp(noise(1.4), 2400) * swell(1.4, 0.25, 2.2)
+    return mix(throat * 1.4, rasp * 0.7, fire * 0.5)
+
+
+def s_ignis_thrust():
+    # the spear flung all the way to the wall: a whistle, a hard stab
+    whip = sweep(noise(0.3) * swell(0.3, 0.7, 3.0), 900, 4200, 2.4)
+    stab = np.pad(mix(hp(noise(0.06), 1800) * env(0.06, 0.0003, curve=10),
+                      bp(noise(0.3), 160, 1.4) * env(0.3, 0.001, curve=5)), (int(SR * 0.2), 0))
+    return mix(whip * 0.8, stab * 1.3)
+
+
+def s_ignis_summon():
+    # fire drawn up the staff: a swelling roar of flame and a heartbeat under it
+    flame = sweep(noise(1.2) * swell(1.2, 0.5, 1.6), 300, 1800, 1.2)
+    crackle = grains(1.2, 40, spread=1.0, length=0.006, band=(2000, 6500), decay=0.8)
+    beats = []
+    for i, at in enumerate([0.15, 0.4, 0.75, 1.0]):
+        b = bp(noise(0.14), 70, 1.2) * env(0.14, 0.003, curve=5)
+        beats.append(np.pad(b, (int(SR * at), 0)) * (1.0 if i % 2 == 0 else 0.7))
+    return mix(flame * 0.9, crackle * 0.5, *beats)
+
+
+def s_ignis_block():
+    # the staff spun into a wheel: a whirr and a metallic catch
+    whirr = am(bp(noise(0.5), 500, 2.0) * swell(0.5, 0.2, 2.0), 24, 0.8)
+    clang = ring(noise(0.4), 1400, 26) * env(0.4, 0.0005, curve=5)
+    clang2 = ring(noise(0.3), 2350, 30) * env(0.3, 0.0005, curve=6) * 0.6
+    return mix(whirr * 0.7, clang * 0.8, clang2)
+
+
+def s_orb_dash():
+    # an ember orb letting go: a hiss that drops as it goes
+    return mix(sweep(noise(0.45) * env(0.45, 0.004, curve=2.4), 5200, 700, 2.0),
+               grains(0.4, 14, spread=0.3, length=0.006, band=(2500, 7000), decay=1.4) * 0.5)
+
+
+def s_bones_fall():
+    # a skeleton coming apart onto the floor: knocks and rattles
+    knocks = grains(0.9, 26, spread=0.7, length=0.03, band=(350, 1400), decay=1.6)
+    rattle = grains(0.9, 40, spread=0.8, length=0.008, band=(1500, 4200), decay=1.4)
+    thud = bp(noise(0.4), 110, 1.3) * env(0.4, 0.002, curve=4)
+    return mix(knocks * 1.1, rattle * 0.7, thud * 0.8)
+
+
+def s_bones_click():
+    # poking the pile: a few bones knocking
+    return mix(grains(0.25, 8, spread=0.12, length=0.02, band=(500, 1800), decay=2.0) * 1.2,
+               ring(noise(0.15), 900, 16) * env(0.15, 0.001, curve=7) * 0.5)
+
+
+def s_ignis_reform():
+    # the bones pulling back together and the fire coming back into him
+    rattle = am(grains(1.6, 60, spread=1.2, length=0.007, band=(1400, 4500), decay=0.4), 11, 0.4)
+    rise = sweep(noise(1.6) * swell(1.6, 0.8, 2.0), 200, 2400, 1.3)
+    whump = np.pad(bp(noise(0.6), 80, 1.2) * env(0.6, 0.003, curve=3.5), (int(SR * 1.0), 0))
+    return mix(rattle * 0.8, rise * 0.9, whump * 1.3)
+
+
+def s_ignis_slam():
+    # the spear driven into the lawn with all his weight behind it
+    boom = lp(noise(0.9), 120, 3) * env(0.9, 0.002, curve=3.2)
+    crack = hp(noise(0.1), 1500) * env(0.1, 0.0005, curve=8)
+    fire = sweep(noise(0.8) * swell(0.8, 0.15, 2.2), 1800, 400, 1.2)
+    debris = grains(0.8, 30, spread=0.5, length=0.012, band=(600, 3200), decay=1.6)
+    return mix(boom * 1.5, crack * 1.1, fire * 0.6, debris * 0.6)
+
+
+def s_ignis_death():
+    # the long end: fire guttering, a crack right through him, bones
+    # scattering, and a wind that carries them up and away
+    gutter = am(bp(noise(3.0), 400, 1.2) * swell(3.0, 0.1, 1.2), 7, 0.6) * np.exp(-np.linspace(0, 3, int(SR * 3.0)))
+    crack = np.pad(mix(hp(noise(0.2), 1400) * env(0.2, 0.0004, curve=7),
+                       lp(noise(1.0), 110, 3) * env(1.0, 0.003, curve=3)), (int(SR * 2.9), 0))
+    scatter = np.pad(grains(1.4, 50, spread=1.1, length=0.012, band=(700, 4200), decay=1.2), (int(SR * 3.0), 0))
+    wind = np.pad(sweep(noise(6.0) * swell(6.0, 0.35, 1.6), 250, 2600, 1.1), (int(SR * 4.0), 0))
+    return mix(gutter * 0.8, crack * 1.3, scatter * 0.7, wind * 0.6)
+
+
+def s_heart_break():
+    # a burning heart coming undone: a wet pop and a hiss of embers
+    pop = bp(noise(0.12), 600, 1.4) * env(0.12, 0.0008, curve=8)
+    hiss = sweep(noise(0.35) * env(0.35, 0.002, curve=3), 2000, 6000, 1.6)
+    return mix(pop * 1.1, hiss * 0.6)
+
+
 SOUNDS = {
     'click_hit': s_click_hit, 'click_miss': s_click_miss, 'crit': s_crit,
     'kill': s_kill, 'kill_big': s_kill_big, 'castle_hit': s_castle_hit,
@@ -905,6 +1011,10 @@ SOUNDS = {
     'star_fall': s_star_fall, 'star_hit': s_star_hit, 'sk_starfall': s_sk_starfall,
     'hammer_lift': s_hammer_lift, 'hammer_tick': s_hammer_tick, 'hammer_slam': s_hammer_slam, 'sk_quake': s_sk_quake,
     'ice_shatter': s_ice_shatter, 'sk_hail': s_sk_hail,
+    'ignis_rise': s_ignis_rise, 'ignis_roar': s_ignis_roar, 'ignis_thrust': s_ignis_thrust,
+    'ignis_summon': s_ignis_summon, 'ignis_block': s_ignis_block, 'orb_dash': s_orb_dash,
+    'bones_fall': s_bones_fall, 'bones_click': s_bones_click, 'ignis_reform': s_ignis_reform,
+    'ignis_slam': s_ignis_slam, 'ignis_death': s_ignis_death, 'heart_break': s_heart_break,
 }
 
 if __name__ == '__main__':

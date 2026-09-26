@@ -32,7 +32,7 @@ class Enemy {
     this.hpShown = 1;         // HP bar eases toward the real value
     this.wobblePhase = Math.random() * 10;
     this.boss = kind === 'boss' || kind === 'warden' || kind === 'eagle'
-      || kind === 'hive' || kind === 'queen';
+      || kind === 'hive' || kind === 'queen' || kind === 'ignis';
     this.skillT = kind === 'boss' ? 4.5 : (kind === 'eagle' ? 2.2 : 7);
     this.dash = null;                          // the Eagle's swoop, while it lasts
     this.dashT = kind === 'eagle' ? 3.4 : 0;
@@ -54,6 +54,15 @@ class Enemy {
     this.immuneT = 0;                          // the warden's chalk barrier
     this.barrierT = 0;                         // barrier flare when it blocks
     this.calledGuards = false;
+    // Ignis and his brood carry their own state (js/ignis.js); these are the
+    // at-rest versions the bestiary draws - the fight replaces them
+    if (kind === 'ignis') {
+      this.ig = { preview: true, state: 'preview', anim: 'idle', animT: 0, t: 0, phase: 1, dir: [-1, 0], dist: Math.abs(x) || 1,
+        hop: 0, rise: 1, blockT: 0, did: {}, barMax: 250, barFill: 0 };
+      this.shadowY = y;
+    }
+    if (kind === 'heart') this.heart = { preview: true, beat: Math.random() * 6, life: 0 };
+    if (kind === 'ignisorb') this.orb = { t: 0, sx: x, sy: y, mode: 'back', trail: [] };
   }
 
   get speed() {
@@ -71,7 +80,7 @@ class Enemy {
     // way onto the page
     if (this.untouchable) {
       if (!opts.silent && Math.random() < 0.25) {
-        game.effects.push(new FloatText(this.x + Rough.jit(14), this.y - this.r, 'not yet', '#b8b2a3', 15, false));
+        game.effects.push(new FloatText(this.x + Rough.jit(14), this.y - this.r, this.guardText || 'not yet', '#b8b2a3', 15, false));
       }
       return 0;
     }
@@ -125,7 +134,9 @@ class Enemy {
 
   die(game) {
     if (this.dead) return;
+    if (this.kind === 'ignis' && this.ignisDown(game)) return;   // bones first, then the end
     this.dead = true;
+    if (this.kind === 'heart') Ignis.decompile(game, this);       // broken, it becomes an orb
     if (this.kind === 'hive') {                // phase 3 walks out of the wreck
       const q = game.spawnMinion('queen', this.x, this.y, 0, game.waveSpec ? game.waveSpec.speed : 55);
       q.spawnT = 0; q.skillT = 2.4;
@@ -175,6 +186,12 @@ class Enemy {
     if (this.flash > 0) this.flash -= dt;
     if (this.barrierT > 0) this.barrierT = Math.max(0, this.barrierT - dt / 0.3);
     if (this.drink > 0) this.drink = Math.max(0, this.drink - dt / 0.5);
+    // Ignis and his hearts move by their own rules and shrug off stuns,
+    // slows and shoves (js/ignis.js)
+    if (this.kind === 'ignis' || this.kind === 'heart') {
+      this.stun = 0; this.knock = null; this.slow = 0;
+      return this.kind === 'ignis' ? this.ignisUpdate(dt, game) : this.heartUpdate(dt, game);
+    }
     if (this.boss) this.bossSkill(dt, game);
     if (this.faded > 0) this.faded = Math.max(0, this.faded - dt * 0.6);
     if (this.knock) {                            // thrown: slides out, easing off
@@ -190,6 +207,7 @@ class Enemy {
     const d = Math.hypot(this.x, this.y) || 1;
 
     if (this.kind === 'auger') { this.augerUpdate(dt, game, d); return; }
+    if (this.kind === 'ignisorb') { this.orbUpdate(dt, game, d); return; }
     if (this.kind === 'eagle') { this.flyLikeAnEagle(dt, game, d); return; }
     if (HIVE_KINDS[this.kind]) { this.hiveUpdate(dt, game, d); return; }
 
@@ -516,6 +534,9 @@ class Enemy {
   }
 
   draw(ctx, t) {
+    if (this.kind === 'ignis') return this.drawIgnis(ctx, t);
+    if (this.kind === 'heart') return this.drawHeart(ctx, t);
+    if (this.kind === 'ignisorb') return this.drawOrb(ctx, t);
     Rough.boil(this.id, t + this.wobblePhase);
     // scale-in on spawn, squash on hit, and a walk bob of its own
     const grow = this.spawnT < 1 ? E.back(this.spawnT) : 1;

@@ -227,6 +227,9 @@ const Game = {
     this.chestsRun = 0;
     this.runBosses = 0;          // bosses down this run, for the Endless achievement
     this.onlyPlain = true;       // no other cursor picked up this run
+    this.boughtAny = false;      // nothing bought at all, for Window Shopper
+    this.playerStun = 0;         // Ignis's roar
+    this.cutscene = false;       // Ignis's entrance and death: hands off
     this.achRun = [];
     this.stillT = 0;
     this.lawnBurnt = false;
@@ -239,6 +242,9 @@ const Game = {
     this.cinematic = null;
     this.slowT = 0;
     this.paused = false;
+    this.cutscene = false;
+    this.playerStun = 0;
+    IgnisHud.lb = 0;
     Protector.reset();
     // the worn relic, where it acts from the very start
     if (Relics.val('tape')) { this.maxHp += 1; this.castleHp += 1; this.hpShown += 1; }
@@ -262,13 +268,14 @@ const Game = {
     };
     this.spawnLeft = this.waveSpec.count;
     this.spawnTimer = 1.1;
-    // out past the ten-wave run, one or two Augers hide in every wave - never
-    // the first thing through the door, and never on the boss's slot
+    // from wave 14, in any mode, Augers hide in the crowd - never the first
+    // thing through the door, never on the boss's slot, never on Ignis's wave:
+    // none or one on 14 and 16, one or two from 17 on
     this.augerAt = [];
-    if (this.endless && this.wave >= AUGER_FROM_WAVE) {
+    if (this.wave >= AUGER_FROM_WAVE && this.wave !== IGNIS_WAVE) {
       const slots = [];
       for (let i = 0; i <= this.waveSpec.count - 3; i++) slots.push(i);
-      const n = Math.random() < 0.4 ? 2 : 1;
+      const n = this.wave < 17 ? (Math.random() < 0.5 ? 1 : 0) : (Math.random() < 0.5 ? 2 : 1);
       while (this.augerAt.length < n && slots.length) {
         this.augerAt.push(slots.splice(Math.floor(Math.random() * slots.length), 1)[0]);
       }
@@ -283,9 +290,15 @@ const Game = {
       : boss === 'boss' ? (Math.random() < 0.5 ? 'eagle' : 'boss')
         : boss === 'warden' ? (Math.random() < 0.5 ? 'hive' : 'warden')
           : boss;
-    const BOSS_LINE = { warden: 'the warden is coming', hive: 'the hive is coming' };
+    const BOSS_LINE = { warden: 'the warden is coming', hive: 'the hive is coming', ignis: 'the ground is moving' };
+    if (boss === 'ignis') {
+      // no crowd: just him, climbing out of the ground (js/ignis.js)
+      this.spawnLeft = 0;
+      this.augerAt = [];
+      Ignis.spawn(this);
+    }
     this.banner = boss
-      ? new WaveBanner('WAVE ' + this.wave, BOSS_LINE[this.bossKind] || 'something big is coming', '#c8433a')
+      ? new WaveBanner('WAVE ' + this.wave, BOSS_LINE[this.bossKind] || 'a mini boss is coming', '#c8433a')
       : new WaveBanner('WAVE ' + this.wave,
         (!this.endless && this.wave === WAVES_PER_RUN) ? 'last one' : '', '#2b2b2b');
     UI.hideAll();
@@ -302,6 +315,7 @@ const Game = {
 
   buyOffer(off) {
     this.scribbles -= off.cost;
+    this.boughtAny = true;
     if (off.kind === 'cursor') {
       this.cursorId = off.id;                 // the old cursor is gone for good
       this.onlyPlain = false;
@@ -359,6 +373,11 @@ const Game = {
 
   press() {
     if (this.paused) return;
+    if (this.cutscene && this.state === 'playing') return;        // Ignis's entrance and death
+    if (this.playerStun > 0 && this.state === 'playing') {         // his roar knocked your hand off
+      Sfx.play('click_miss', { volume: 0.3, throttle: 80 });
+      return;
+    }
     this.pointer.down = 0.13;
     if (this.state === 'offers' && this.offerScreen) {
       this.offerScreen.click(this.pointer.x, this.pointer.y, this.w, this.h);
@@ -407,6 +426,7 @@ const Game = {
 
   /* The Sledgehammer coming down: everything within reach takes the hit. */
   slam(x, y, mult, ghost) {
+    if (!ghost && Ignis.boneClick(this, x, y)) return;           // his bones want clicking, not slamming for damage
     const tier = Math.round((mult - 1) / HAMMER_STEP);
     if (!ghost) {                             // one slam is worth a few clicks of skill charge
       this.cursorCharge++;
@@ -437,6 +457,7 @@ const Game = {
   click(x, y, opts_ghost) {
     if (!opts_ghost) this.stillT = 0;        // clicking is not standing still
     if (this.pickup(x, y)) return;            // anything lying on the floor comes first
+    if (!opts_ghost && Ignis.boneClick(this, x, y)) return;       // Ignis's bones, two clicks to wake
 
     const cursor = cursorById(this.cursorId);
     if (!opts_ghost) {                       // the ghost charges nothing
@@ -494,7 +515,7 @@ const Game = {
 
   /* Fired by hand only: right-click, or the corner button on a touchscreen. */
   castSkill() {
-    if (this.state !== 'playing' || this.cinematic || this.paused) return;
+    if (this.state !== 'playing' || this.cinematic || this.paused || this.cutscene || this.playerStun > 0) return;
     if (!this.skillReady()) {
       Sfx.play('click_miss', { volume: 0.5 });
       const why = this.skillCd > 0 ? Math.ceil(this.skillCd) + 's' : (SKILL_CHARGE - this.skillCharge) + ' clicks';
@@ -524,7 +545,7 @@ const Game = {
     Save.kill(e.kind);
     Sfx.play(e.boss || e.kind === 'brick' ? 'kill_big' : 'kill',
       { volume: e.boss ? 1 : 0.5, throttle: e.boss ? 0 : 45, voices: 4 });
-    if (ENEMY_KINDS[e.kind] && ENEMY_KINDS[e.kind].boss) Achievements.onBossKilled(this);
+    if (ENEMY_KINDS[e.kind] && ENEMY_KINDS[e.kind].boss) Achievements.onBossKilled(this, e);
     const credit = (1 + 0.05 * (this.stacking.credit || 0)) * (1 + 0.04 * Relics.val('goldstar'));
     const gain = Math.max(1, Math.round((1 + e.maxHp / 5) * DIFFICULTIES[this.difficulty].reward * credit));
     this.scribbles += gain;
@@ -859,12 +880,15 @@ const Game = {
     }
     if (this.sentry) this.sentry.update(dt, this);
     Protector.update(dt, this);            // the Protector relic's shields
+    if (this.playerStun > 0) this.playerStun = Math.max(0, this.playerStun - dt);
+    if (this.wave >= 12 && this.wave <= IGNIS_WAVE) IgnisSheet.warm(3);   // draw Ignis's frames ahead of him, a few ms a frame
 
     if (this.state === 'playing' && this.spawnLeft === 0 && this.enemies.length === 0) {
       this.banner = null;
       Sfx.play('wave_clear', { volume: 0.75 });
       // every tenth wave out in endless pays coins, and pays them now - a run
       // that dies at wave 27 keeps what it earned at 10 and 20
+      if (this.wave === 10) Achievements.onWave10(this);
       if (this.endless && this.wave % COIN_RULES.every === 0) {
         this.earnCoins(coinsForEndlessMilestone(this.difficulty, this.wave / COIN_RULES.every));
         if (this.difficulty !== 'easy') this.earnChest(1);
@@ -872,7 +896,6 @@ const Game = {
       if (!this.endless && this.wave >= WAVES_PER_RUN) {   // nothing left to spend it on
         this.earnCoins(coinsForVictory(this.difficulty));
         if (this.difficulty !== 'easy') this.earnChest(1);
-        Achievements.onVictory(this);
         this.state = 'victory';
         UI.showEnd(this, true);
       } else {
@@ -926,6 +949,7 @@ const Game = {
       ctx.restore();
     }
 
+    if (this.state !== 'menu') IgnisHud.draw(ctx, this);          // his bar, the letterbox, what he says
     if (this.cinematic) this.cinematic.draw(ctx, this.w, this.h, this.time);
     if (this.banner) this.banner.draw(ctx, this.w, this.h, this.time);
     if (this.state === 'offers' && this.offerScreen) this.offerScreen.draw(ctx, this.w, this.h, this.time);
@@ -955,6 +979,10 @@ const Game = {
       if (this.hold) drawHoldGauge(ctx, this);
       Depth.cursorShadow(ctx, this);            // the top layer's shadow on the world
       Protector.draw(ctx, this);
+      if (this.playerStun > 0) {                // stars round the hand he knocked off the cursor
+        drawStunStars(ctx, this.pointer.x + 6, this.pointer.y - 4, 16, this.time);
+        Rough.text(ctx, 'stunned', this.pointer.x + 8, this.pointer.y - 30, 14, '#e0562d');
+      }
       drawCursor(ctx, cursorById(this.cursorId), this.pointer.x, this.pointer.y,
         this.cursorCharge, this.pointer.down > 0 ? 1 : 0, this.time, this.oneshot,
         false, this.oneshot.double ? this.doubleId : null);

@@ -14,7 +14,7 @@ Open `index.html` in a browser. That's the whole install.
 Three buttons in the bottom-left corner, over the castle with enemies
 circling it:
 
-- **PLAY** opens a popup: 10 waves or Endless, then Easy / Normal / Hard.
+- **PLAY** opens a popup: 15 waves or Endless, then Easy / Normal / Hard.
 - **BESTIARY** opens a book of every enemy and boss: its picture, its stats,
   where it shows up, and a live preview of it attacking. The preview runs the
   enemy's real code in a small stand-in for the game with the sound off, so
@@ -39,7 +39,7 @@ second, with colour scribbled in past the edge.
 Coins are saved in the browser (`localStorage`), so they survive closing the
 tab. You earn them by:
 
-- finishing the 10-wave run: **1** on Normal, **2** on Hard;
+- finishing the 15-wave run (beating Ignis): **1** on Normal, **2** on Hard;
 - every 10th wave in Endless: on Normal the first pays 1 and each one after
   pays 1 more, up to **5** a time; on Hard it starts at 2 and goes up to **10**.
 
@@ -87,9 +87,10 @@ Like every skin, neither changes a number.
 
 | Achievement | What | Pays |
 |---|---|---|
-| Big Game | Kill 3 bosses in one Endless run (the count starts over when the castle falls) | 3 coins |
-| Just the Arrow | Win on Normal or Hard with only the Plain Cursor | 5 coins |
-| Hard Copy | Win on Hard | the Thunder Pack |
+| Big Game | Kill 3 mini bosses in one Endless run (the count starts over when the castle falls) | 3 coins |
+| Just the Arrow | Clear wave 10 on Normal or Hard with only the Plain Cursor | 5 coins |
+| Hard Copy | Clear wave 10 on Hard | the Thunder Pack |
+| Window Shopper | Clear wave 10 on Normal or Hard without buying anything | 3 coins + 2 chests |
 
 **Chests** come from winning a Normal or Hard run, from every tenth wave of
 an Endless run on Normal or Hard, from **searching**, or from the **shop**.
@@ -131,10 +132,12 @@ so it never runs out.
 - **5 castle HP**, drawn as five even 20% segments. Every leak costs one, and
   the castle is redrawn for each one it loses: cracks, then broken merlons,
   then a hole in the wall and smoke, then it collapses.
-- **10 waves.** Wave 5 brings the Blot, wave 10 brings the Warden. Both are coin
-  flips, so each run draws a different pair. Both boss
-  waves hold a smaller crowd than the ones around them, because the bosses
-  keep adding to it themselves. Each boss has a trick of its own:
+- **15 waves.** Wave 5 and wave 10 bring a **mini boss** (below); wave 15 is
+  **Ignis, the last attacker** - the only boss, and the only thing on his
+  wave (see *Ignis* further down). The mini boss waves are coin flips, so
+  each run draws a different pair, and they hold a smaller crowd than the
+  waves around them, because the mini bosses keep adding to it themselves.
+  Each has a trick of its own:
   - **Wave 5 is a coin flip.** Half the time it's **the Blot**, which coughs
     up a fast blotling every 4.5s, bursts into three more when it dies, and
     half the time leaves a **Blob'd-Tier** on the floor for you to click up.
@@ -182,15 +185,16 @@ so it never runs out.
 - **Endless**, picked on the title screen instead of the ten-wave run. The
   waves never stop: ordinary enemy HP keeps climbing on a gently quadratic
   curve (a wave-30 blob is worth six of a wave-10 one), and **bosses climb
-  faster still** on top of that. Past wave 10 a boss lands **every fifth wave**
+  faster still** on top of that. Wave 15 is Ignis, as in the 15-wave run;
+  after that a mini boss lands **every fifth wave**
   and it is **drawn at random** from all four — the Blot, the Thunder Eagle,
   the Warden and the Hive — so you cannot plan a loadout around knowing what
   is coming. The Hive's flat-HP half scales on the same curve as everything
   else, so the whole fight keeps pace rather than melting. There is no victory
   screen out here; the run ends when the castle does, and the end card tells
   you which wave you reached.
-- **The Auger** — endless only, from wave 13, **one or two hidden in every
-  wave**. A spider that got the count wrong: three legs on its right, two
+- **The Auger** — in any mode from wave 14: **none or one on waves 14 and 16**
+  (never on 15), **one or two** from wave 17 on. A spider that got the count wrong: three legs on its right, two
   heavier ones on its left and a bleeding stump where the third should be, a
   body crowded with eyes, and a drill where its mouth ought to be. It walks
   in until it is **four blocks off the castle's lawn** and stops dead. Every
@@ -346,6 +350,46 @@ glow, the decorative extras are off, the canvas drops to one pixel per pixel
 and the game runs at a steady 30 fps (about 2.5x cheaper to draw). On a first
 visit from what looks like a low-end phone it starts switched on.
 
+## Ignis, the last attacker
+
+Wave 15. No crowd: the ground splits at the edge of the page and a skeleton
+climbs out of it - fire for a crown, fire in his eye, a tattered mantle and a
+long staff with a caged ember at the top and a spear at the bottom. He roars,
+and walks at the castle. **Nothing touches him on the way in.**
+
+Four blocks off the lawn he raises the staff and throws himself back to his
+post, and then fights to a pattern:
+
+- **Summon** - three **hearts** fly off the staff and circle the castle a
+  block outside the lawn (4 HP each). **While one lives he cannot be hit**:
+  he spins the staff, and every few seconds reaches the **spear end all the
+  way to the castle wall** (1 damage).
+- **A broken heart unravels into an Ember Orb** (1 HP) that backs off a block
+  and runs at the castle **faster than an Auger** (2 damage).
+- **Exposed** - with all three gone he kneels, and can be hit.
+- **Roar** - the **Chalk Ward shatters** and **your hand is knocked off the
+  cursor for a second** (no clicks, no skill). Then round again.
+- **Block**, at any time: when a projectile comes within his 3x3-block reach
+  there is a **45% chance** he catches it and spins the staff into a wheel of
+  fire that **eats every projectile in that reach for 1.5s** - arrows,
+  thunderbolts, bird bolts, blots, boomerangs, drops.
+
+**250 HP**, then he falls into a **pile of bones**. **Click the bones twice**
+and he pulls himself back together: the bar across the bottom doubles in
+length and fills - **500 more HP**. In his second life the thrusts come
+faster, **hearts unravel on their own after five seconds** (a ring on each
+counts it down), and after he is exposed he **leaps in and drives the spear
+into the lawn** (2 damage) before he roars.
+
+When he dies it is ten seconds of cutscene: he speaks, cracks through with
+fire, breaks apart, and every bone of him rises into the sky and fades out.
+
+He is drawn from a **sprite sheet** (`js/ignis_sheet.js`): sixteen
+animations - idle, walk, raise, dash back, summon, spin guard, spear thrust,
+roar, block, exposed, collapse, bone pile, reassemble, slam, death, emerge -
+each pose drawn once in crayon on a little skeleton rig and baked into frames,
+built quietly in the background during waves 12-14. The fight only blits.
+
 ## Depth
 
 The page is drawn in layers, like a pop-up book seen from above
@@ -436,6 +480,8 @@ js/fx.js          decoration only: hit sparks, kill bursts, droplets, the frame 
 js/depth.js       the layers, the camera lean (parallax), shadows
 js/settings.js    settings: parallax, low graphics, sound
 js/protector.js   the Protector relic's shields
+js/ignis_sheet.js Ignis's sprite sheet: the rig, the poses, sixteen animations
+js/ignis.js       Ignis's fight, his hearts and orbs, his HUD and his death
 js/deaths.js      how each enemy breaks when it dies
 js/save.js        coins and skins, kept in localStorage
 js/skins.js       the skins, and everything the Star Caller draws

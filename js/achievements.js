@@ -2,12 +2,14 @@
    MORE page for what it pays. */
 
 const ACHIEVEMENTS = [
-  { id: 'endless3', name: 'Big Game', text: 'Kill 3 bosses in one Endless run.',
+  { id: 'endless3', name: 'Big Game', text: 'Kill 3 mini bosses in one Endless run.',
     goal: 3, reward: { coins: 3 }, note: 'the count starts over when the castle falls' },
-  { id: 'plainwin', name: 'Just the Arrow', text: 'Win on Normal or Hard with only the Plain Cursor.',
+  { id: 'plainwin', name: 'Just the Arrow', text: 'Clear wave 10 on Normal or Hard with only the Plain Cursor.',
     reward: { coins: 5 } },
-  { id: 'hardwin', name: 'Hard Copy', text: 'Win on Hard.',
-    reward: { pack: 'thunder' } }
+  { id: 'hardwin', name: 'Hard Copy', text: 'Clear wave 10 on Hard.',
+    reward: { pack: 'thunder' } },
+  { id: 'nobuy', name: 'Window Shopper', text: 'Clear wave 10 on Normal or Hard without buying anything.',
+    reward: { coins: 3, chests: 2 } }
 ];
 
 function achievementById(id) { return ACHIEVEMENTS.find(a => a.id === id) || null; }
@@ -42,7 +44,12 @@ const Achievements = {
     if (!a || this.state(id) !== 'done') return null;
     Save.data.ach[id] = 'claimed';
     Save.store();
-    if (a.reward.coins) { Save.addCoins(a.reward.coins); return '+' + a.reward.coins + ' coins'; }
+    if (a.reward.coins || a.reward.chests) {
+      const got = [];
+      if (a.reward.coins) { Save.addCoins(a.reward.coins); got.push('+' + a.reward.coins + ' coins'); }
+      if (a.reward.chests) { Save.addChests(a.reward.chests); got.push('+' + a.reward.chests + ' chests'); }
+      return got.join(', ');
+    }
     if (a.reward.pack) {
       const pack = skinById(a.reward.pack);
       Save.grant([pack.id].concat(pack.skins));
@@ -53,21 +60,25 @@ const Achievements = {
   },
 
   rewardText(a) {
+    if (a.reward.coins && a.reward.chests) return a.reward.coins + ' coins + ' + a.reward.chests + ' chests';
     if (a.reward.coins) return a.reward.coins + ' coins';
     if (a.reward.pack) return skinById(a.reward.pack).name;
     return '';
   },
 
   /* ---- the hooks the game calls */
-  onBossKilled(game) {
-    if (!game.endless) return;
+  onBossKilled(game, e) {
+    if (!game.endless || (e && ENEMY_KINDS[e.kind].final)) return;     // Ignis is not a mini boss
     game.runBosses = (game.runBosses || 0) + 1;
     this.progress('endless3', Math.min(3, game.runBosses));
     if (game.runBosses >= 3) this.complete('endless3', game);
   },
 
-  onVictory(game) {
+  /* Clearing wave 10 - in either mode - is what the Normal/Hard ones ask. */
+  onWave10(game) {
+    if (game.difficulty !== 'normal' && game.difficulty !== 'hard') return;
     if (game.difficulty === 'hard') this.complete('hardwin', game);
-    if ((game.difficulty === 'normal' || game.difficulty === 'hard') && game.onlyPlain) this.complete('plainwin', game);
+    if (game.onlyPlain) this.complete('plainwin', game);
+    if (!game.boughtAny) this.complete('nobuy', game);
   }
 };

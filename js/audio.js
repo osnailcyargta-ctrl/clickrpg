@@ -25,7 +25,9 @@ const Sfx = {
     'trap_dig', 'trap_emerge', 'trap_snap',
     'star_fall', 'star_hit', 'sk_starfall',
     'hammer_lift', 'hammer_tick', 'hammer_slam', 'sk_quake',
-    'ice_shatter', 'sk_hail'
+    'ice_shatter', 'sk_hail',
+    'ignis_rise', 'ignis_roar', 'ignis_thrust', 'ignis_summon', 'ignis_block', 'orb_dash',
+    'bones_fall', 'bones_click', 'ignis_reform', 'ignis_slam', 'ignis_death', 'heart_break'
   ],
   path: 'assets/sfx/',
   ver: (typeof window !== 'undefined' && window.BUILD_V) ? '?v=' + window.BUILD_V : '',

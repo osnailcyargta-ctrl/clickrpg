@@ -57,7 +57,8 @@ const Depth = {
     for (const e of game.enemies) {
       if (e.dead || e.spawnT < 0.2) continue;
       const k = Math.min(1, e.spawnT);
-      ctx.beginPath(); ctx.ellipse(e.x + sx, e.y + e.r * 0.75 + sy, e.r * 0.95 * k, e.r * 0.36 * k, 0, 0, 7); ctx.fill();
+      const gy = e.shadowY != null ? e.shadowY : e.y + e.r * 0.75;       // Ignis stands taller than his hit circle
+      ctx.beginPath(); ctx.ellipse(e.x + sx, gy + sy, e.r * 0.95 * k, e.r * 0.36 * k, 0, 0, 7); ctx.fill();
     }
     if (game.sentry) {
       const s = game.sentry;

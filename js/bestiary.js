@@ -17,7 +17,7 @@ const BESTIARY = [
   { group: 'ENEMIES', kind: 'brick', name: 'Brick', where: 'from wave 5', castle: '1 segment',
     text: 'Slow and fat: nearly twice a blob\'s HP, at two thirds the pace. It holds up everything behind it.',
     scene: 'walk' },
-  { group: 'ENEMIES', kind: 'auger', name: 'The Auger', where: 'endless only, wave 13 on - one or two a wave', castle: '1 segment',
+  { group: 'ENEMIES', kind: 'auger', name: 'The Auger', where: 'wave 14 on, any mode - one at most on 14 and 16, one or two after', castle: '1 segment',
     text: 'Stops four blocks off the lawn and every eye shuts, then opens on you. It backs away for a second with the drill screaming, then runs. Hit it while it is running and it stops dead and has to wind up again.',
     scene: 'auger' },
   // --- summoned by something bigger
@@ -42,22 +42,32 @@ const BESTIARY = [
   { group: 'SUMMONED', kind: 'lavaball', name: 'Lava Ball', where: 'climbs out of the Queen\'s ground crack', castle: '2 - if it lands on the lawn',
     text: 'Rises out of the crack, hangs, and drops. Shoot it before it lands: on bare paper it leaves a burning puddle, on the castle\'s lawn it sets the whole lawn alight.',
     scene: 'lava' },
-  // --- bosses
-  { group: 'BOSSES', kind: 'boss', name: 'The Blot', where: 'wave 5 (half the time), random in endless', castle: '1 segment',
+  { group: 'SUMMONED', kind: 'heart', name: 'Heart of Ignis', where: 'three at a time, off Ignis\'s staff', castle: 'none - it guards', speed: 'orbits',
+    text: 'Three circle the castle a block outside the lawn, 4 HP each. While one is left, Ignis cannot be touched. Break one and it unravels into an Ember Orb. In his second life they unravel on their own after five seconds.',
+    scene: 'heartshow' },
+  { group: 'SUMMONED', kind: 'ignisorb', name: 'Ember Orb', where: 'what a broken heart becomes', castle: '2 segments', speed: 'a dash',
+    text: 'One HP. It backs off a block, gathering itself, then runs at the castle faster than an Auger. Every heart you break is one of these to catch.',
+    scene: 'orb' },
+  // --- mini bosses
+  { group: 'MINI BOSSES', kind: 'boss', name: 'The Blot', where: 'wave 5 (half the time), random in endless', castle: '1 segment',
     text: 'Coughs up a blotling every four and a half seconds, and bursts into three more when it dies. Half the time it leaves a Blob\'d-Tier behind.',
     scene: 'boss' },
-  { group: 'BOSSES', kind: 'eagle', name: 'The Thunder Eagle', where: 'wave 5 (the other half), random in endless', castle: 'never lands',
+  { group: 'MINI BOSSES', kind: 'eagle', name: 'The Thunder Eagle', where: 'wave 5 (the other half), random in endless', castle: 'never lands',
     text: 'Holds off five blocks out, looses a bolt at the castle every 3.2 seconds and swoops in and back out. Immune to everything the Storm Caller throws. Half the time it drops an Electric Bird.',
     scene: 'boss' },
-  { group: 'BOSSES', kind: 'warden', name: 'The Warden', where: 'wave 10 (half the time), random in endless', castle: '1 segment',
+  { group: 'MINI BOSSES', kind: 'warden', name: 'The Warden', where: 'wave 10 (half the time), random in endless', castle: '1 segment',
     text: 'Every nine seconds it chalks a barrier that eats all damage for two and a half - the eye goes pale and the pupil narrows first. The first time it drops to half, it calls two bricks.',
     scene: 'warden' },
-  { group: 'BOSSES', kind: 'hive', name: 'The Hive', where: 'wave 10 (the other half), random in endless', castle: '1 segment',
+  { group: 'MINI BOSSES', kind: 'hive', name: 'The Hive', where: 'wave 10 (the other half), random in endless', castle: '1 segment',
     text: 'Three fights in one. Hauled in by ten workers and untouchable until it is three blocks off the green; then 200 HP that lets three bees out for every 25 you put in; then the Queen walks out of the wreck.',
     scene: 'hive' },
-  { group: 'BOSSES', kind: 'queen', name: 'The Queen', where: 'the Hive\'s third act', castle: 'keeps her distance',
+  { group: 'MINI BOSSES', kind: 'queen', name: 'The Queen', where: 'the Hive\'s third act', castle: 'keeps her distance',
     text: 'Takes 15% more from fire. Every 3.4 seconds: lobs three larvae, rallies her swarm to run faster, or drives her stinger through the paper to open a crack that burns - and coughs up a lava ball.',
-    scene: 'boss' }
+    scene: 'boss' },
+  // --- the boss
+  { group: 'BOSS', kind: 'ignis', name: 'Ignis', where: 'wave 15, alone - the last attacker', castle: '1 a thrust, 2 a slam',
+    text: 'Climbs out of the ground and walks at you, untouchable, then throws himself back and sends three hearts round the castle - and while they live he stabs the wall from where he stands. Break them and he kneels: hit him then. He roars (the ward shatters, your hand is knocked off the cursor for a second), and catches projectiles on a spinning staff. 250 HP; then a pile of bones to click twice; then 500 more, meaner.',
+    scene: 'showcase', loop: 60 }
 ];
 
 /* A stand-in for the game, just big enough for an enemy's own code to run
@@ -173,6 +183,26 @@ const BeastScenes = {
     e.spawnT = 0.6;
     e.skillT = 1.2; e.dashT = 3;          // get to the tricks quickly
     sim.entry.loop = 12;
+    return e;
+  },
+  showcase(sim) {                           // Ignis just shows his whole repertoire
+    const e = new Enemy('ignis', 250, 0, sim.left * 0.5, 0);
+    e.spawnT = 1;
+    sim.enemies.push(e);
+    return e;
+  },
+  heartshow(sim) {
+    const e = new Enemy('heart', 4, 0, sim.left * 0.45, -10);
+    e.spawnT = 1;
+    sim.enemies.push(e);
+    return e;
+  },
+  orb(sim) {
+    const e = new Enemy('ignisorb', 1, 0, sim.left * 0.55, 0);
+    e.spawnT = 1;
+    e.orb = { t: -0.6, sx: e.x, sy: e.y, mode: 'back', trail: [] };
+    sim.enemies.push(e);
+    sim.entry.loop = 4;
     return e;
   },
   warden(sim) {
@@ -300,7 +330,7 @@ const Bestiary = {
       row.appendChild(this.thumb(b.kind, !state));
       if (state) row.insertAdjacentHTML('beforeend', '<span>' + b.name + '</span>');
       else row.appendChild(Scrawl.render(b.name, 110, 13));
-      if (ENEMY_KINDS[b.kind].boss) row.insertAdjacentHTML('beforeend', '<span class="boss-tag">BOSS</span>');
+      if (ENEMY_KINDS[b.kind].boss) row.insertAdjacentHTML('beforeend', '<span class="boss-tag">' + (ENEMY_KINDS[b.kind].final ? 'BOSS' : 'MINI BOSS') + '</span>');
     }
   },
 
@@ -370,7 +400,7 @@ const Bestiary = {
     const hp = b.kind === 'boltshot' ? '1'
       : k.flatHp ? String(k.flatHp) + (k.boss ? '+' : '')
         : '×' + k.hpMul + ' wave';
-    const speed = k.speedMul === 0 ? 'still' : '×' + k.speedMul;
+    const speed = b.speed || (k.speedMul === 0 ? 'still' : '×' + k.speedMul);
     const stat = (label) => '<div class="beast-stat" data-doodle="#b8b2a3" data-weight="2"><i>' + label + '</i><b></b></div>';
     const stats = document.getElementById('beast-stats');
     const vals = [['HP', hp], ['SPEED', speed], ['SIZE', String(k.r)], ['CASTLE', String(b.castle)]];

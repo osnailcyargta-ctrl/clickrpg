@@ -6,13 +6,14 @@ const BASE_CRIT_CHANCE = 0.10;
 const CRIT_MULT = 1.5;             // crit = 50% more damage
 const SENTRY_CRIT_CHANCE = 0.10;   // with the Sentry Drill, the post crits like you do
 const CASTLE_HP = 5;               // 5 bar segments, 20% each
-const WAVES_PER_RUN = 10;
-const ENDLESS_BOSSES = ['boss', 'eagle', 'warden', 'hive'];   // past wave 10 it is a draw
+const WAVES_PER_RUN = 15;         // waves 5 and 10 are mini bosses; 15 is IGNIS
+const ENDLESS_BOSSES = ['boss', 'eagle', 'warden', 'hive'];   // mini bosses: in endless, a draw every 5th wave
+const IGNIS_WAVE = 15;            // the last attacker - here, and nowhere else
 const ENDLESS_BOSS_EVERY = 5;
 const SKILL_CHARGE = 50;        // clicks to charge a skill
 const SKILL_COOLDOWN = 30;      // seconds between casts, however fast you click
 const GROUND_RADIUS = BLOCK * 3;   // the coloured ground around the castle
-const AUGER_FROM_WAVE = 13;        // endless only, and not straight away - it is a lot
+const AUGER_FROM_WAVE = 14;        // any mode: 0-1 on waves 14 and 16, none on 15, 1-2 from 17
 const AUGER_STOP = GROUND_RADIUS + BLOCK * 4;   // where it halts to wind up
 const TRAPPER_BASE_DMG = 6;
 const TRAPPER_MAX_DMG = 10;
@@ -28,7 +29,7 @@ const DIFFICULTIES = {
   hard:   { name: 'HARD',   hpMul: 1.70, countMul: 1.40, speedMul: 1.20, intervalMul: 0.85, color: '#c8433a', reward: 1.25 }
 };
 
-// Ten waves. Wave 5 and wave 10 carry a boss.
+// Fifteen waves. Waves 5 and 10 carry a mini boss; wave 15 is Ignis, alone.
 // Enemy COUNT climbs up to the first boss and then stops for good - after that
 // fight the waves get meaner through HP and speed, not through bigger crowds.
 const WAVE_TABLE = [
@@ -41,8 +42,14 @@ const WAVE_TABLE = [
   { count: 13, hp: 33, speed: 49, interval: 1.35 },
   { count: 13, hp: 38, speed: 51, interval: 1.30 },
   { count: 13, hp: 44, speed: 53, interval: 1.25 },
-  { count: 9,  hp: 50, speed: 55, interval: 1.55, boss: 'warden' }   // or the Hive, 50/50
+  { count: 9,  hp: 50, speed: 55, interval: 1.55, boss: 'warden' },  // or the Hive, 50/50
+  { count: 13, hp: 56, speed: 56, interval: 1.24 },
+  { count: 13, hp: 62, speed: 57, interval: 1.22 },
+  { count: 13, hp: 69, speed: 58, interval: 1.20 },
+  { count: 13, hp: 76, speed: 59, interval: 1.18 },
+  { count: 0,  hp: 0,  speed: 0,  interval: 1.00, boss: 'ignis' }    // IGNIS, the last attacker
 ];
+const LAST_PLAIN_WAVE = WAVE_TABLE[13];   // what endless grows from
 
 /* Past the tenth wave the table runs out, so the rest is generated. Ordinary
    enemies keep getting fatter; bosses get fatter faster, so the fight between
@@ -50,8 +57,8 @@ const WAVE_TABLE = [
    Crowds stay where the table left them - the arrival rate is what a pair of
    hands can actually keep up with, and no amount of HP changes that. */
 function endlessSpec(wave) {
-  const past = wave - WAVES_PER_RUN;                 // 1 on wave 11
-  const last = WAVE_TABLE[WAVES_PER_RUN - 1];
+  const past = wave - WAVES_PER_RUN;                 // 1 on wave 16
+  const last = LAST_PLAIN_WAVE;
   const boss = wave % ENDLESS_BOSS_EVERY === 0
     ? ENDLESS_BOSSES[Math.floor(Math.random() * ENDLESS_BOSSES.length)] : null;
   // gently quadratic, not exponential: your click damage climbs by addition,
@@ -114,7 +121,13 @@ const ENEMY_KINDS = {
   // THE AUGER - endless only, wave 13 on, one or two a wave. Walks to four
   // blocks off the lawn, winds up backing away, then runs at the castle. A
   // hit mid-run stops it dead and it has to wind up all over again.
-  auger:    { r: 24, hpMul: 1.5, speedMul: 0.8, fill: '#3a2436' }
+  auger:    { r: 24, hpMul: 1.0, speedMul: 0.8, fill: '#3a2436' },
+
+  // IGNIS, the last attacker - wave 15 only. 250 HP, then a pile of bones,
+  // then 500 more. His hearts guard him; broken, each one becomes an orb.
+  ignis:    { r: 34, hpMul: 0, flatHp: 250, speedMul: 0.3, boss: true, final: true, fill: '#3a2436' },
+  heart:    { r: 14, hpMul: 0, flatHp: 4,   speedMul: 0,   fill: '#c8233a' },
+  ignisorb: { r: 10, hpMul: 0, flatHp: 1,   speedMul: 0,   fill: '#ff7a2d' }
 };
 
 /* ---- CURSORS -------------------------------------------------------------
