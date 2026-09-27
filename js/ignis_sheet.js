@@ -21,6 +21,21 @@ const IG = {
 };
 const IG_STAFF = 140;
 
+/* Phase two: the same rig, drawn again wrecked - bones charred and split
+   with fire showing through, a piece of the skull gone, ribs snapped, the
+   mantle burnt through, fire at every joint and a crown twice the height.
+   The sheet is built once per look; IG_WRECK says which one is being drawn. */
+let IG_WRECK = 0;
+const IG_CHARRED = { bone: '#d6c29a', boneDark: '#9f8a62', cloak: '#211822', cloakHi: '#5a2a2a', trim: '#ff7a2d' };
+const IG_HOT = '#fff1b0';
+
+/* A seam of fire: dark split, ember in it, white heat down the middle. */
+function igSeam(g, pts, w) {
+  Rough.poly(g, pts, { color: IG.socket, width: (w || 2) + 1.6, jitter: 0.3, closed: false, passes: 1 });
+  Rough.poly(g, pts, { color: IG.ember, width: w || 2, jitter: 0.3, closed: false, passes: 1 });
+  Rough.poly(g, pts, { color: IG_HOT, width: Math.max(0.6, (w || 2) * 0.35), jitter: 0.2, closed: false, passes: 1, alpha: 0.9 });
+}
+
 /* ------------------------------------------------------------- the rig */
 const IG_REST = {
   x: 0, y: 0, lean: 0.06, head: 0, jaw: 0.05,
@@ -114,6 +129,10 @@ function igBone(g, L, w, dark, hand, foot) {
     Rough.line(g, 0, L / 2 + 1, 8, L / 2 + 2, { color: IG.ink, width: 4.5, jitter: 0.3, passes: 1 });
     Rough.line(g, 0, L / 2 + 1, 8, L / 2 + 2, { color: c, width: 2.2, jitter: 0.3, passes: 1 });
   }
+  if (IG_WRECK) {
+    igSeam(g, [[Rough.jit(1), -L * 0.3], [w * 0.2, -L * 0.05], [-w * 0.15, L * 0.12], [w * 0.1, L * 0.3]], 1.3);
+    if (Rough.rnd() < 0.55) igFlame(g, Rough.jit(1.5), -L / 2 + 1, 6 + Rough.rnd() * 5, 2.6, 3);
+  }
 }
 
 function igFlame(g, x, y, h, w, seedA) {
@@ -127,12 +146,13 @@ function igFlame(g, x, y, h, w, seedA) {
 
 function igSkull(g, pt) {
   // the crown of fire first, so the skull sits in it
-  const crown = pt.crown || 0;
+  const crown = (pt.crown || 0) * (IG_WRECK ? 1.8 : 1);
   if (crown > 0.05) {
-    for (let i = 0; i < 5; i++) {
-      const a = -2.55 + i * 0.5;
+    const n = IG_WRECK ? 7 : 5;
+    for (let i = 0; i < n; i++) {
+      const a = -2.75 + i * (IG_WRECK ? 0.42 : 0.5);
       const bx = Math.cos(a) * 11, by = Math.sin(a) * 11;
-      igFlame(g, bx, by + 2, (7 + (i % 2) * 6 + Rough.rnd() * 5) * crown, 3.4, i);
+      igFlame(g, bx, by + 2, (7 + (i % 2) * 6 + Rough.rnd() * 5) * crown, IG_WRECK ? 4.2 : 3.4, i);
     }
   }
   const cran = Rough.circlePts(0, 0, 13, 0.8, 14);
@@ -145,8 +165,8 @@ function igSkull(g, pt) {
   // the eye: a deep socket with fire in it
   g.fillStyle = IG.socket;
   g.beginPath(); g.ellipse(7, -1.5, 4.4, 3.8, 0, 0, 7); g.fill();
-  const eyes = pt.eyes || 0;
-  if (eyes > 0.05) igFlame(g, 7, 1, 7 * eyes, 2.2 * Math.min(1.2, eyes), 9);
+  const eyes = (pt.eyes || 0) * (IG_WRECK ? 1.6 : 1);
+  if (eyes > 0.05) igFlame(g, 7, 1, 7 * eyes, 2.2 * Math.min(IG_WRECK ? 1.7 : 1.2, eyes), 9);
   Rough.poly(g, [[12, 2], [14, 4.5], [11.5, 4.5]], { color: IG.socket, width: 1.8, jitter: 0.2 });
   for (let i = 0; i < 4; i++) Rough.line(g, 6 + i * 2.5, 7, 6 + i * 2.5, 9.5, { color: IG.ink, width: 1.2, jitter: 0.2, passes: 1 });
   // the jaw, hinged under the ear
@@ -160,16 +180,37 @@ function igSkull(g, pt) {
   g.restore();
   // an old crack across the crown - glowing when he is breaking
   const crack = [[-7, -10], [-3, -6], [-5, -2], [0, 1]];
-  Rough.poly(g, crack, { color: pt.crack ? IG.ember : IG.ink, width: pt.crack ? 2.4 : 1.3, jitter: 0.3, closed: false, passes: 1 });
+  if (IG_WRECK) {
+    // a piece of the back of the skull gone, fire inside it
+    const gone = [[-13, -3], [-10, -9], [-6, -12.5], [-4, -9], [-7.5, -6], [-8, -1.5]];
+    g.fillStyle = IG.socket;
+    g.beginPath(); gone.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill();
+    Rough.scribble(g, gone, { color: IG.ember, spacing: 2.4, width: 1.8, overflow: 0.7, alpha: 0.9 });
+    Rough.poly(g, gone, { color: IG.ember, width: 1.4, jitter: 0.4 });
+    igFlame(g, -8, -7, 12, 3.2, 5);
+    igSeam(g, crack, 2.2);
+    igSeam(g, [[2, -12], [4, -7], [3, -3]], 1.6);
+    igSeam(g, [[10, 7], [12, 4], [15, 3]], 1.2);
+  } else {
+    Rough.poly(g, crack, { color: pt.crack ? IG.ember : IG.ink, width: pt.crack ? 2.4 : 1.3, jitter: 0.3, closed: false, passes: 1 });
+  }
 }
 
 function igRibs(g, pt) {
   if ((pt.core || 0) > 0.05) {                     // the ember his hearts come from
-    Rough.blob(g, 3, -1, 3.4 * Math.min(1.5, pt.core + 0.3), IG.ember, IG.emberDeep, { spacing: 1.8, fillWidth: 2, sides: 7, width: 1.2, wobble: 0.5 });
+    const cr = 3.4 * Math.min(1.5, pt.core + 0.3) * (IG_WRECK ? 1.7 : 1);
+    Rough.blob(g, 3, -1, cr, IG.ember, IG.emberDeep, { spacing: 1.8, fillWidth: 2, sides: 7, width: 1.2, wobble: 0.5 });
+    if (IG_WRECK) {
+      Rough.blob(g, 3, -1, cr * 0.5, IG_HOT, null, { spacing: 1.4, fillWidth: 2, sides: 7, width: 0.1, wobble: 0.4 });
+      igFlame(g, 1, -6, 14, 3.6, 2);
+      igFlame(g, 6, -4, 10, 2.8, 4);
+    }
   }
   for (let i = 0; i < 4; i++) {
     const y = -11 + i * 6;
-    const rib = [[-5, y], [2, y - 4 + i * 0.4], [9, y - 1], [11, y + 3]];
+    // phase two: two of them snapped off short
+    const snapped = IG_WRECK && (i === 1 || i === 3);
+    const rib = snapped ? [[-5, y], [2, y - 4 + i * 0.4], [5 + Rough.rnd() * 2, y - 2.5]] : [[-5, y], [2, y - 4 + i * 0.4], [9, y - 1], [11, y + 3]];
     Rough.poly(g, rib, { color: IG.ink, width: 4.4, jitter: 0.4, closed: false, passes: 1 });
     Rough.poly(g, rib, { color: i === 3 ? IG.boneDark : IG.bone, width: 2.2, jitter: 0.3, closed: false, passes: 1 });
   }
@@ -177,6 +218,7 @@ function igRibs(g, pt) {
   Rough.line(g, -5, -14, -5, 13, { color: IG.bone, width: 2.6, jitter: 0.3, passes: 1 });
   Rough.line(g, 11.5, -9, 12, 10, { color: IG.ink, width: 1.6, jitter: 0.3, passes: 1 });
   if (pt.crack) Rough.poly(g, [[0, -12], [4, -5], [1, 2], [6, 9]], { color: IG.ember, width: 2.2, jitter: 0.3, closed: false, passes: 1 });
+  if (IG_WRECK) igSeam(g, [[-5, -10], [-3.5, -3], [-6, 3], [-4.5, 10]], 1.6);
 }
 
 function igPelvis(g) {
@@ -185,6 +227,7 @@ function igPelvis(g) {
   Rough.poly(g, p, { color: IG.ink, width: 1.8, jitter: 0.4 });
   g.fillStyle = IG.socket;
   g.beginPath(); g.arc(1, 0, 2.2, 0, 7); g.fill();
+  if (IG_WRECK) igSeam(g, [[-8, -2], [-3, 1], [-1, 6]], 1.4);
 }
 
 function igSpine(g, pt) {
@@ -211,7 +254,8 @@ function igStaff(g, pt) {
   // the crook, and the caged ember hanging in it
   Rough.arc(g, 7, -62, 8, Math.PI * 0.95, Math.PI * 2.35, { color: IG.ink, width: 4.4, jitter: 0.4, passes: 1 });
   Rough.arc(g, 7, -62, 8, Math.PI * 0.95, Math.PI * 2.35, { color: IG.wood, width: 2.2, jitter: 0.3, passes: 1 });
-  const glow = pt.glow || 0;
+  const glow = (pt.glow || 0) + (IG_WRECK ? 0.8 : 0);
+  if (IG_WRECK) { igFlame(g, 8, -60, 18, 4.4, 1); igFlame(g, 1, -66, 10, 2.6, 6); }
   Rough.blob(g, 8, -57, 5 + glow * 1.6, IG.ember, IG.emberDeep, { spacing: 1.8, fillWidth: 2, sides: 8, width: 1.4, wobble: 0.6 });
   Rough.blob(g, 8, -57, 2.4 + glow, IG.emberHi, null, { spacing: 1.4, fillWidth: 2, sides: 7, width: 0.1, wobble: 0.4 });
   for (const dx of [-4, 0, 4]) Rough.line(g, 8 + dx, -63, 8 + dx * 0.6, -51, { color: IG.ink, width: 1, jitter: 0.2, passes: 1 });
@@ -221,6 +265,11 @@ function igStaff(g, pt) {
   Rough.scribble(g, blade, { color: IG.steel, spacing: 1.8, width: 2.2, overflow: 1.1 });
   Rough.poly(g, blade, { color: IG.ink, width: 1.6, jitter: 0.3 });
   Rough.line(g, 0, 54, 0, 68, { color: '#e8ecf2', width: 1, jitter: 0.2, passes: 1, alpha: 0.8 });
+  if (IG_WRECK) {                                   // red-hot
+    Rough.scribble(g, blade, { color: IG.ember, spacing: 2.2, width: 1.8, overflow: 0.9, alpha: 0.75, angle: 0.8 });
+    Rough.line(g, 0, 54, 0, 68, { color: IG_HOT, width: 1.4, jitter: 0.2, passes: 1 });
+    igSeam(g, [[0, -30], [1, -20], [-1, -8]], 1.1);
+  }
 }
 
 function igPart(g, pt) {
@@ -257,6 +306,17 @@ function igCloak(g, rig, p, k) {
     Rough.scribble(g, shape, { color: IG.cloakHi, spacing: 7, width: 2.2, overflow: 1, alpha: 0.6, angle: 0.9 });
     Rough.poly(g, shape, { color: '#140e16', width: 1.8, jitter: 0.6 });
     Rough.poly(g, hem, { color: IG.trim, width: 2, jitter: 0.5, closed: false, passes: 1 });
+    if (IG_WRECK) {
+      // burnt through in places, and the hem still burning
+      for (const [u, v, r] of [[0.3, 0.45, 4.5], [0.62, 0.7, 3.4], [0.45, 0.25, 2.8]]) {
+        const bx = igLerp(H[0] + back * 0.6, H[0] + 4, u), by = igLerp(S[1] + 6, hemY - 4, v);
+        const hole = Rough.circlePts(bx, by, r, r * 0.3, 8);
+        g.fillStyle = 'rgba(20,12,10,0.9)';
+        g.beginPath(); hole.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill();
+        Rough.poly(g, hole, { color: IG.ember, width: 1.4, jitter: 0.4, passes: 1 });
+      }
+      for (let i = 0; i < hem.length; i += 2) igFlame(g, hem[i][0], hem[i][1] + 2, 6 + Rough.rnd() * 6, 2.6, i);
+    }
     // the hood, behind the skull
     const hood = Rough.circlePts(head[0] - 3, head[1] - 1, 16, 1.2, 12);
     Rough.scribble(g, hood, { color: IG.cloak, spacing: 2.6, width: 3, overflow: 1.04 });
@@ -368,38 +428,51 @@ const IgnisSheet = {
 
   names() { return Object.keys(IG_ANIMS); },
 
-  strip(name) {
-    let s = this.strips[name];
+  strip(name, v) {
+    const key = v ? name + '#2' : name;
+    let s = this.strips[key];
     if (!s) {
       const a = IG_ANIMS[name];
       this.scale = (typeof Settings !== 'undefined' && Settings.data.low) ? 0.75 : 1;
       const cv = document.createElement('canvas');
       cv.width = Math.round(this.CELL * a.n * this.scale);
       cv.height = Math.round(this.CELL * this.scale);
-      s = this.strips[name] = { cv, anchors: [], done: 0, scale: this.scale };
+      s = this.strips[key] = { cv, anchors: [], done: 0, scale: this.scale };
     }
     return s;
   },
 
   /* Draw one frame into its strip (in full crayon, whatever the setting). */
-  build(name, i) {
-    const a = IG_ANIMS[name], s = this.strip(name);
+  build(name, i, v) {
+    const a = IG_ANIMS[name], s = this.strip(name, v);
     if (s.anchors[i]) return;
     const g = s.cv.getContext('2d');
     const low = Rough.isLow();
     Rough.setLow(false);
+    const keep = v ? this.wreck(true) : null;
     Rough.srand(7000 + this.names().indexOf(name) * 97 + i * 13);
     g.setTransform(s.scale, 0, 0, s.scale, (i * this.CELL + this.OX) * s.scale, this.OY * s.scale);
     const u = a.loop ? i / a.n : (a.n > 1 ? i / (a.n - 1) : 0);
     s.anchors[i] = igDrawPose(g, a.pose(u), a.fall ? a.fall(u) : 0);
     g.setTransform(1, 0, 0, 1, 0, 0);
+    if (keep) this.wreck(false, keep);
     Rough.setLow(low);
     s.done++;
   },
 
-  ensure(name) {
+  /* Swap the charred palette in (returns what it replaced) or back out. */
+  wreck(on, keep) {
+    if (!on) { Object.assign(IG, keep); IG_WRECK = 0; return null; }
+    const old = {};
+    for (const k in IG_CHARRED) old[k] = IG[k];
+    Object.assign(IG, IG_CHARRED);
+    IG_WRECK = 1;
+    return old;
+  },
+
+  ensure(name, v) {
     const a = IG_ANIMS[name];
-    for (let i = 0; i < a.n; i++) this.build(name, i);
+    for (let i = 0; i < a.n; i++) this.build(name, i, v);
   },
 
   /* Build a few frames at a time in the background, so nothing hitches
@@ -409,13 +482,17 @@ const IgnisSheet = {
       this.queue = [];
       for (const name of ['emerge', 'idle', 'walk', 'roar', 'raise', 'dashback', 'summon', 'guard', 'thrust',
         'block', 'exposed', 'collapse', 'bones', 'rise', 'slam', 'death']) {
-        for (let i = 0; i < IG_ANIMS[name].n; i++) this.queue.push([name, i]);
+        for (let i = 0; i < IG_ANIMS[name].n; i++) this.queue.push([name, i, 0]);
+      }
+      // then the wrecked look, for the second life
+      for (const name of ['rise', 'roar', 'idle', 'summon', 'guard', 'thrust', 'block', 'exposed', 'slam', 'dashback', 'death']) {
+        for (let i = 0; i < IG_ANIMS[name].n; i++) this.queue.push([name, i, 1]);
       }
     }
     const t0 = performance.now();
     while (this.queue.length && performance.now() - t0 < budget) {
-      const [name, i] = this.queue.shift();
-      this.build(name, i);
+      const [name, i, v] = this.queue.shift();
+      this.build(name, i, v);
     }
     return this.queue.length === 0;
   },
@@ -430,9 +507,9 @@ const IgnisSheet = {
 
   /* Blit one frame with his feet at (x, y). Returns that frame's anchors in
      world space (eye, top, tip, hand, chest, head). */
-  draw(ctx, name, i, x, y, flip, scale) {
-    const s = this.strip(name);
-    this.build(name, i);
+  draw(ctx, name, i, x, y, flip, scale, v) {
+    const s = this.strip(name, v);
+    this.build(name, i, v);
     const k = scale || 1;
     const C = this.CELL;
     ctx.save();
@@ -447,10 +524,11 @@ const IgnisSheet = {
 
   /* ---- the pieces he breaks into when he dies: each bone of a pose on a
      small canvas of its own, so it can fly off and fade on its own. */
-  pieces(name, i) {
+  pieces(name, i, v) {
     const rig = igRig(IG_ANIMS[name].pose(IG_ANIMS[name].loop ? i / IG_ANIMS[name].n : 0));
     const low = Rough.isLow();
     Rough.setLow(false);
+    const keep = v ? this.wreck(true) : null;
     const out = rig.parts.map((pt, j) => {
       const R = pt.type === 'staff' ? 80 : pt.type === 'skull' ? 34 : pt.type === 'bone' ? Math.max(20, pt.L / 2 + 12) : 22;
       const cv = document.createElement('canvas');
@@ -461,6 +539,7 @@ const IgnisSheet = {
       igPart(g, Object.assign({}, pt, { x: 0, y: 0, a: 0 }));
       return { cv, R, x: pt.x, y: pt.y, a: pt.a, type: pt.type };
     });
+    if (keep) this.wreck(false, keep);
     Rough.setLow(low);
     return out;
   }

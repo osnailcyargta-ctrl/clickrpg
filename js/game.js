@@ -245,7 +245,7 @@ const Game = {
     this.paused = false;
     this.cutscene = false;
     this.playerStun = 0;
-    IgnisHud.lb = 0;
+    IgnisHud.lb = 0; IgnisHud.flash = 0; IgnisHud.heat = 0; IgnisHud.ash.length = 0;
     Protector.reset();
     // the worn relic, where it acts from the very start
     if (Relics.val('tape')) { this.maxHp += 1; this.castleHp += 1; this.hpShown += 1; }
@@ -470,11 +470,15 @@ const Game = {
       if (this.skillCharge < SKILL_CHARGE) this.skillCharge++;
     }
 
+    // the nearest thing in reach - and something that can be hurt before
+    // something that cannot (Ignis standing behind his own hearts)
     let target = null, bestDist = Infinity;
     for (const e of this.enemies) {
       if (e.dead) continue;
       const d = Math.hypot(e.x - x, e.y - y);
-      if (d <= e.r + 8 && d < bestDist) { bestDist = d; target = e; }
+      if (d > e.r + 8 + (ENEMY_KINDS[e.kind].hitPad || 0)) continue;
+      const score = d + (e.untouchable ? 1000 : 0);
+      if (score < bestDist) { bestDist = score; target = e; }
     }
 
     if (target) {
@@ -543,7 +547,7 @@ const Game = {
   areaDamage(x, y, radius, dmg, opts) {
     for (const e of this.enemies) {
       if (e.dead) continue;
-      if (Math.hypot(e.x - x, e.y - y) <= radius + e.r) e.hurt(dmg, this, opts);
+      if (Math.hypot(e.x - x, e.y - y) <= radius + e.r + (ENEMY_KINDS[e.kind].hitPad || 0) * 0.5) e.hurt(dmg, this, opts);
     }
   },
 

@@ -126,8 +126,8 @@ const ENEMY_KINDS = {
   // IGNIS, the last attacker - wave 15 only. 250 HP, then a pile of bones,
   // then 500 more. His hearts guard him; broken, each one becomes an orb.
   ignis:    { r: 34, hpMul: 0, flatHp: 250, speedMul: 0.3, boss: true, final: true, fill: '#3a2436' },
-  heart:    { r: 14, hpMul: 0, flatHp: 4,   speedMul: 0,   fill: '#c8233a' },
-  ignisorb: { r: 10, hpMul: 0, flatHp: 1,   speedMul: 0,   fill: '#ff7a2d' }
+  heart:    { r: 14, hpMul: 0, flatHp: 4,   speedMul: 0,   fill: '#c8233a', hitPad: 12 },   // hitPad: extra reach for a click
+  ignisorb: { r: 12, hpMul: 0, flatHp: 1,   speedMul: 0,   fill: '#ff7a2d', hitPad: 24 }
 };
 
 /* ---- CURSORS -------------------------------------------------------------

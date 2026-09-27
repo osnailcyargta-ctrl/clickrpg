@@ -394,6 +394,25 @@ animations - idle, walk, raise, dash back, summon, spin guard, spear thrust,
 roar, block, exposed, collapse, bone pile, reassemble, slam, death, emerge -
 each pose drawn once in crayon on a little skeleton rig and baked into frames,
 built quietly in the background during waves 12-14. The fight only blits.
+His second life has a **second sheet**: the same poses drawn wrecked - bones
+charred and split with fire showing through the seams, a piece of the skull
+gone, two ribs snapped, the ember in his chest white-hot, the mantle burnt
+through with its hem on fire, flames at the joints and a crown of fire twice
+the height. Live flames lick up off his skull, chest, hand and staff on top.
+
+The whole fight is **lit by him**: night falls on the page while he is on it
+(red-black in his second life), and his fire, his hearts, the orbs, the
+pillar, the rings of fire and the scorch marks burn light into it, with a
+glow over each. The castle and your cursor always keep some light. Ash and
+cinders drift up across the screen, and his big moments flash it orange.
+Where he stands in his second life the ground scorches and burns; his slam
+and his roar roll a ring of fire out across the lawn, and when he rises again
+a pillar of fire goes up out of the bones.
+
+The hearts and the orbs are **easier to click than they look**: a click
+reaches a heart from 34px and an orb from 44px, and a click near him and one
+of them always goes to the one that can be hurt. An orb gathers for 0.6s
+before it goes, drawing a line of fire to the castle where it will run.
 
 ## Depth
 
