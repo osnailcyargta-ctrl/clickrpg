@@ -476,7 +476,7 @@ const Game = {
     let target = null, bestDist = Infinity;
     for (const e of this.enemies) {
       if (e.dead) continue;
-      const d = Math.hypot(e.x - x, e.y - y);
+      const d = e.hitDist ? e.hitDist(x, y) : Math.hypot(e.x - x, e.y - y);   // a long thing is hit along its length
       if (d > e.r + 8 + (ENEMY_KINDS[e.kind].hitPad || 0)) continue;
       const score = d + (e.untouchable ? 1000 : 0);
       if (score < bestDist) { bestDist = score; target = e; }

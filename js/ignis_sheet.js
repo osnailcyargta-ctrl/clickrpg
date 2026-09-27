@@ -334,12 +334,12 @@ function igCloak(g, rig, p, k) {
 }
 
 /* One whole frame of him, standing (or part-fallen). */
-function igDrawPose(g, p, fall) {
+function igDrawPose(g, p, fall, nostaff) {
   const rig = igRig(p);
   const k = fall || 0;
   igCloak(g, rig, p, k);
   const parts = k > 0 ? igBlend(rig, k, { eyes: p.eyes, crown: p.crown, jaw: p.jaw }) : rig.parts;
-  for (const pt of parts) igPart(g, pt);
+  for (const pt of parts) if (!(nostaff && pt.type === 'staff')) igPart(g, pt);   // his staff may be off being thrown
   return rig.anchors;
 }
 
@@ -429,7 +429,7 @@ const IgnisSheet = {
   names() { return Object.keys(IG_ANIMS); },
 
   strip(name, v) {
-    const key = v ? name + '#2' : name;
+    const key = v ? name + '#' + v : name;
     let s = this.strips[key];
     if (!s) {
       const a = IG_ANIMS[name];
@@ -442,18 +442,19 @@ const IgnisSheet = {
     return s;
   },
 
-  /* Draw one frame into its strip (in full crayon, whatever the setting). */
+  /* `v` is which look: +1 wrecked (his second life), +2 empty-handed (the
+     staff is off being thrown). */
   build(name, i, v) {
     const a = IG_ANIMS[name], s = this.strip(name, v);
     if (s.anchors[i]) return;
     const g = s.cv.getContext('2d');
     const low = Rough.isLow();
     Rough.setLow(false);
-    const keep = v ? this.wreck(true) : null;
+    const keep = v & 1 ? this.wreck(true) : null;
     Rough.srand(7000 + this.names().indexOf(name) * 97 + i * 13);
     g.setTransform(s.scale, 0, 0, s.scale, (i * this.CELL + this.OX) * s.scale, this.OY * s.scale);
     const u = a.loop ? i / a.n : (a.n > 1 ? i / (a.n - 1) : 0);
-    s.anchors[i] = igDrawPose(g, a.pose(u), a.fall ? a.fall(u) : 0);
+    s.anchors[i] = igDrawPose(g, a.pose(u), a.fall ? a.fall(u) : 0, v & 2);
     g.setTransform(1, 0, 0, 1, 0, 0);
     if (keep) this.wreck(false, keep);
     Rough.setLow(low);
@@ -488,6 +489,10 @@ const IgnisSheet = {
       for (const name of ['rise', 'roar', 'idle', 'summon', 'guard', 'thrust', 'block', 'exposed', 'slam', 'dashback', 'death']) {
         for (let i = 0; i < IG_ANIMS[name].n; i++) this.queue.push([name, i, 1]);
       }
+      // and both, empty-handed, for while the staff is thrown
+      for (const v of [2, 3]) for (const name of ['idle', 'thrust', 'exposed']) {
+        for (let i = 0; i < IG_ANIMS[name].n; i++) this.queue.push([name, i, v]);
+      }
     }
     const t0 = performance.now();
     while (this.queue.length && performance.now() - t0 < budget) {
@@ -520,6 +525,27 @@ const IgnisSheet = {
     const A = s.anchors[i], out = {};
     for (const key in A) out[key] = [x + (flip ? -A[key][0] : A[key][0]) * k, y + A[key][1] * k];
     return out;
+  },
+
+  /* ---- his staff on its own, for throwing: local +y (the spear) points
+     down the canvas; `cy` is where the middle of the staff is. Drawn at
+     his size, so it is exactly as long as the one in his hand. */
+  staff(v) {
+    this.staffs = this.staffs || {};
+    if (this.staffs[v]) return this.staffs[v];
+    const S = IGNIS.SCALE, W = Math.ceil(56 * S), top = 96, bot = 80, H = Math.ceil((top + bot) * S);
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d');
+    const low = Rough.isLow();
+    Rough.setLow(false);
+    const keep = v ? this.wreck(true) : null;
+    Rough.srand(4242 + v);
+    g.setTransform(S, 0, 0, S, W / 2, top * S);
+    igPart(g, { type: 'staff', x: 0, y: 0, a: 0, glow: 0.8, blur: 0 });
+    if (keep) this.wreck(false, keep);
+    Rough.setLow(low);
+    return (this.staffs[v] = { cv, cx: W / 2, cy: top * S, len: IG_STAFF * S, top: top * S, bot: bot * S });
   },
 
   /* ---- the pieces he breaks into when he dies: each bone of a pose on a

@@ -48,8 +48,8 @@ const BESTIARY = [
   { group: 'SUMMONED', kind: 'ignisorb', name: 'Ember Orb', where: 'what a broken heart becomes', castle: '2 segments', speed: 'a dash',
     text: 'One HP. It backs off a block, gathering itself, then runs at the castle faster than an Auger. Every heart you break is one of these to catch.',
     scene: 'orb' },
-  { group: 'SUMMONED', kind: 'ignisspear', name: 'Ember Javelin', where: 'thrown off the end of Ignis\'s staff', castle: '1 segment', speed: 'a throw',
-    text: 'Five HP of burning shaft and red-hot blade, thrown at the castle every few seconds while the hearts hold him. Break it in the air - five notches on the shaft show what is left of it - or it lands.',
+  { group: 'SUMMONED', kind: 'ignisspear', name: 'Ignis\'s Staff', where: 'thrown by Ignis while his hearts hold', castle: '1 segment', speed: 'a throw',
+    text: 'His own staff, turned spear end first and thrown at the castle, every few seconds while the hearts hold him. Five HP - five notches on the shaft - to break it in the air, or it lands. Either way it flies apart, and he calls the pieces back to his hand, and it is whole again.',
     scene: 'javelin' },
   // --- mini bosses
   { group: 'MINI BOSSES', kind: 'boss', name: 'The Blot', where: 'wave 5 (half the time), random in endless', castle: '1 segment',

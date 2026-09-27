@@ -42,21 +42,15 @@ const UI = {
       if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') game.togglePause();
     });
 
-    const mute = document.getElementById('hud-mute');
-    const paint = () => {
-      mute.textContent = Sfx.muted ? 'SOUND OFF' : 'SOUND ON';
-      mute.classList.toggle('off', Sfx.muted);
-    };
-    this.paintMute = paint;                 // settings flips it too
-    mute.addEventListener('click', e => { e.stopPropagation(); Sfx.toggleMute(); paint(); });
+    // sound is switched in the settings only
+    this.paintMute = () => {};
     // settings, from the pause screen
     document.getElementById('pause-settings').addEventListener('click', e => {
       e.stopPropagation(); Sfx.play('button', { volume: 0.7 }); SettingsModal.open();
     });
     window.addEventListener('keydown', e => {
-      if (e.key === 'm' || e.key === 'M') { Sfx.toggleMute(); paint(); }
+      if (e.key === 'm' || e.key === 'M') Sfx.toggleMute();
     });
-    paint();
 
     Menu.bind(game);
     document.querySelectorAll('[data-action="menu"]').forEach(btn => {

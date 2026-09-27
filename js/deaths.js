@@ -204,12 +204,9 @@ const Deaths = {
   },
 
   recipes: {
-    /* his javelin, broken in the air: splinters of shaft, the blade, embers */
+    /* his staff, broken in the air: it flies apart, and he calls it home */
     ignisspear(e, game, x, y, r) {
-      this.spray(game, x, y, 5, { shape: 'rod', color: '#4a3528', size: 4, speed: 170, up: 180 });
-      this.spray(game, x, y, 3, { shape: 'shard', color: '#6b7280', size: 5, speed: 150, up: 200 });
-      for (let i = 0; i < Fx.n(10); i++) game.effects.push(new IgnisCinder(x + Rough.jit(12), y, i % 2));
-      game.effects.push(new Flare(x, y, { color: '#ff7a2d', r: 30, dur: 0.35, rays: 8, motes: 6, rings: 1 }));
+      game.effects.push(new IgnisStaffReturn(e, game));
       Sfx.play('ignis_block', { volume: 0.6, rate: 1.3, throttle: 60 });
     },
     /* crayon things burst into gobs of their own colour and stain the page */

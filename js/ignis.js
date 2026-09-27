@@ -180,7 +180,7 @@ Object.assign(Enemy.prototype, {
     if (g.rattle > 0) g.rattle -= dt;
     // nothing moves him but himself: magnets, knockback and stuns slide off
     this.igPlace();
-    const canBlock = g.state === 'walk' || g.state === 'guard' || g.state === 'exposed';
+    const canBlock = !g.staffOut && (g.state === 'walk' || g.state === 'guard' || g.state === 'exposed');
     if (g.blockCool > 0) g.blockCool -= dt;
     if (g.blockT > 0) {
       g.blockT -= dt;
@@ -253,19 +253,24 @@ Object.assign(Enemy.prototype, {
         g.anim = 'guard';
         g.thrustT -= dt;
         if (hearts === 0) { this.igExpose(game); break; }
-        if (g.thrustT <= 0) this.igSet('thrust');
+        if (g.thrustT <= 0 && !g.staffOut) this.igSet('thrust');
         break;
       case 'thrust':
         g.anim = 'thrust';
         if (g.t >= 0.22 && once('hit')) {
           const tip = (this.igA && this.igA.tip) || [this.x, this.y];
-          // a javelin of fire off the spear end, thrown at the castle: it
-          // has to be broken in the air (5 HP) or it lands for 1
-          const jv = new Enemy('ignisspear', 5, 0, tip[0], tip[1]);
+          // he throws the staff itself, spear end first, at the castle: it
+          // has to be broken in the air (5 HP) or it lands for 1 - and
+          // either way he calls the pieces home and it is whole again
+          const hand = (this.igA && this.igA.hand) || [this.x, this.y];
+          const d = Math.hypot(hand[0], hand[1]) || 1;
+          const half = IgnisSheet.staff(g.phase === 2 ? 1 : 0).len / 2;
+          const jv = new Enemy('ignisspear', 5, 0, hand[0] - hand[0] / d * half * 0.3, hand[1] - hand[1] / d * half * 0.3);
           jv.spawnT = 1;
-          jv.spear = { t: 0, speed: g.phase === 2 ? 215 : 170, trail: [] };
+          jv.spear = { t: 0, speed: g.phase === 2 ? 215 : 170, trail: [], v: g.phase === 2 ? 1 : 0, owner: this };
           game.spawnQueue.push(jv);
-          game.effects.push(new Flare(tip[0], tip[1], { color: '#ff7a2d', r: 30, dur: 0.35, rays: 8, motes: 6, rings: 1 }));
+          g.staffOut = true;
+          game.effects.push(new Flare(hand[0], hand[1], { color: '#ff7a2d', r: 30, dur: 0.35, rays: 8, motes: 6, rings: 1 }));
           for (let i = 0; i < Fx.n(g.phase === 2 ? 12 : 6); i++) game.effects.push(new IgnisCinder(tip[0] + Rough.jit(20), tip[1], i % 2));
           Sfx.play('ignis_thrust', { volume: 1, rateVar: 0.05 });
           game.shake(6);
@@ -277,7 +282,7 @@ Object.assign(Enemy.prototype, {
         break;
       case 'exposed':
         g.anim = 'exposed';
-        if (g.t >= IGNIS.EXPOSED[g.phase - 1]) this.igSet(g.phase === 1 ? 'roar' : 'charge');
+        if (g.t >= IGNIS.EXPOSED[g.phase - 1] && !g.staffOut) this.igSet(g.phase === 1 ? 'roar' : 'charge');
         break;
       case 'roar':
         g.anim = 'roar';
@@ -414,6 +419,7 @@ Object.assign(Enemy.prototype, {
     this.hp = 0;
     g.blockT = 0;
     Ignis.clearBrood(game, this);
+    g.staffOut = false;                           // it goes down with him, and comes back up with him
     if (g.phase === 1) {
       this.igSet('collapse');
       g.clicks = 0;
@@ -448,9 +454,10 @@ Object.assign(Enemy.prototype, {
     const f = this.igFeet();
     const flip = f[0] > 1;
     if (g.state === 'dying' && g.t >= 3) return;          // in pieces: the cutscene draws him
-    const anim = g.blockT > 0 ? 'block' : g.anim;
+    // empty-handed, the spin of the guard makes no sense: he stands
+    const anim = g.blockT > 0 ? 'block' : g.staffOut && (g.anim === 'guard' || g.anim === 'summon') ? 'idle' : g.anim;
     const fi = IgnisSheet.frameAt(anim, g.animT);
-    const P2 = g.phase === 2 && !g.preview, v = P2 ? 1 : 0;
+    const P2 = g.phase === 2 && !g.preview, v = (P2 ? 1 : 0) | (g.staffOut ? 2 : 0);
     const S = IGNIS.SCALE;
     let fy = f[1] - (g.hop || 0);
     let fx = f[0];
@@ -642,7 +649,7 @@ Object.assign(Enemy.prototype, {
     }
   },
 
-  /* ---------------------------------------------------------- javelins */
+  /* ------------------------------------------------- his thrown staff */
   spearUpdate(dt, game, d) {
     const s = this.spear;
     if (!s) return;
@@ -650,48 +657,61 @@ Object.assign(Enemy.prototype, {
     const step = s.speed * Math.min(1, 0.45 + s.t * 1.6) * dt;     // it leaves the hand fast and keeps coming
     this.x -= (this.x / d) * step;
     this.y -= (this.y / d) * step;
-    s.trail.push([this.x, this.y]);
+    s.ang = Math.atan2(-this.y, -this.x);
+    const len = IgnisSheet.staff(s.v || 0).len;
+    const tipX = this.x + Math.cos(s.ang) * len / 2, tipY = this.y + Math.sin(s.ang) * len / 2;
+    s.trail.push([this.x - Math.cos(s.ang) * len / 2, this.y - Math.sin(s.ang) * len / 2]);
     if (s.trail.length > 10) s.trail.shift();
-    if (Math.random() < dt * (Fx.low ? 8 : 26)) game.effects.push(new IgnisCinder(this.x, this.y, Math.random() < 0.5));
-    if (d <= game.castleRadius + this.r * 0.5) {
+    if (Math.random() < dt * (Fx.low ? 8 : 26)) game.effects.push(new IgnisCinder(this.x + Rough.jit(20), this.y + Rough.jit(20), Math.random() < 0.5));
+    if (Math.hypot(tipX, tipY) <= game.castleRadius) {
       this.dead = true;
-      game.effects.push(new Flare(this.x, this.y, { color: '#ff7a2d', r: 44, dur: 0.5, rays: 12, motes: 10, rings: 2 }));
-      game.effects.push(new IgnisFireRing(this.x, this.y, BLOCK * 1.4));
+      game.effects.push(new Flare(tipX, tipY, { color: '#ff7a2d', r: 44, dur: 0.5, rays: 12, motes: 10, rings: 2 }));
+      game.effects.push(new IgnisFireRing(tipX, tipY, BLOCK * 1.4));
       game.shake(10);
       Sfx.play('ignis_slam', { volume: 0.7, rate: 1.4 });
       game.castleHit(this);
+      game.effects.push(new IgnisStaffReturn(this, game));
     }
   },
 
+  /* A click on it counts anywhere along its length. */
+  hitDist(x, y) {
+    if (this.kind !== 'ignisspear' || !this.spear) return Math.hypot(x - this.x, y - this.y);
+    const a = this.spear.ang || Math.atan2(-this.y, -this.x), L = IgnisSheet.staff(this.spear.v || 0).len / 2;
+    const c = Math.cos(a), sn = Math.sin(a);
+    const u = Math.max(-L, Math.min(L, (x - this.x) * c + (y - this.y) * sn));
+    return Math.hypot(x - (this.x + c * u), y - (this.y + sn * u));
+  },
+
   drawSpear(ctx, t) {
-    const s = this.spear || { t, trail: [] };
-    const x = this.x, y = this.y;
-    const a = Math.atan2(-y, -x) || 0, c = Math.cos(a), sn = Math.sin(a);
+    const s = this.spear || { t, trail: [], v: 0 };
+    const st = IgnisSheet.staff(s.v || 0);
+    const a = s.ang != null ? s.ang : Math.atan2(-this.y, -this.x);
     Rough.boil(this.id, Math.floor(t * 12));
     for (let i = 1; i < s.trail.length; i++) {
       const p = s.trail[i - 1], q = s.trail[i];
-      Rough.line(ctx, p[0], p[1], q[0], q[1], { color: i % 2 ? '#ff7a2d' : '#ffd24a', width: 1 + i * 0.6, jitter: 1, passes: 1, alpha: i / s.trail.length * 0.8 });
+      Rough.line(ctx, p[0], p[1], q[0], q[1], { color: i % 2 ? '#ff7a2d' : '#ffd24a', width: 1 + i * 0.7, jitter: 1, passes: 1, alpha: i / s.trail.length * 0.8 });
     }
-    igGlow(ctx, x, y, 44, '#ff5a1d', 0.7);
-    const at = (d, o) => [x + c * d - sn * o, y + sn * d + c * o];
-    const flash = this.flash > 0;
-    // the shaft, bound with bone, burning along its length
-    const tail = at(-38, 0), neck = at(8, 0);
-    Rough.line(ctx, tail[0], tail[1], neck[0], neck[1], { color: '#2b2b2b', width: 6, jitter: 0.6, passes: 1 });
-    Rough.line(ctx, tail[0], tail[1], neck[0], neck[1], { color: flash ? '#ffffff' : '#4a3528', width: 3.2, jitter: 0.5, passes: 1 });
-    Rough.line(ctx, tail[0], tail[1], neck[0], neck[1], { color: '#ff7a2d', width: 1.2, jitter: 1.4, passes: 1, alpha: 0.9 });
-    for (const d of [-26, -10]) { const b0 = at(d, -4), b1 = at(d + 2, 4); Rough.line(ctx, b0[0], b0[1], b1[0], b1[1], { color: '#ece3c9', width: 3, jitter: 0.3, passes: 1 }); }
-    const blade = [at(6, -6), at(24, 0), at(6, 6), at(10, 0)];
-    Rough.scribble(ctx, blade, { color: flash ? '#ffffff' : '#ff7a2d', spacing: 2, width: 2.2, overflow: 1.1 });
-    Rough.poly(ctx, blade, { color: '#2b1014', width: 1.8, jitter: 0.3 });
-    const hot = at(20, 0);
-    igGlow(ctx, hot[0], hot[1], 18, '#fff1b0', 0.8);
-    // how much is left of it: five notches
-    const left = Math.max(0, Math.ceil(this.hp));
+    igGlow(ctx, this.x, this.y, st.len * 0.45, '#ff5a1d', 0.5);
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(a - Math.PI / 2);                 // the staff's spear end (+y) leads
+    ctx.rotate(Math.sin(s.t * 18) * 0.02);       // a shiver in flight
+    ctx.drawImage(st.cv, -st.cx, -st.cy);
+    if (this.flash > 0) {
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6;
+      ctx.drawImage(st.cv, -st.cx, -st.cy);
+    }
+    ctx.restore();
+    const tip = [this.x + Math.cos(a) * st.len / 2, this.y + Math.sin(a) * st.len / 2];
+    igGlow(ctx, tip[0], tip[1], 22, '#fff1b0', 0.7);
+    // how much is left of it: five notches along the shaft
+    const left = Math.max(0, Math.ceil(this.hp)), nx = -Math.sin(a), ny = Math.cos(a);
     for (let i = 0; i < 5; i++) {
-      const p = at(-30 + i * 7, -10);
+      const u = -st.len * 0.3 + i * st.len * 0.12;
+      const px = this.x + Math.cos(a) * u + nx * 11, py = this.y + Math.sin(a) * u + ny * 11;
       ctx.fillStyle = i < left ? '#ffd24a' : 'rgba(43,16,20,0.35)';
-      ctx.fillRect(p[0] - 2, p[1] - 2, 4, 4);
+      ctx.fillRect(px - 2.5, py - 2.5, 5, 5);
     }
   },
 
@@ -814,6 +834,105 @@ class IgnisScorch {
       igGlow(ctx, this.x, this.y, this.r * 2.2, '#ff4a1d', heat * 0.7);
       Rough.boil(this.id, Math.floor(time * 12));
       if (this.t < 0.9) igLiveFlame(ctx, this.x, this.y + 2, this.r * 1.3 * heat, this.r * 0.4, time, this.id % 7);
+    }
+  }
+}
+
+/* His staff, broken or landed: it flies apart into pieces, then he calls
+   them, and they dash back to his hand end over end, trailing fire, and
+   click together into the staff he is holding. */
+class IgnisStaffReturn {
+  constructor(spear, game) {
+    this.id = nextId(); this.game = game;
+    const s = spear.spear || {};
+    this.owner = s.owner || Ignis.alive(game);
+    this.v = s.v || 0;
+    const st = IgnisSheet.staff(this.v), a = s.ang != null ? s.ang : Math.atan2(-spear.y, -spear.x);
+    this.st = st; this.t = 0; this.n = 6; this.done = false;
+    this.pieces = [];
+    for (let i = 0; i < this.n; i++) {
+      const u = (i + 0.5) / this.n;                    // along the staff: 0 the ember end, 1 the spear
+      const ly = -st.len / 2 + u * st.len;
+      const out = Math.random() * Math.PI * 2, sp = 90 + Math.random() * 120;
+      this.pieces.push({
+        i, u, x: spear.x + Math.cos(a) * ly, y: spear.y + Math.sin(a) * ly, a: a - Math.PI / 2,
+        vx: Math.cos(out) * sp, vy: Math.sin(out) * sp - 40, va: Rough.jit(12), trail: []
+      });
+    }
+    this.callAt = 0.45;                              // how long they hang apart before he calls them
+    this.dur = 1.35;
+    game.effects.push(new Flare(spear.x, spear.y, { color: '#ff7a2d', r: 40, dur: 0.4, rays: 10, motes: 10, rings: 1 }));
+    Sfx.play('bones_fall', { volume: 0.55, rate: 1.4 });
+  }
+  /* where each piece belongs in his hand right now */
+  home(p) {
+    const e = this.owner, A = e && e.igA;
+    if (!A) return null;
+    const top = A.top, tip = A.tip;
+    return { x: top[0] + (tip[0] - top[0]) * p.u, y: top[1] + (tip[1] - top[1]) * p.u, a: Math.atan2(tip[1] - top[1], tip[0] - top[0]) - Math.PI / 2 };
+  }
+  update(dt, game) {
+    this.t += dt;
+    const e = this.owner;
+    const gone = !e || e.dead || !e.ig || !e.ig.staffOut;         // he fell (and it with him)
+    for (const p of this.pieces) {
+      if (this.t < this.callAt || gone) {
+        p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 1 - dt * 3; p.vy *= 1 - dt * 3; p.a += p.va * dt;
+        continue;
+      }
+      // called home: a beat of pulling back, then a dash
+      if (!p.from) {
+        p.from = [p.x, p.y, p.a];
+        p.go = this.callAt + p.i * 0.04;
+        if (p.i === 0) Sfx.play('orb_dash', { volume: 0.7, rate: 0.8 });
+      }
+      const k = Math.max(0, Math.min(1, (this.t - p.go) / 0.5));
+      const h = this.home(p);
+      if (!h) continue;
+      const ek = k * k * k;                                        // slow, then all at once
+      let da = h.a - p.from[2];
+      while (da > Math.PI) da -= Math.PI * 2;
+      while (da < -Math.PI) da += Math.PI * 2;
+      p.x = p.from[0] + (h.x - p.from[0]) * ek + Math.sin(k * Math.PI) * 30 * (p.i % 2 ? 1 : -1);
+      p.y = p.from[1] + (h.y - p.from[1]) * ek;
+      p.a = p.from[2] + da * ek + (1 - ek) * this.t * 6;
+      p.trail.push([p.x, p.y]); if (p.trail.length > 7) p.trail.shift();
+      p.home = k >= 1;
+    }
+    if (!gone && !this.done && this.t > this.callAt && this.pieces.every(p => p.home)) {
+      this.done = true;
+      e.ig.staffOut = false;
+      const A = e.igA;
+      if (A) {
+        game.effects.push(new Flare(A.hand[0], A.hand[1], { color: '#ffb347', r: 50, dur: 0.45, rays: 12, motes: 10, rings: 2 }));
+        for (let i = 0; i < Fx.n(10); i++) game.effects.push(new IgnisCinder(A.hand[0] + Rough.jit(20), A.hand[1] + Rough.jit(40), true));
+      }
+      Sfx.play('ignis_reform', { volume: 0.5, rate: 1.8 });
+      return false;
+    }
+    if (gone && this.t > this.callAt + 0.6) return false;
+    return this.t < 4;
+  }
+  draw(ctx, time) {
+    const st = this.st, seg = st.len / this.n;
+    const fade = (!this.owner || !this.owner.ig || !this.owner.ig.staffOut) && this.t > this.callAt ? Math.max(0, 1 - (this.t - this.callAt) / 0.6) : 1;
+    Rough.boil(this.id, Math.floor(time * 12));
+    for (const p of this.pieces) {
+      for (let i = 1; i < p.trail.length; i++) {
+        const q0 = p.trail[i - 1], q1 = p.trail[i];
+        Rough.line(ctx, q0[0], q0[1], q1[0], q1[1], { color: i % 2 ? '#ff7a2d' : '#ffd24a', width: 1 + i * 0.6, jitter: 0.8, passes: 1, alpha: i / p.trail.length * 0.8 * fade });
+      }
+      igGlow(ctx, p.x, p.y, 22, '#ff5a1d', 0.6 * fade);
+      // its own stretch of the staff sprite
+      const y0 = st.cy - st.len / 2 + p.i * seg - (p.i === 0 ? st.top - st.len / 2 : 0);
+      const y1 = st.cy - st.len / 2 + (p.i + 1) * seg + (p.i === this.n - 1 ? st.bot - st.len / 2 : 0);
+      ctx.save();
+      ctx.globalAlpha = fade;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.a);
+      const cyLocal = st.cy - st.len / 2 + (p.i + 0.5) * seg;
+      ctx.drawImage(st.cv, 0, y0, st.cv.width, y1 - y0, -st.cx, y0 - cyLocal, st.cv.width, y1 - y0);
+      ctx.restore();
     }
   }
 }

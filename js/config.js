@@ -128,7 +128,7 @@ const ENEMY_KINDS = {
   ignis:    { r: 34, hpMul: 0, flatHp: 250, speedMul: 0.3, boss: true, final: true, fill: '#3a2436' },
   heart:    { r: 14, hpMul: 0, flatHp: 4,   speedMul: 0,   fill: '#c8233a', hitPad: 12 },   // hitPad: extra reach for a click
   ignisorb: { r: 12, hpMul: 0, flatHp: 1,   speedMul: 0,   fill: '#ff7a2d', hitPad: 24 },
-  ignisspear: { r: 14, hpMul: 0, flatHp: 5, speedMul: 0,   fill: '#6b7280', hitPad: 18 }
+  ignisspear: { r: 10, hpMul: 0, flatHp: 5, speedMul: 0,   fill: '#4a3528', hitPad: 14 }
 };
 
 /* ---- CURSORS -------------------------------------------------------------

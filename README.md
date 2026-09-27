@@ -349,7 +349,8 @@ instead of 3.
 ## Settings
 
 In MORE, or from the pause screen: **3D parallax** on or off, **graphics**,
-**sound** on or off and a ten-notch **volume**. The graphics button opens a
+**sound** on or off and a ten-notch **volume**. Sound is switched here (or
+with M) - there is no sound button over the game. The graphics button opens a
 little picker above it: **LOW**, **MID** (the default) or **HIGH**. HIGH is
 full sharpness (up to 2 pixels per pixel) and every particle; MID caps the
 canvas at 1.5 and makes about 70% of the debris, with all the glow. LOW is
@@ -373,9 +374,14 @@ post, and then fights to a pattern:
 
 - **Summon** - three **hearts** fly off the staff and circle the castle a
   block outside the lawn (4 HP each). **While one lives he cannot be hit**:
-  he spins the staff, and every few seconds throws an **Ember Javelin** off
-  the spear end at the castle: a thing in its own right with **5 HP** (five
-  notches on the shaft), to be broken in the air, or it lands for 1.
+  he spins the staff, and every few seconds **throws the staff itself** at
+  the castle, turned spear end first - the very same staff, just as long as
+  it is in his hand. In the air it is a thing in its own right with **5 HP**
+  (five notches on the shaft), and a click anywhere along its length counts.
+  Break it, or it lands for 1. Either way it flies apart into pieces, and he
+  **calls them home**: they hang a moment, then dash back to his hand end
+  over end, trailing fire, and click together into the staff he holds. While
+  it is gone he stands empty-handed - no throwing, no blocking, no leaping.
 - **A broken heart unravels into an Ember Orb** (1 HP) that backs off a block
   and runs at the castle **faster than an Auger** (2 damage).
 - **Exposed** - with all three gone he kneels, and can be hit.
