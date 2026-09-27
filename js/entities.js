@@ -63,6 +63,7 @@ class Enemy {
     }
     if (kind === 'heart') this.heart = { preview: true, beat: Math.random() * 6, life: 0 };
     if (kind === 'ignisorb') this.orb = { t: 0, sx: x, sy: y, mode: 'back', trail: [] };
+    if (kind === 'ignisspear') this.spear = { t: 0, speed: 170, trail: [] };
   }
 
   get speed() {
@@ -208,6 +209,7 @@ class Enemy {
 
     if (this.kind === 'auger') { this.augerUpdate(dt, game, d); return; }
     if (this.kind === 'ignisorb') { this.orbUpdate(dt, game, d); return; }
+    if (this.kind === 'ignisspear') { this.spearUpdate(dt, game, d); return; }
     if (this.kind === 'eagle') { this.flyLikeAnEagle(dt, game, d); return; }
     if (HIVE_KINDS[this.kind]) { this.hiveUpdate(dt, game, d); return; }
 
@@ -537,6 +539,7 @@ class Enemy {
     if (this.kind === 'ignis') return this.drawIgnis(ctx, t);
     if (this.kind === 'heart') return this.drawHeart(ctx, t);
     if (this.kind === 'ignisorb') return this.drawOrb(ctx, t);
+    if (this.kind === 'ignisspear') return this.drawSpear(ctx, t);
     Rough.boil(this.id, t + this.wobblePhase);
     // scale-in on spawn, squash on hit, and a walk bob of its own
     const grow = this.spawnT < 1 ? E.back(this.spawnT) : 1;

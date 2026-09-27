@@ -26,7 +26,8 @@ const Fx = {
 
   /* How many of something to make: the full count normally, a third of it
      when the machine is struggling, never less than one. */
-  n(count) { return this.low ? Math.max(1, Math.round(count / 3)) : count; }
+  share: 0.7,             // how much of it the graphics setting wants (Settings)
+  n(count) { return Math.max(1, Math.round(count * (this.low ? Math.min(this.share, 1 / 3) : this.share))); }
 };
 
 /* A flash where a click lands: a bloom, a few ink streaks thrown outward,

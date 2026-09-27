@@ -455,6 +455,10 @@ canvas.scrawl { display: block; }
 .set-label span { font-size: 12px; opacity: 0.6; }
 .set-toggle { min-width: 76px; font-size: 15px; }
 .set-toggle.equipped { color: #3c7c58; }
+.set-row { position: relative; }
+.gfx-pick { position: absolute; right: 8px; bottom: calc(100% - 4px); z-index: 5; display: flex; gap: 6px; padding: 8px; background: #fffdf4; }
+.gfx-opt { min-width: 58px; font-size: 14px; padding: 6px 8px; }
+.gfx-opt.on { color: #3c7c58; }
 .set-notches { display: flex; align-items: flex-end; gap: 5px; }
 .set-notch { width: 14px; padding: 0; min-height: 0; }
 

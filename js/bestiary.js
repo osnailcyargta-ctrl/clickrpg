@@ -48,6 +48,9 @@ const BESTIARY = [
   { group: 'SUMMONED', kind: 'ignisorb', name: 'Ember Orb', where: 'what a broken heart becomes', castle: '2 segments', speed: 'a dash',
     text: 'One HP. It backs off a block, gathering itself, then runs at the castle faster than an Auger. Every heart you break is one of these to catch.',
     scene: 'orb' },
+  { group: 'SUMMONED', kind: 'ignisspear', name: 'Ember Javelin', where: 'thrown off the end of Ignis\'s staff', castle: '1 segment', speed: 'a throw',
+    text: 'Five HP of burning shaft and red-hot blade, thrown at the castle every few seconds while the hearts hold him. Break it in the air - five notches on the shaft show what is left of it - or it lands.',
+    scene: 'javelin' },
   // --- mini bosses
   { group: 'MINI BOSSES', kind: 'boss', name: 'The Blot', where: 'wave 5 (half the time), random in endless', castle: '1 segment',
     text: 'Coughs up a blotling every four and a half seconds, and bursts into three more when it dies. Half the time it leaves a Blob\'d-Tier behind.',
@@ -203,6 +206,13 @@ const BeastScenes = {
     e.orb = { t: -0.6, sx: e.x, sy: e.y, mode: 'back', trail: [] };
     sim.enemies.push(e);
     sim.entry.loop = 4;
+    return e;
+  },
+  javelin(sim) {
+    const e = new Enemy('ignisspear', 5, 0, sim.left * 0.6, 0);
+    e.spawnT = 1;
+    sim.enemies.push(e);
+    sim.entry.loop = 3;
     return e;
   },
   warden(sim) {

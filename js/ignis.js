@@ -72,6 +72,14 @@ const Ignis = {
     e.spawnT = 1;
     e.untouchable = true;
     e.guardText = '...';
+    // the castle is put right for the last fight
+    if (game.castleHp < game.maxHp) {
+      game.castleHp = game.maxHp;
+      game.effects.push(new FloatText(0, -game.castleRadius - 40, 'the castle is mended', '#4c9f70', 22, true));
+      game.effects.push(new Flare(0, 0, { color: '#8fd18a', r: game.castleRadius * 1.6, dur: 0.8, rays: 12, motes: 10, rings: 2 }));
+      Sfx.play('ward', { volume: 0.9 });
+      UI.syncHud(game);
+    }
     e.igPlace();
     game.enemies.push(e);
     game.cutscene = true;
@@ -110,7 +118,7 @@ const Ignis = {
   clearBrood(game, parent) {
     for (const list of [game.enemies, game.spawnQueue]) {
       for (const h of list) {
-        if (h.dead || (h.kind !== 'heart' && h.kind !== 'ignisorb')) continue;
+        if (h.dead || (h.kind !== 'heart' && h.kind !== 'ignisorb' && h.kind !== 'ignisspear')) continue;
         if (h.kind === 'heart' && h.heart && h.heart.parent !== parent) continue;
         h.dead = true;
         game.effects.push(new IgnisUnravel(h.x, h.y, true));
@@ -251,10 +259,16 @@ Object.assign(Enemy.prototype, {
         g.anim = 'thrust';
         if (g.t >= 0.22 && once('hit')) {
           const tip = (this.igA && this.igA.tip) || [this.x, this.y];
-          game.effects.push(new IgnisThrust(tip[0], tip[1], game));
+          // a javelin of fire off the spear end, thrown at the castle: it
+          // has to be broken in the air (5 HP) or it lands for 1
+          const jv = new Enemy('ignisspear', 5, 0, tip[0], tip[1]);
+          jv.spawnT = 1;
+          jv.spear = { t: 0, speed: g.phase === 2 ? 215 : 170, trail: [] };
+          game.spawnQueue.push(jv);
+          game.effects.push(new Flare(tip[0], tip[1], { color: '#ff7a2d', r: 30, dur: 0.35, rays: 8, motes: 6, rings: 1 }));
           for (let i = 0; i < Fx.n(g.phase === 2 ? 12 : 6); i++) game.effects.push(new IgnisCinder(tip[0] + Rough.jit(20), tip[1], i % 2));
           Sfx.play('ignis_thrust', { volume: 1, rateVar: 0.05 });
-          game.castleHit(this);
+          game.shake(6);
         }
         if (g.t >= 0.62) {
           g.thrustT = IGNIS.THRUST[g.phase - 1];
@@ -444,12 +458,12 @@ Object.assign(Enemy.prototype, {
     if (g.state === 'dying') { fx += Rough.jit(2 + g.t); }
 
     // heat off him: a glow that breathes, and a pool of firelight at his feet
-    if (!Fx.low && g.state !== 'bones' && g.state !== 'intro' && !g.preview) {
+    if (g.state !== 'bones' && g.state !== 'intro' && !g.preview) {
       const pulse = 0.85 + Math.sin(t * (P2 ? 7 : 3.5)) * 0.15;
-      Rough.bloom(ctx, this.x, this.y, (P2 ? 110 : 80) * pulse, P2 ? '#ff3a12' : '#ff7a2d', P2 ? 0.3 : 0.18);
+      igGlow(ctx, this.x, this.y, (P2 ? 110 : 80) * pulse, P2 ? '#ff3a12' : '#ff7a2d', P2 ? 0.3 : 0.18);
       ctx.save();
       ctx.translate(f[0], f[1]); ctx.scale(1, 0.32);
-      Rough.bloom(ctx, 0, 0, (P2 ? 130 : 80) * pulse, P2 ? '#ff4a1d' : '#ff7a2d', P2 ? 0.5 : 0.28);
+      igGlow(ctx, 0, 0, (P2 ? 130 : 80) * pulse, P2 ? '#ff4a1d' : '#ff7a2d', P2 ? 0.5 : 0.28);
       ctx.restore();
     }
     // pulling himself back together: fire spiralling into the bones
@@ -462,9 +476,9 @@ Object.assign(Enemy.prototype, {
         const x = f[0] + Math.cos(a) * r, y = f[1] - 30 + Math.sin(a) * r * 0.6;
         const x2 = f[0] + Math.cos(a - 0.35) * (r + 26), y2 = f[1] - 30 + Math.sin(a - 0.35) * (r + 26) * 0.6;
         Rough.line(ctx, x2, y2, x, y, { color: i % 2 ? '#ffd24a' : '#ff7a2d', width: 3, jitter: 1, passes: 1, alpha: 0.4 + k * 0.6 });
-        if (!Fx.low) Rough.bloom(ctx, x, y, 14, '#ff7a2d', 0.6);
+        igGlow(ctx, x, y, 14, '#ff7a2d', 0.6);
       }
-      if (!Fx.low) Rough.bloom(ctx, f[0], f[1] - 30, 30 + k * 90, '#ff4a1d', k);
+      igGlow(ctx, f[0], f[1] - 30, 30 + k * 90, '#ff4a1d', k);
     }
     // fire threads from the staff to every heart it holds up
     if (this.igA && (g.state === 'guard' || g.state === 'thrust' || g.state === 'summon')) {
@@ -495,7 +509,7 @@ Object.assign(Enemy.prototype, {
       ctx.restore();
     }
     // in his second life the whole drawing glows through itself
-    if (P2 && !Fx.low && g.state !== 'bones') {
+    if (P2 && !Settings.data.low && g.state !== 'bones') {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.08 + Math.sin(t * 9) * 0.04;
@@ -507,11 +521,11 @@ Object.assign(Enemy.prototype, {
     if (this.igA && g.state !== 'bones') {
       const A = this.igA;
       const flick = 0.7 + Math.sin(t * 17 + this.id) * 0.2 + Math.random() * 0.1;
-      if (!Fx.low) {
-        Rough.bloom(ctx, A.eye[0], A.eye[1], (P2 ? 26 : 16) * flick, P2 ? '#ff4a1d' : '#ff7a2d', 0.9);
-        Rough.bloom(ctx, A.eye[0], A.eye[1], (P2 ? 10 : 6) * flick, '#fff1b0', 0.9);
-        Rough.bloom(ctx, A.top[0], A.top[1], (P2 ? 40 : 26) * flick * (anim === 'summon' ? 1.8 : 1), '#ffb347', 0.8);
-        Rough.bloom(ctx, A.chest[0], A.chest[1], (P2 ? 34 : 18) * flick, '#ff7a2d', P2 ? 0.8 : 0.45);
+      {
+        igGlow(ctx, A.eye[0], A.eye[1], (P2 ? 26 : 16) * flick, P2 ? '#ff4a1d' : '#ff7a2d', 0.9);
+        igGlow(ctx, A.eye[0], A.eye[1], (P2 ? 10 : 6) * flick, '#fff1b0', 0.9);
+        igGlow(ctx, A.top[0], A.top[1], (P2 ? 40 : 26) * flick * (anim === 'summon' ? 1.8 : 1), '#ffb347', 0.8);
+        igGlow(ctx, A.chest[0], A.chest[1], (P2 ? 34 : 18) * flick, '#ff7a2d', P2 ? 0.8 : 0.45);
       }
       if (P2) {
         Rough.boil(this.id + 11, Math.floor(t * 12));
@@ -525,7 +539,7 @@ Object.assign(Enemy.prototype, {
     if (g.blockT > 0 && this.igA) {
       const h = this.igA.hand, a = t * 22;
       Rough.boil(this.id + 9, Math.floor(t * 20));
-      Rough.bloom(ctx, h[0], h[1], 64, '#ffb347', 0.5);
+      igGlow(ctx, h[0], h[1], 64, '#ffb347', 0.5);
       for (let i = 0; i < 3; i++) {
         Rough.arc(ctx, h[0], h[1], 50 + i * 6, a + i * 2, a + i * 2 + 2.2, { color: i ? '#ffd24a' : '#ff7a2d', width: 3 - i * 0.6, jitter: 1, passes: 1, alpha: 0.9 });
       }
@@ -534,7 +548,7 @@ Object.assign(Enemy.prototype, {
     // the pile: a hint that it wants clicking
     if (g.state === 'bones') {
       const k = 0.5 + Math.sin(t * 5) * 0.5;
-      Rough.bloom(ctx, f[0], f[1] - 16, 50, '#ff7a2d', 0.2 + k * 0.25);
+      igGlow(ctx, f[0], f[1] - 16, 50, '#ff7a2d', 0.2 + k * 0.25);
       Rough.text(ctx, 'click! ' + g.clicks + '/2', f[0], f[1] - 62 - k * 4, 16, '#e0562d');
     }
   },
@@ -572,9 +586,9 @@ Object.assign(Enemy.prototype, {
     const r = this.r * beat * (this.hitT > 0 ? 1.15 : 1);
     const x = this.x + (this.flash > 0 ? Rough.jit(2) : 0), y = this.y;
     Rough.boil(this.id, Math.floor(t * 7));
-    if (!Fx.low) {
-      Rough.bloom(ctx, x, y, r * 4.2 * beat, '#ff2a1d', 0.5);
-      Rough.bloom(ctx, x, y, r * 1.8, '#ffb347', 0.45);
+    {
+      igGlow(ctx, x, y, r * 4.2 * beat, '#ff2a1d', 0.5);
+      igGlow(ctx, x, y, r * 1.8, '#ffb347', 0.45);
     }
     // a heart, the drawn kind but lumpier: two lobes and a point
     const pts = [];
@@ -628,6 +642,59 @@ Object.assign(Enemy.prototype, {
     }
   },
 
+  /* ---------------------------------------------------------- javelins */
+  spearUpdate(dt, game, d) {
+    const s = this.spear;
+    if (!s) return;
+    s.t += dt;
+    const step = s.speed * Math.min(1, 0.45 + s.t * 1.6) * dt;     // it leaves the hand fast and keeps coming
+    this.x -= (this.x / d) * step;
+    this.y -= (this.y / d) * step;
+    s.trail.push([this.x, this.y]);
+    if (s.trail.length > 10) s.trail.shift();
+    if (Math.random() < dt * (Fx.low ? 8 : 26)) game.effects.push(new IgnisCinder(this.x, this.y, Math.random() < 0.5));
+    if (d <= game.castleRadius + this.r * 0.5) {
+      this.dead = true;
+      game.effects.push(new Flare(this.x, this.y, { color: '#ff7a2d', r: 44, dur: 0.5, rays: 12, motes: 10, rings: 2 }));
+      game.effects.push(new IgnisFireRing(this.x, this.y, BLOCK * 1.4));
+      game.shake(10);
+      Sfx.play('ignis_slam', { volume: 0.7, rate: 1.4 });
+      game.castleHit(this);
+    }
+  },
+
+  drawSpear(ctx, t) {
+    const s = this.spear || { t, trail: [] };
+    const x = this.x, y = this.y;
+    const a = Math.atan2(-y, -x) || 0, c = Math.cos(a), sn = Math.sin(a);
+    Rough.boil(this.id, Math.floor(t * 12));
+    for (let i = 1; i < s.trail.length; i++) {
+      const p = s.trail[i - 1], q = s.trail[i];
+      Rough.line(ctx, p[0], p[1], q[0], q[1], { color: i % 2 ? '#ff7a2d' : '#ffd24a', width: 1 + i * 0.6, jitter: 1, passes: 1, alpha: i / s.trail.length * 0.8 });
+    }
+    igGlow(ctx, x, y, 44, '#ff5a1d', 0.7);
+    const at = (d, o) => [x + c * d - sn * o, y + sn * d + c * o];
+    const flash = this.flash > 0;
+    // the shaft, bound with bone, burning along its length
+    const tail = at(-38, 0), neck = at(8, 0);
+    Rough.line(ctx, tail[0], tail[1], neck[0], neck[1], { color: '#2b2b2b', width: 6, jitter: 0.6, passes: 1 });
+    Rough.line(ctx, tail[0], tail[1], neck[0], neck[1], { color: flash ? '#ffffff' : '#4a3528', width: 3.2, jitter: 0.5, passes: 1 });
+    Rough.line(ctx, tail[0], tail[1], neck[0], neck[1], { color: '#ff7a2d', width: 1.2, jitter: 1.4, passes: 1, alpha: 0.9 });
+    for (const d of [-26, -10]) { const b0 = at(d, -4), b1 = at(d + 2, 4); Rough.line(ctx, b0[0], b0[1], b1[0], b1[1], { color: '#ece3c9', width: 3, jitter: 0.3, passes: 1 }); }
+    const blade = [at(6, -6), at(24, 0), at(6, 6), at(10, 0)];
+    Rough.scribble(ctx, blade, { color: flash ? '#ffffff' : '#ff7a2d', spacing: 2, width: 2.2, overflow: 1.1 });
+    Rough.poly(ctx, blade, { color: '#2b1014', width: 1.8, jitter: 0.3 });
+    const hot = at(20, 0);
+    igGlow(ctx, hot[0], hot[1], 18, '#fff1b0', 0.8);
+    // how much is left of it: five notches
+    const left = Math.max(0, Math.ceil(this.hp));
+    for (let i = 0; i < 5; i++) {
+      const p = at(-30 + i * 7, -10);
+      ctx.fillStyle = i < left ? '#ffd24a' : 'rgba(43,16,20,0.35)';
+      ctx.fillRect(p[0] - 2, p[1] - 2, 4, 4);
+    }
+  },
+
   drawOrb(ctx, t) {
     const o = this.orb || { mode: 'back', t: t, trail: [] };
     const x = this.x, y = this.y;
@@ -649,9 +716,9 @@ Object.assign(Enemy.prototype, {
           { color: '#ffd24a', width: 2, jitter: 0.4, passes: 1, alpha: 0.9 });
       }
     }
-    if (!Fx.low) {
-      Rough.bloom(ctx, x, y, r * 5, '#ff3a12', 0.7);
-      Rough.bloom(ctx, x, y, r * 2, '#fff1b0', 0.6);
+    {
+      igGlow(ctx, x, y, r * 5, '#ff3a12', 0.7);
+      igGlow(ctx, x, y, r * 2, '#fff1b0', 0.6);
     }
     Rough.blob(ctx, x, y, r, this.flash > 0 ? '#ffffff' : '#ff7a2d', '#5a1a0a', { spacing: 2, fillWidth: 2.4, sides: 9, width: 1.8, wobble: 1.2 });
     Rough.blob(ctx, x, y, r * 0.45, '#fff1b0', null, { spacing: 1.6, fillWidth: 2, sides: 7, width: 0.1, wobble: 0.4 });
@@ -659,6 +726,29 @@ Object.assign(Enemy.prototype, {
 });
 
 /* ------------------------------------------------------------ effects */
+
+/* Glow for his fight. Rough.bloom goes dark in low graphics; this is the
+   same soft additive light but it stays on (one drawImage each), so the fight
+   keeps its fire on a slow phone too. */
+const IG_GLOW = {};
+function igGlow(ctx, x, y, r, color, alpha) {
+  if (!(r > 0.5)) return;
+  const a = (alpha == null ? 0.5 : alpha) * (Rough.isLow() ? 0.45 : 0.55);
+  if (a <= 0.004) return;
+  let c = IG_GLOW[color];
+  if (!c) {
+    c = IG_GLOW[color] = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, color); gr.addColorStop(0.45, color); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  }
+  const op = ctx.globalCompositeOperation, pa = ctx.globalAlpha;
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = Math.min(1, a);
+  ctx.drawImage(c, x - r, y - r, r * 2, r * 2);
+  ctx.globalCompositeOperation = op; ctx.globalAlpha = pa;
+}
 
 /* A tongue of fire drawn live at 12 fps: outer red, orange, a white-hot core,
    with a glow behind it. */
@@ -672,7 +762,7 @@ function igLiveFlame(ctx, x, y, h, w, t, seed) {
     Rough.scribble(ctx, pts, { color, spacing: 2.2, width: 2.4, overflow: 1.05, alpha });
     return pts;
   };
-  if (!Fx.low) Rough.bloom(ctx, x, y - hh * 0.4, hh * 0.9, '#ff5a1d', 0.55);
+  igGlow(ctx, x, y - hh * 0.4, hh * 0.9, '#ff5a1d', 0.55);
   const outer = layer(1, '#e0402a', 0.9);
   layer(0.72, '#ff9a2d', 0.95);
   layer(0.42, '#fff1b0', 0.95);
@@ -694,7 +784,7 @@ class IgnisCinder {
   }
   draw(ctx) {
     const p = this.life / this.max;
-    if (!Fx.low) Rough.bloom(ctx, this.x, this.y, this.s * 5, this.hot ? '#ff4a1d' : '#ff9a2d', p * 0.8);
+    if (!Fx.low) igGlow(ctx, this.x, this.y, this.s * 5, this.hot ? '#ff4a1d' : '#ff9a2d', p * 0.8);
     ctx.save();
     ctx.globalAlpha = Math.min(1, p * 1.4);
     ctx.fillStyle = p > 0.5 ? '#fff1b0' : this.hot ? '#ff5a1d' : '#ffb347';
@@ -721,7 +811,7 @@ class IgnisScorch {
     ctx.restore();
     const heat = Math.max(0, 1 - this.t / 1.4);
     if (heat > 0) {
-      if (!Fx.low) Rough.bloom(ctx, this.x, this.y, this.r * 2.2, '#ff4a1d', heat * 0.7);
+      igGlow(ctx, this.x, this.y, this.r * 2.2, '#ff4a1d', heat * 0.7);
       Rough.boil(this.id, Math.floor(time * 12));
       if (this.t < 0.9) igLiveFlame(ctx, this.x, this.y + 2, this.r * 1.3 * heat, this.r * 0.4, time, this.id % 7);
     }
@@ -740,7 +830,7 @@ class IgnisFireRing {
     Rough.boil(this.id, Math.floor(time * 12));
     ctx.save();
     ctx.translate(this.x, this.y); ctx.scale(1, 0.42);
-    if (!Fx.low) Rough.bloom(ctx, 0, 0, r * 1.2, '#ff4a1d', a * 0.6);
+    igGlow(ctx, 0, 0, r * 1.2, '#ff4a1d', a * 0.6);
     Rough.circle(ctx, 0, 0, r, { color: '#ff7a2d', width: 7 * a + 1, jitter: 1.5, wobble: 4, passes: 1, alpha: a });
     Rough.circle(ctx, 0, 0, r * 0.93, { color: '#fff1b0', width: 2, jitter: 1.5, wobble: 4, passes: 1, alpha: a * 0.8 });
     ctx.restore();
@@ -765,9 +855,9 @@ class IgnisPillar {
     const grow = E.out(Math.min(1, this.t / 0.25)), fade = k < 0.5 ? 1 : 1 - (k - 0.5) / 0.5;
     const W = 46 * (1 - k * 0.5), H = this.H * grow;
     Rough.boil(this.id, Math.floor(time * 12));
-    if (!Fx.low) {
-      Rough.bloom(ctx, this.x, this.y - H * 0.5, H * 0.6, '#ff3a12', fade * 0.8);
-      Rough.bloom(ctx, this.x, this.y - H * 0.3, H * 0.3, '#fff1b0', fade * 0.6);
+    {
+      igGlow(ctx, this.x, this.y - H * 0.5, H * 0.6, '#ff3a12', fade * 0.8);
+      igGlow(ctx, this.x, this.y - H * 0.3, H * 0.3, '#fff1b0', fade * 0.6);
     }
     for (const [kw, col, al] of [[1, '#e0402a', 0.85], [0.66, '#ff9a2d', 0.9], [0.3, '#fff1b0', 1]]) {
       const pts = [];
@@ -809,7 +899,7 @@ class IgnisRift {
     ctx.fillStyle = '#1a0c08';
     ctx.beginPath(); ctx.ellipse(this.x, this.y, 30 * grow, 9 * grow, 0, 0, 7); ctx.fill();
     ctx.restore();
-    if (heat > 0 && !Fx.low) Rough.bloom(ctx, this.x, this.y - 6, 60 * grow, '#ff4a2d', 0.7 * heat);
+    if (heat > 0) igGlow(ctx, this.x, this.y - 6, 60 * grow, '#ff4a2d', 0.7 * heat);
     for (const c of this.cracks) {
       const n = Math.max(2, Math.ceil(c.length * grow));
       const pts = c.slice(0, n).map(q => [this.x + q[0] * 1.6, this.y + q[1] * 1.6]);
@@ -828,7 +918,7 @@ class IgnisSigil {
     const k = this.t / this.dur, a = Math.sin(k * Math.PI);
     const R = (this.big ? 58 : 44) * (0.6 + E.out(Math.min(1, k * 2)) * 0.4);
     Rough.boil(this.id, Math.floor(this.t * 7));
-    if (!Fx.low) Rough.bloom(ctx, this.x, this.y, R * 1.6, '#ff7a2d', 0.5 * a);
+    igGlow(ctx, this.x, this.y, R * 1.6, '#ff7a2d', 0.5 * a);
     ctx.save();
     ctx.translate(this.x, this.y); ctx.scale(1, 0.4);
     Rough.circle(ctx, 0, 0, R, { color: '#ff7a2d', width: 2.6, jitter: 0.8, wobble: 1, passes: 1, alpha: a });
@@ -859,7 +949,7 @@ class IgnisThrust {
     const ex = igLerp(this.x, this.tx, out), ey = igLerp(this.y, this.ty, out);
     const a = Math.atan2(ey - this.y, ex - this.x);
     Rough.boil(this.id, Math.floor(this.t * 20));
-    if (!Fx.low) Rough.bloom(ctx, ex, ey, 30, '#ff7a2d', 0.8);
+    igGlow(ctx, ex, ey, 30, '#ff7a2d', 0.8);
     // a shaft of bone and fire, with the blade on the end of it
     Rough.line(ctx, this.x, this.y, ex, ey, { color: '#2b2b2b', width: 6.5, jitter: 1, passes: 1 });
     Rough.line(ctx, this.x, this.y, ex, ey, { color: '#4a3528', width: 3.4, jitter: 0.8, passes: 1 });
@@ -883,7 +973,7 @@ class IgnisRoarWave {
   draw(ctx) {
     const k = this.t / this.dur;
     Rough.boil(this.id, Math.floor(this.t * 12));
-    if (!Fx.low) Rough.bloom(ctx, this.x, this.y, 60 + k * 200, '#ff7a2d', (1 - k) * 0.5);
+    igGlow(ctx, this.x, this.y, 60 + k * 200, '#ff7a2d', (1 - k) * 0.5);
     for (let i = 0; i < 3; i++) {
       const q = E.out(Math.min(1, Math.max(0, (k - i * 0.12) / 0.8)));
       if (q <= 0 || q >= 1) continue;
@@ -917,7 +1007,7 @@ class IgnisUnravel {
       const px = this.x + Math.cos(a) * r, py = this.y + Math.sin(a) * r + (this.crumble ? k * k * 30 : 0);
       Rough.line(ctx, px, py, px + Math.cos(a + 1.5) * 5, py + Math.sin(a + 1.5) * 5, { color: this.crumble ? '#6b4a3a' : '#ff7a2d', width: 2.2, jitter: 0.3, passes: 1, alpha: 1 - k * 0.6 });
     }
-    if (!this.crumble && !Fx.low) Rough.bloom(ctx, this.x, this.y, 20 + k * 20, '#ffd24a', 1 - k);
+    if (!this.crumble && !Fx.low) igGlow(ctx, this.x, this.y, 20 + k * 20, '#ffd24a', 1 - k);
   }
 }
 
@@ -992,7 +1082,7 @@ class IgnisDeath {
       ctx.scale(IGNIS.SCALE, IGNIS.SCALE);
       ctx.drawImage(p.cv, -p.R, -p.R);
       ctx.restore();
-      if (!Fx.low) Rough.bloom(ctx, p.x, p.y, 16, '#ff7a2d', 0.35 * fade);
+      igGlow(ctx, p.x, p.y, 16, '#ff7a2d', 0.35 * fade);
     }
   }
 }
@@ -1017,10 +1107,10 @@ const IgnisHud = {
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 1.8);
     if (this.heat < 0.01 && this.flash <= 0) { this.ash.length = 0; return; }
     const pulse = 0.85 + Math.sin(game.time * (P2 ? 5 : 2.5)) * 0.15;
-    if (!Fx.low) this.lighting(ctx, game, e, P2);
-    Rough.vignette(ctx, w, h, this.heat * (Fx.low ? 0.5 : 0.35) * pulse, P2 ? 'rgba(90,10,0,0.95)' : 'rgba(40,16,20,0.9)');
+    this.lighting(ctx, game, e, P2);
+    Rough.vignette(ctx, w, h, this.heat * 0.35 * pulse, P2 ? 'rgba(90,10,0,0.95)' : 'rgba(40,16,20,0.9)');
     // ash and cinders, in screen space so they drift over everything
-    const n = Math.round((Fx.low ? 14 : P2 ? 70 : 38) * this.heat);
+    const n = Math.round((Fx.low ? 18 : (P2 ? 70 : 38) * (Settings.gfx === 'high' ? 1 : 0.7)) * this.heat);
     while (this.ash.length < n) this.ash.push(this.flake(w, h, this.ash.length > 0));
     if (this.ash.length > n) this.ash.length = n;
     for (const a of this.ash) {
@@ -1028,7 +1118,7 @@ const IgnisHud = {
       if (a.y < -10 || a.life <= 0) Object.assign(a, this.flake(w, h, true));
       const al = Math.min(1, a.life) * this.heat;
       if (a.hot) {
-        if (!Fx.low) Rough.bloom(ctx, a.x, a.y, a.s * 4, P2 ? '#ff3a12' : '#ff7a2d', al * 0.7);
+        if (!Fx.low) igGlow(ctx, a.x, a.y, a.s * 4, P2 ? '#ff3a12' : '#ff7a2d', al * 0.7);
         ctx.fillStyle = '#ffd24a';
       } else ctx.fillStyle = '#5a4a44';
       ctx.globalAlpha = al * (a.hot ? 1 : 0.5);
@@ -1049,7 +1139,7 @@ const IgnisHud = {
      then those lights glowing over the top. The castle and your cursor keep
      a little light of their own, so you can always see what you are doing. */
   lighting(ctx, game, e, P2) {
-    const w = game.w, h = game.h, q = 0.5;
+    const w = game.w, h = game.h, q = Settings.data.low ? 0.25 : Settings.gfx === 'high' ? 0.5 : 0.35;
     const A = Depth.off(Depth.ACTORS);
     const ox = w / 2 + game.shakeX + A.x, oy = h / 2 + game.shakeY + A.y;
     const t = game.time, flick = 0.9 + Math.sin(t * 13) * 0.05 + Math.sin(t * 29) * 0.05;
@@ -1066,12 +1156,14 @@ const IgnisHud = {
       if (x.dead) continue;
       if (x.kind === 'heart') add(x.x, x.y, 95 * flick, 0.85, '#ff2a1d');
       else if (x.kind === 'ignisorb') add(x.x, x.y, 115 * flick, 0.95, '#ff5a1d');
+      else if (x.kind === 'ignisspear') add(x.x, x.y, 110 * flick, 0.9, '#ff7a2d');
     }
     for (const f of game.effects) {
       if (f instanceof IgnisPillar) { const k = f.t / f.dur; add(f.x, f.y - f.H * 0.35, f.H * 0.9, 1 - k * k, '#ff3a12'); }
       else if (f instanceof IgnisFireRing) { const k = f.t / f.dur; add(f.x, f.y, 60 + f.R * E.out(k) * 1.2, (1 - k) * 0.9, '#ff5a1d'); }
       else if (f instanceof IgnisScorch && f.t < 1.4) add(f.x, f.y, f.r * 4, (1 - f.t / 1.4) * 0.7, '#ff4a1d');
       else if (f instanceof IgnisThrust) add(f.tx, f.ty, 150, 1 - f.t / f.dur, '#ff7a2d');
+      else if (f instanceof Flare && f.color === '#ff7a2d') add(f.x, f.y, f.r * 3, 0.7, '#ff7a2d');
       else if (f instanceof IgnisRoarWave) add(f.x, f.y, 120 + f.t * 300, (1 - f.t / f.dur) * 0.8, '#ff7a2d');
       else if (f instanceof IgnisSigil) add(f.x, f.y, 130, Math.sin(f.t / f.dur * Math.PI) * 0.8, '#ff7a2d');
       else if (f instanceof IgnisRift) add(f.x, f.y, 160, Math.max(0, 1 - Math.max(0, f.t - 3) / 3) * 0.9, '#ff4a1d');
@@ -1098,6 +1190,7 @@ const IgnisHud = {
     ctx.drawImage(cv, 0, 0, w, h);
     // what the fire lights, it warms (soft light: coloured, not washed white),
     // and right at the fire itself, a glow
+    if (!Settings.data.low) {
     ctx.save();
     ctx.globalCompositeOperation = 'soft-light';
     for (const [x, y, r, i, c] of L) {
@@ -1106,7 +1199,9 @@ const IgnisHud = {
       ctx.drawImage(this.warm(c), x - r * 0.8, y - r * 0.8, r * 1.6, r * 1.6);
     }
     ctx.restore();
-    for (const [x, y, r, i, c, core] of L) if (c && core !== false) Rough.bloom(ctx, x, y, r * 0.16, c, i * this.heat * 0.45);
+    }
+    else for (const [x, y, r, i, c] of L) if (c) igGlow(ctx, x, y, r * 0.5, c, i * this.heat * 0.45);   // low: a cheap warm glow instead
+    for (const [x, y, r, i, c, core] of L) if (c && core !== false) igGlow(ctx, x, y, r * 0.16, c, i * this.heat * 0.45);
   },
 
   warm(c) {

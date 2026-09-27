@@ -348,16 +348,22 @@ instead of 3.
 
 ## Settings
 
-In MORE, or from the pause screen: **3D parallax** on or off, **low
-graphics**, **sound** on or off and a ten-notch **volume**. Low graphics is
+In MORE, or from the pause screen: **3D parallax** on or off, **graphics**,
+**sound** on or off and a ten-notch **volume**. The graphics button opens a
+little picker above it: **LOW**, **MID** (the default) or **HIGH**. HIGH is
+full sharpness (up to 2 pixels per pixel) and every particle; MID caps the
+canvas at 1.5 and makes about 70% of the debris, with all the glow. LOW is
 for weak phones - the crayon is drawn in one pass with batched strokes and no
 glow, the decorative extras are off, the canvas drops to one pixel per pixel
 and the game runs at a steady 30 fps (about 2.5x cheaper to draw). On a first
-visit from what looks like a low-end phone it starts switched on.
+visit from what looks like a low-end phone it starts on LOW. Even on LOW the
+Ignis fight keeps its light and fire: its glow is drawn with a cheap sprite
+of its own rather than the renderer's (which goes dark on LOW), and the dark
+it lights up is drawn at quarter size.
 
 ## Ignis, the last attacker
 
-Wave 15. No crowd: the ground splits at the edge of the page and a skeleton
+Wave 15. The castle is **mended to full** as he arrives. No crowd: the ground splits at the edge of the page and a skeleton
 climbs out of it - fire for a crown, fire in his eye, a tattered mantle and a
 long staff with a caged ember at the top and a spear at the bottom. He roars,
 and walks at the castle. **Nothing touches him on the way in.**
@@ -367,8 +373,9 @@ post, and then fights to a pattern:
 
 - **Summon** - three **hearts** fly off the staff and circle the castle a
   block outside the lawn (4 HP each). **While one lives he cannot be hit**:
-  he spins the staff, and every few seconds reaches the **spear end all the
-  way to the castle wall** (1 damage).
+  he spins the staff, and every few seconds throws an **Ember Javelin** off
+  the spear end at the castle: a thing in its own right with **5 HP** (five
+  notches on the shaft), to be broken in the air, or it lands for 1.
 - **A broken heart unravels into an Ember Orb** (1 HP) that backs off a block
   and runs at the castle **faster than an Auger** (2 damage).
 - **Exposed** - with all three gone he kneels, and can be hit.

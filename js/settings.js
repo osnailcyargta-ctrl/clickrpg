@@ -8,9 +8,17 @@
    instead of a stuttering 40-something. On a first visit from what looks
    like a low-end phone it starts switched on. */
 
+/* Graphics come in three: LOW (above), MID - the default: everything drawn,
+   the canvas a little softer on sharp screens, a bit less debris - and HIGH:
+   full resolution, every particle, every glow. */
+const GFX = ['low', 'mid', 'high'];
+
 const Settings = {
   KEY: 'fandharn.settings',
-  data: { parallax: true, low: null },
+  data: { parallax: true, low: null, gfx: null },
+
+  /* 'low' | 'mid' | 'high' */
+  get gfx() { return this.data.gfx || 'mid'; },
 
   load() {
     try {
@@ -19,9 +27,12 @@ const Settings = {
         const d = JSON.parse(raw);
         if (typeof d.parallax === 'boolean') this.data.parallax = d.parallax;
         if (typeof d.low === 'boolean') this.data.low = d.low;
+        if (GFX.includes(d.gfx)) this.data.gfx = d.gfx;
       }
     } catch (e) { /* no storage: defaults */ }
-    if (this.data.low == null) this.data.low = this.guessLow();
+    // an older save only knew low graphics on or off
+    if (!this.data.gfx) this.data.gfx = this.data.low == null ? (this.guessLow() ? 'low' : 'mid') : (this.data.low ? 'low' : 'mid');
+    this.data.low = this.data.gfx === 'low';
     this.apply();
     return this;
   },
@@ -38,6 +49,7 @@ const Settings = {
 
   set(key, value) {
     this.data[key] = value;
+    if (key === 'gfx') this.data.low = value === 'low';
     try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); } catch (e) { }
     this.apply();
   },
@@ -48,6 +60,7 @@ const Settings = {
     Fx.forced = low;
     Fx.low = low;
     if (!low) { Fx.slowFor = 0; Fx.fastFor = 0; }
+    Fx.share = this.gfx === 'high' ? 1 : this.gfx === 'mid' ? 0.7 : 1 / 3;
     if (typeof Doodle !== 'undefined') Doodle.RATE = low ? 2 : 3.5;
     if (typeof Game !== 'undefined' && Game.canvas) Game.resize();
   }
@@ -75,8 +88,32 @@ function renderSettings(el) {
   };
   toggle(row('3D PARALLAX', 'the page leans toward the cursor'), Settings.data.parallax,
     () => Settings.set('parallax', !Settings.data.parallax));
-  toggle(row('LOW GRAPHICS', 'for slow phones: plainer drawing, steady 30 fps'), Settings.data.low,
-    () => Settings.set('low', !Settings.data.low));
+  // graphics: one button naming the level; it opens a little picker above it
+  const gr = row('GRAPHICS', { low: 'for slow phones: plainer drawing, steady 30 fps', mid: 'the default: all of it, a touch lighter', high: 'every particle, every glow, full sharpness' }[Settings.gfx]);
+  const gb = document.createElement('button');
+  gb.className = 'set-toggle set-gfx';
+  gb.textContent = Settings.gfx.toUpperCase() + ' ▾';
+  gb.dataset.doodle = 'ink';
+  gb.onclick = e => {
+    e.stopPropagation();
+    Sfx.play('button', { volume: 0.7 });
+    const open = gr.querySelector('.gfx-pick');
+    if (open) { open.remove(); return; }
+    const pick = document.createElement('div');
+    pick.className = 'gfx-pick';
+    pick.dataset.doodle = 'ink'; pick.dataset.paper = '1'; pick.dataset.weight = '2.2';
+    for (const g of GFX) {
+      const o = document.createElement('button');
+      o.className = 'gfx-opt' + (g === Settings.gfx ? ' on' : '');
+      o.textContent = g.toUpperCase();
+      o.dataset.doodle = g === Settings.gfx ? '#4c9f70' : '#b8b2a3';
+      o.onclick = ev => { ev.stopPropagation(); Settings.set('gfx', g); Sfx.play('card_buy', { volume: 0.6 }); renderSettings(el); };
+      pick.appendChild(o);
+    }
+    gr.appendChild(pick);
+    Doodle.scan(gr);
+  };
+  gr.appendChild(gb);
   toggle(row('SOUND'), !Sfx.muted, () => { Sfx.toggleMute(); if (UI.paintMute) UI.paintMute(); });
   // volume: ten notches, like a crayon-drawn slider
   const vr = row('VOLUME');

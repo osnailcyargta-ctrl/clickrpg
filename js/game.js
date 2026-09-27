@@ -99,7 +99,8 @@ const Game = {
   },
 
   resize() {
-    this.dpr = Settings.data.low ? 1 : Math.min(2, window.devicePixelRatio || 1);   // low graphics: one pixel per pixel
+    // low graphics: one pixel per pixel; mid: at most one and a half
+    this.dpr = Settings.data.low ? 1 : Math.min(Settings.gfx === 'high' ? 2 : 1.5, window.devicePixelRatio || 1);
     this.w = window.innerWidth;
     this.h = window.innerHeight;
     this.canvas.width = Math.floor(this.w * this.dpr);
