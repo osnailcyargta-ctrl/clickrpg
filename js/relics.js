@@ -32,7 +32,7 @@ const CHEST_ODDS = { coins: 0.05, relic: 0.30 };          // the rest: nothing
 const SEARCH_MS = 4 * 3600e3;
 const SEARCH_TICK_MS = 10 * 60e3;                          // every ten minutes of searching...
 const SEARCH_CHANCE = 0.07;                                // ...a 7% chance of a chest
-const BOOST_LUCK = 1.3, BOOST_MS = 3600e3;                 // a boost: +30% luck for an hour
+const BOOST_LUCK = 1.35, BOOST_MS = 3600e3;                // a boost: +35% luck for an hour
 const PRICE = { chest: 3, boost: 3 };
 const STACK_MAX = 9999;                                    // per inventory slot
 

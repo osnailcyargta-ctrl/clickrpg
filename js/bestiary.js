@@ -276,6 +276,52 @@ const BeastScripts = {
 };
 
 /* ----------------------------------------------------------------- the book */
+/* How much of the book is filled in: a thing met is half its page, a thing
+   killed is the whole of it. */
+function bookProgress() {
+  let met = 0, read = 0;
+  for (const b of BESTIARY) { const k = Save.known(b.kind); if (k) met++; if (k > 1) read++; }
+  const total = BESTIARY.length;
+  return { met, read, total, pct: Math.round((met + read) / (total * 2) * 100) };
+}
+
+/* The crayon bar for it: a pale stroke for every page met, a dark one over
+   it for every page read in full, one tick per page. `k` runs it in from 0. */
+function paintBookBar(cv, p, k) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = cv.clientWidth || 200, H = cv.clientHeight || 22;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  }
+  const g = cv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const x0 = 4, y0 = 4, w = W - 8, h = H - 8;
+  Rough.srand(917 + Math.floor(k * 12));            // the fill boils while it runs in
+  const metW = w * p.met / p.total * k, readW = w * p.read / p.total * k;
+  if (metW > 2) Rough.scribble(g, Rough.rectPts(x0, y0, metW, h), { color: '#dcc79c', spacing: 3.4, width: 3.2, overflow: 1.04, alpha: 0.95 });
+  if (readW > 2) Rough.scribble(g, Rough.rectPts(x0, y0, readW, h), { color: '#8a6a3a', spacing: 3, width: 3.4, overflow: 1.04, alpha: 0.95, angle: -0.9 });
+  for (let i = 1; i < p.total; i++) {
+    const x = x0 + w * i / p.total;
+    Rough.line(g, x, y0 + h * 0.6, x, y0 + h, { color: '#5c4326', width: 1, jitter: 0.3, passes: 1, alpha: 0.3 });
+  }
+  Rough.poly(g, Rough.rectPts(x0, y0, w, h), { color: '#3a2a18', width: 2, jitter: 0.7 });
+}
+
+/* Run a bar in from empty, and count its number up alongside it. */
+function fillBookBar(cv, label) {
+  if (!cv) return;
+  const p = bookProgress(), t0 = performance.now();
+  cancelAnimationFrame(cv._raf);
+  const step = (now) => {
+    const u = Math.min(1, (now - t0) / 700), k = 1 - Math.pow(1 - u, 3);
+    paintBookBar(cv, p, k);
+    if (label) label.textContent = Math.round(p.pct * k) + '%';
+    if (u < 1) cv._raf = requestAnimationFrame(step);
+  };
+  cv._raf = requestAnimationFrame(step);
+}
+
 const Bestiary = {
   built: false, sel: 0, sim: null, raf: 0, last: 0,
 
@@ -283,6 +329,7 @@ const Bestiary = {
     if (!this.built) this.build();
     this.refresh();
     this.select(this.sel);
+    fillBookBar(document.getElementById('beast-bar'), document.getElementById('beast-pct'));
     cancelAnimationFrame(this.raf);
     this.last = performance.now();
     const loop = (now) => {

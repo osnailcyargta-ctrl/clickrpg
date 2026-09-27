@@ -194,6 +194,11 @@ const CURSORS = [
     id: 'hammer', name: 'Sledgehammer', cost: 48, color: '#6b5a4a', every: 0, dmg: 10, hold: true,
     desc: 'Hold it up. Let go to bring it down.',
     detail: 'A click does nothing. Hold for at least 0.4s and let go: it comes down on everything within a block and a half for 10 each. Every full second more you hold adds 20% - and at three seconds it comes down by itself, at +40%.'
+  },
+  {
+    id: 'fist', name: 'Chalk Fist', cost: 44, color: '#8fa3ba', every: 10, dmg: 2.5,
+    desc: 'Every 10 clicks it punches a cloud of chalk out of the page.',
+    detail: '2.5 a click. Every tenth jab hits the page hard enough to blow a block of chalk dust out: 4 damage, and everything in it knocked half a block away from the castle. Its skill is one of three, rolled ahead and named on the button.'
   }
 ];
 
@@ -322,7 +327,8 @@ const SKILLS = {
   plain:   { name: 'EXCLAMATION', blurb: 'one enormous mark slams down where you point it' },
   magnet:  { name: 'POLE REVERSAL', blurb: 'the whole board is hauled into one heap, then flung apart' },
   boomerang: { name: 'FLIGHT PATH', blurb: 'five of them criss-cross the page and none of them stop' },
-  hammer:  { name: 'QUAKE', blurb: 'the ground heaves out from the castle and everything on the page is knocked flat' }
+  hammer:  { name: 'QUAKE', blurb: 'the ground heaves out from the castle and everything on the page is knocked flat' },
+  fist:    { name: 'FINGER GUNS', blurb: 'one of three, and the button says which' }   // the Chalk Fist rolls its own (js/fist.js)
 };
 
 function skillFor(cursorId) { return SKILLS[cursorId] || SKILLS.plain; }

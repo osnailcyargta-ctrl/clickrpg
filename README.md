@@ -25,7 +25,9 @@ circling it:
   - met: the real picture in colour, its name and what it does; the numbers
     and where it turns up are still scrawled;
   - killed at least once: the whole page, and the live preview.
-  What you have met and killed is saved with your coins.
+  What you have met and killed is saved with your coins. A crayon bar under
+  the title shows how much of the book is filled in, as a percentage: a page
+  met counts half, a page read in full counts whole.
 - **SKIN** opens the skin shop.
 - **MORE** opens achievements, relics and the inventory (see below). A red
   dot on it means something is waiting there.
@@ -39,12 +41,13 @@ second, with colour scribbled in past the edge.
 Coins are saved in the browser (`localStorage`), so they survive closing the
 tab. You earn them by:
 
-- finishing the 15-wave run (beating Ignis): **1** on Normal, **2** on Hard;
-- every 10th wave in Endless: on Normal the first pays 1 and each one after
-  pays 1 more, up to **5** a time; on Hard it starts at 2 and goes up to **10**.
+- clearing **wave 5**: a coin half the time (Normal and Hard);
+- clearing **wave 10**: **1** (Normal and Hard);
+- beating Ignis on **wave 15**: **1** on Easy and Normal, **2** on Hard;
+- in Endless, every 5th wave past 15: **1** on Normal, **2** on Hard.
 
-Easy pays nothing. Coins from Endless are saved the moment the wave clears,
-so a run that dies later keeps them.
+Easy pays only for Ignis. Coins are saved the moment the wave clears, so a
+run that dies later keeps them.
 
 A skin changes a cursor's (or, later, a sentry's) name and look. **Star
 Caller** (4 coins) reskins the Storm Caller: the cursor is a star, its strike
@@ -92,7 +95,7 @@ Like every skin, neither changes a number.
 | Hard Copy | Clear wave 10 on Hard | the Thunder Pack |
 | Window Shopper | Clear wave 10 on Normal or Hard without buying anything | 3 coins + 2 chests |
 
-**Chests** come from winning a Normal or Hard run, from every tenth wave of
+**Chests** come from beating Ignis on Normal or Hard, from every tenth wave of
 an Endless run on Normal or Hard, from **searching**, or from the **shop**.
 A search runs for four hours by the clock, tab open or shut; every ten
 minutes of it has a **7% chance** of turning up a chest (about 1.7 a search). When the four hours are up
@@ -104,7 +107,7 @@ the time, and nothing the rest.
 
 **The shop** (under search and chests): **chests** at 3 coins each - a
 wheel to scroll to how many - and a **luck boost**, 3 coins for an hour of
-+30% chance on every search roll (buy another and it adds an hour on the end).
++35% chance on every search roll (buy another and it adds an hour on the end).
 
 **Relics** - one can be worn at a time. Holding more than one of a kind
 makes most of them stronger, up to five:
@@ -258,6 +261,7 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Boomerang** | 3 | 10 clicks | The throw loops out five blocks and curves home again, cutting 3 into everything on the way out and 3 more on the way back — line the arc up and the same enemy pays twice. |
 | **Sledgehammer** | 10 | hold | A click does nothing. **Hold for at least 0.4s** and let go: it comes down on everything within 1.5 blocks. Every full second more adds 20%, and at **3 seconds it comes down by itself** at +40%. A ring round the cursor fills while you hold. |
 | **Scissor Cursor** | 4 | — | Hardest click, no charge at all. Any non-boss enemy already under 18% HP is cut clean out of the drawing instead of damaged. Useless against a crowd. |
+| **Chalk Fist** | 2.5 | 10 clicks | A fist carved out of chalk, snapped off at the wrist. Every click is a jab (drawn at 12 fps: strike, squash, spring back, settle) with a puff of chalk; every tenth hits the page hard enough to blow a block of chalk dust out: 4 damage, and everything in it knocked half a block away from the castle. It trembles and glows when the next one is the big one. |
 
 ### Skills
 
@@ -275,6 +279,7 @@ on a mouse, 7–8 on a phone with two thumbs — not around spamming.
 | **Plain** | EXCLAMATION | One enormous mark slams down for a flat 45 in 2 blocks. The biggest single hit in the game, and the smallest area. |
 | **Magnet** | POLE REVERSAL | Hauls the whole board into one heap — never onto the castle — holds it, then flips and flings it: 8 plus 1.5 for every enemy in the pile, capped at ten. |
 | **Sledgehammer** | QUAKE | The ground heaves out from the castle to the edge of the screen: everything on screen is **stunned for 1s and knocked back a block** as the wave passes it. |
+| **Chalk Fist** | one of three | Rolled ahead of time and **named on the skill button**, so you know which one is loaded. While it plays the page stays dark like a blackboard and the chalk is the only bright thing on it. **FINGER GUNS**: the fist opens into a finger gun, chalk-circles ten random enemies and shoots them in turn, **15 each**, then blows the smoke off. **SKYFALL**: the fist clenches, goes up off the top of the page, and comes down on the castle knuckles first — the **QUAKE** shockwave. **HAYMAKER**: five random enemies punched straight out from the castle and **clean off the page**, 5 each (they have to walk back); a mini boss only rocks back a block. |
 | **Boomerang** | FLIGHT PATH | Nine of them launch from the castle, two laps each, the whole loop drifting round as it flies. 6 a pass, and a pass is easy to take twice. |
 
 Every cast opens the same way and runs about three and a half seconds: the
@@ -497,6 +502,7 @@ js/cryo.js        the Cryo Rain skin
 js/drillgear.js   how the Sentry Drill looks on each sentry
 js/mole.js        the Moleman skin
 js/hammer.js      the Sledgehammer and its QUAKE
+js/fist.js        the Chalk Fist, its jab, and its three skills
 js/flourish.js    decoration only: flares and page washes on every ability
 js/auger.js       the Auger, endless only
 js/trapper.js     the Trapper sentry

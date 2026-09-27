@@ -197,6 +197,9 @@ WEIGHT = {
     'ignis_roar': (0.6, 80, 30, 0.8, 0.02), 'ignis_thrust': (0.2, 140, 50, 0.7, 0.2),
     'ignis_slam': (0.8, 90, 26, 1.2, 0), 'ignis_death': (1.0, 80, 24, 1.0, 2.9),
     'bones_fall': (0.25, 130, 50, 0.5, 0), 'ignis_reform': (0.6, 90, 28, 0.9, 1.0),
+    'chalk_punch': (0.09, 170, 70, 0.55, 0), 'chalk_burst': (0.3, 130, 45, 0.8, 0),
+    'finger_gun': (0.16, 150, 55, 0.7, 0), 'haymaker': (0.3, 130, 42, 1.0, 0.06),
+    'fist_slam': (0.9, 80, 24, 1.3, 0),
 }
 
 # How much room each sound gets: (size 0..1, wet level). Quick UI sounds
@@ -212,6 +215,7 @@ ROOM = {
     'hammer_slam': (0.4, 0.16), 'sk_quake': (0.7, 0.2),
     'ice_shatter': (0.14, 0.1),
     'ignis_roar': (0.7, 0.22), 'ignis_death': (0.8, 0.22), 'ignis_rise': (0.6, 0.2), 'ignis_slam': (0.5, 0.18),
+    'chalk_punch': (0.12, 0.08), 'finger_gun': (0.4, 0.16), 'fist_slam': (0.7, 0.22), 'fling_ding': (0.35, 0.18),
 }
 
 
@@ -979,6 +983,121 @@ def s_heart_break():
     return mix(pop * 1.1, hiss * 0.6)
 
 
+# ------------------------------------------------------ the Chalk Fist
+def s_chalk_punch():
+    # a fist of chalk jabbed into the page: a soft knock, the stick
+    # crumbling a little at the knuckles, a breath of dust
+    knock = lp(noise(0.09), 260) * env(0.09, 0.001, curve=7)
+    tap = bp(noise(0.03), 1300, 1.6) * env(0.03, 0.0004, curve=10)
+    crumble = grains(0.12, 16, spread=0.06, length=0.004, band=(2500, 7500), jitter=0.6, decay=2.5)
+    puff = bp(noise(0.14), 1600, 0.8) * swell(0.14, 0.12, 3.0)
+    return mix(knock * 1.3, tap * 0.8, crumble * 0.7, puff * 0.35)
+
+
+def s_chalk_burst():
+    # the tenth jab: the page thumps and a ring of dust blows out of it
+    thud = lp(noise(0.35), 170) * env(0.35, 0.001, curve=5)
+    crack = hp(noise(0.05), 1800) * env(0.05, 0.0005, curve=9)
+    whoomp = sweep(noise(0.5) * swell(0.5, 0.08, 2.6), 2400, 500, 1.0)
+    crumble = grains(0.4, 40, spread=0.3, length=0.005, band=(2000, 8000), decay=2.2)
+    return mix(thud * 1.4, crack * 0.8, whoomp * 0.6, crumble * 0.7)
+
+
+def s_fist_clench():
+    # knuckles cracking one after another, and the chalk creaking with it
+    out = secs(0.5)
+    for i, at in enumerate([0.02, 0.1, 0.16, 0.27]):
+        c = mix(hp(noise(0.012), 2600) * env(0.012, 0.0002, curve=12),
+                ring(noise(0.05), rng.uniform(900, 1500), 14) * env(0.05, 0.0004, curve=8) * 0.5)
+        c = np.pad(c * (1 - i * 0.12), (int(SR * at), 0))
+        out = mix(out, c)
+    creak = am(bp(noise(0.45), 700, 3.0) * swell(0.45, 0.4, 2.5), 38, 0.7)
+    grit = grains(0.45, 22, length=0.004, band=(3000, 8000), decay=1.5)
+    return mix(out * 1.2, creak * 0.35, grit * 0.4)
+
+
+def s_gun_cock():
+    # the thumb going back: two quick chalky clicks
+    a = mix(hp(noise(0.015), 2200) * env(0.015, 0.0002, curve=12), ring(noise(0.04), 1800, 20) * env(0.04, 0.0003, curve=9) * 0.5)
+    b = np.pad(mix(hp(noise(0.02), 1600) * env(0.02, 0.0002, curve=10), ring(noise(0.05), 1200, 18) * env(0.05, 0.0003, curve=8) * 0.5), (int(SR * 0.075), 0))
+    return mix(a, b * 1.1, grains(0.12, 6, length=0.003, band=(4000, 9000)) * 0.3)
+
+
+def s_finger_gun():
+    # BANG, in chalk: a hard crack, a punch of air, a streak of dust after it
+    crack = mix(hp(noise(0.04), 2400) * env(0.04, 0.0002, curve=11),
+                np.pad(hp(noise(0.03), 3200) * env(0.03, 0.0002, curve=12) * 0.6, (int(SR * 0.006), 0)))
+    body = bp(noise(0.16), 420, 1.0) * env(0.16, 0.0006, curve=6)
+    whip = sweep(noise(0.22) * env(0.22, 0.001, curve=4), 5200, 900, 1.6)
+    dust = np.pad(grains(0.3, 26, spread=0.2, length=0.004, band=(2500, 8000), decay=2.0), (int(SR * 0.03), 0))
+    return mix(crack * 1.4, body * 1.0, whip * 0.5, dust * 0.5)
+
+
+def s_fist_rise():
+    # up and away: a rising rush of air with dust shaken off it
+    rush = sweep(noise(0.7) * swell(0.7, 0.55, 3.0), 260, 3200, 1.3)
+    flutter = am(bp(noise(0.7), 900, 1.2) * swell(0.7, 0.5, 3.0), 22, 0.5)
+    dust = grains(0.5, 24, length=0.004, band=(2500, 7000), decay=2.8)
+    return mix(rush * 1.2, flutter * 0.4, dust * 0.4)
+
+
+def s_fist_fall():
+    # coming back down: air whistling past it, falling in pitch, getting close
+    n = int(SR * 0.9)
+    whistle = np.zeros(n)
+    edges = np.linspace(0, n, 40).astype(int)
+    src = noise(0.9)
+    for i, f in enumerate(np.geomspace(2600, 700, 39)):
+        s0, e0 = edges[i], edges[i + 1]
+        pad = min(s0, 1024)
+        whistle[s0:e0] = ring(src[s0 - pad:e0], f, 40)[pad:]
+    t = np.linspace(0, 1, n)
+    whistle *= (0.15 + 0.85 * t ** 1.6)
+    rush = sweep(noise(0.9) * (0.1 + t ** 2), 600, 2400, 1.0)
+    return mix(whistle * 1.2, rush * 0.5)
+
+
+def s_fist_slam():
+    # the fist lands on the castle: the whole page jumps, chalk everywhere
+    thud = lp(noise(0.8), 120) * env(0.8, 0.001, curve=4)
+    body = ring(noise(0.5), 80, 5) * env(0.5, 0.002, curve=4.5)
+    crack = mix(hp(noise(0.08), 1500) * env(0.08, 0.0004, curve=8), np.pad(hp(noise(0.06), 2500) * env(0.06, 0.0004, curve=9) * 0.7, (int(SR * 0.02), 0)))
+    burst = sweep(noise(0.9) * swell(0.9, 0.05, 2.4), 3000, 400, 0.9)
+    shards = grains(1.1, 70, spread=0.9, length=0.006, band=(1800, 8000), decay=1.8)
+    return mix(thud * 1.8, body * 1.0, crack * 1.0, burst * 0.6, shards * 0.6)
+
+
+def s_haymaker():
+    # a big swing through the air, and the smack of it landing
+    swing = np.pad(sweep(noise(0.12) * swell(0.12, 0.8, 2), 500, 2600, 1.4), (0, 0))
+    smack = np.pad(mix(bp(noise(0.12), 900, 1.1) * env(0.12, 0.0004, curve=7),
+                       hp(noise(0.03), 2200) * env(0.03, 0.0002, curve=11) * 0.7,
+                       lp(noise(0.3), 200) * env(0.3, 0.001, curve=5) * 1.2), (int(SR * 0.06), 0))
+    dust = np.pad(grains(0.3, 24, spread=0.18, length=0.004, band=(2500, 8000), decay=2.0), (int(SR * 0.07), 0))
+    return mix(swing * 0.5, smack * 1.3, dust * 0.5)
+
+
+def s_fling():
+    # something going away very fast: a long falling whoosh
+    return sweep(noise(0.6) * swell(0.6, 0.1, 2.2), 2600, 400, 1.3)
+
+
+def s_fling_ding():
+    # it has left the page: a small bright twinkle, far off
+    parts = []
+    for f, d, g in [(2640, 0.5, 0.6), (3960, 0.4, 0.45), (5280, 0.3, 0.3)]:
+        parts.append(ring(noise(d), f, 70) * env(d, 0.001, curve=5) * g)
+    return hp(mix(*parts), 1200)
+
+
+def s_chalk_crumble():
+    # the fist giving up: a stick of chalk crumbling to bits and dust
+    crumble = grains(0.8, 90, spread=0.6, length=0.006, band=(1200, 7000), jitter=0.6, decay=1.6)
+    bits = grains(0.8, 20, spread=0.7, length=0.012, band=(500, 1600), decay=1.4)
+    hiss = bp(noise(0.8), 3500, 0.7) * swell(0.8, 0.15, 3.0)
+    return mix(crumble * 1.2, bits * 0.6, hiss * 0.25)
+
+
 SOUNDS = {
     'click_hit': s_click_hit, 'click_miss': s_click_miss, 'crit': s_crit,
     'kill': s_kill, 'kill_big': s_kill_big, 'castle_hit': s_castle_hit,
@@ -1015,6 +1134,10 @@ SOUNDS = {
     'ignis_summon': s_ignis_summon, 'ignis_block': s_ignis_block, 'orb_dash': s_orb_dash,
     'bones_fall': s_bones_fall, 'bones_click': s_bones_click, 'ignis_reform': s_ignis_reform,
     'ignis_slam': s_ignis_slam, 'ignis_death': s_ignis_death, 'heart_break': s_heart_break,
+    'chalk_punch': s_chalk_punch, 'chalk_burst': s_chalk_burst, 'fist_clench': s_fist_clench,
+    'gun_cock': s_gun_cock, 'finger_gun': s_finger_gun, 'fist_rise': s_fist_rise, 'fist_fall': s_fist_fall,
+    'fist_slam': s_fist_slam, 'haymaker': s_haymaker, 'fling': s_fling, 'fling_ding': s_fling_ding,
+    'chalk_crumble': s_chalk_crumble,
 }
 
 if __name__ == '__main__':

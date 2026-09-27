@@ -160,7 +160,7 @@ const More = {
       + '<div class="shop-items">'
       + '<div class="shop-item"><canvas data-icon="chest" width="84" height="66"></canvas><b>Chests</b><span>' + PRICE.chest + coin + ' each</span>'
       + '<button id="buy-chests" data-doodle="#9a6a36" ' + (coins >= PRICE.chest ? '' : 'disabled') + '>BUY&hellip;</button></div>'
-      + '<div class="shop-item"><canvas data-icon="goldstar" width="84" height="66"></canvas><b>Luck boost</b><span>+30% chance to find a chest, 1 hour</span>'
+      + '<div class="shop-item"><canvas data-icon="goldstar" width="84" height="66"></canvas><b>Luck boost</b><span>+35% chance to find a chest, 1 hour</span>'
       + (left ? '<span class="boost-on" id="boost-left">active &middot; ' + hms(left) + ' left</span>' : '')
       + '<button id="buy-boost" data-doodle="#e8a93a" ' + (coins >= PRICE.boost ? '' : 'disabled') + '>' + (left ? 'ADD AN HOUR' : 'BUY') + ' &middot; ' + PRICE.boost + coin + '</button></div>'
       + '</div></div>';
@@ -185,7 +185,7 @@ const More = {
     if (bb) bb.onclick = () => {
       if (!Relics.buyBoost(Date.now())) return;
       Sfx.play('card_buy', { volume: 0.9, rateVar: 0 });
-      this.flash = 'luck boost: +30% for an hour';
+      this.flash = 'luck boost: +35% for an hour';
       this.render();
     };
   },

@@ -19,6 +19,10 @@ class SkillCinematic {
     this.freezeUntil = 2.4;        // enemies do not move at all until here
     this.payloadFired = false;
     this.dur = 3.6;                // the whole cast, including the tail
+    // a payload may keep the page dark for `hold` seconds after it lands -
+    // the Chalk Fist uses it as a blackboard - and have things drawn over it
+    this.hold = 0; this.holdLevel = 0.78;
+    this.over = [];
     this.flash = 0;
     this.rays = [];
     for (let i = 0; i < 34; i++) {
@@ -48,6 +52,7 @@ class SkillCinematic {
 
   update(dt, game) {
     this.t += dt;
+    if (this.over.length) this.over = this.over.filter(o => !o.finished);
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt / 0.22);
     if (!this.payloadFired && this.t >= this.windup) {
       this.payloadFired = true;
@@ -68,10 +73,14 @@ class SkillCinematic {
     const cx = w / 2 + this.wx + lean.x, cy = h / 2 + this.wy + lean.y;
     const col = this.cursor.color;
 
-    // darkness comes in fast and lifts slowly
+    // darkness comes in fast and lifts slowly - or is held while a payload
+    // plays on it, then lifts
+    const held = this.windup + this.hold, top = this.hold ? this.holdLevel : 0.78;
     const dark = p < this.windup
       ? E.out(wind) * 0.78
-      : Math.max(0, 0.78 - E.out((p - this.windup) / (this.dur - this.windup)) * 0.78);
+      : p < held
+        ? 0.78 + (this.holdLevel - 0.78) * E.clamp01((p - this.windup) / 0.35)
+        : Math.max(0, top - E.out((p - held) / Math.max(0.3, this.dur - held)) * top);
 
     if (dark > 0.01) {
       ctx.save();
@@ -216,6 +225,14 @@ class SkillCinematic {
       ctx.restore();
       Rough.bloom(ctx, cx, cy, rr * 0.8, col, (1 - k) * 0.3);
       ctx.save();
+      ctx.restore();
+    }
+
+    // what the payload draws over the dark, where the world is
+    if (this.over.length) {
+      ctx.save();
+      ctx.translate(w / 2 + lean.x + (Game.shakeX || 0), h / 2 + lean.y + (Game.shakeY || 0));
+      for (const o of this.over) o.drawOver(ctx, time);
       ctx.restore();
     }
 

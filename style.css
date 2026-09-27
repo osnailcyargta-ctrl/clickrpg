@@ -360,6 +360,9 @@ canvas.scrawl { display: block; }
 .more-menu { display: flex; flex-direction: column; gap: 14px; width: min(340px, 80vw); }
 .more-big { position: relative; padding: 16px 20px; }
 .more-big b { font-family: var(--title); font-size: 22px; letter-spacing: 3px; }
+.book-prog { display: flex; align-items: center; gap: 8px; margin: -4px 0 6px; }
+.book-prog .prog-bar { flex: 1; height: 22px; min-width: 0; }
+.book-prog b { font-family: var(--title); font-size: 18px; color: #5c4326; min-width: 2.8em; text-align: right; }
 .more-back { align-self: flex-start; font-size: 15px; padding: 4px 12px; }
 .more-flash { margin: 0; color: #a5741b; font-weight: bold; }
 .more-body h3 { font-family: var(--title); margin: 0; font-size: 20px; letter-spacing: 1px; }

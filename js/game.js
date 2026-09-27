@@ -228,6 +228,7 @@ const Game = {
     this.runBosses = 0;          // bosses down this run, for the Endless achievement
     this.onlyPlain = true;       // no other cursor picked up this run
     this.boughtAny = false;      // nothing bought at all, for Window Shopper
+    this.fistNext = null; this.fistAt = null;   // the Chalk Fist's loaded skill and its last jab
     this.playerStun = 0;         // Ignis's roar
     this.cutscene = false;       // Ignis's entrance and death: hands off
     this.achRun = [];
@@ -322,6 +323,7 @@ const Game = {
       this.cursorCharge = 0;
       this.skillAnnounced = false;            // a new cursor means a new skill
       this.penTrail = off.id === 'pen' ? new PenTrail() : null;
+      if (off.id === 'fist') this.fistNext = rollFist();
     } else if (off.kind === 'oneshot') {
       // a sentry is not owned, it is employed - the post can change hands
       if (!SENTRY_OF[off.id]) this.oneshot[off.id] = true;
@@ -460,6 +462,8 @@ const Game = {
     if (!opts_ghost && Ignis.boneClick(this, x, y)) return;       // Ignis's bones, two clicks to wake
 
     const cursor = cursorById(this.cursorId);
+    const fist = cursor.id === 'fist';
+    if (fist && !opts_ghost) this.fistAt = this.time;       // the jab plays on the cursor
     if (!opts_ghost) {                       // the ghost charges nothing
       this.cursorCharge++;
       this.moltenCharge++;
@@ -479,7 +483,8 @@ const Game = {
       target.hurt(bite, this, { crit });
       this.effects.push(new ClickRipple(x, y, crit ? '#e0562d' : cursor.color, crit));
       this.effects.push(new HitSpark(x, y, cursor.color, crit));
-      Sfx.play(crit ? 'crit' : 'click_hit', { throttle: 25, volume: crit ? 0.9 : 0.55, voices: 6 });
+      if (fist) this.effects.push(new ChalkPuff(x, y, true));
+      Sfx.play(crit ? 'crit' : fist ? 'chalk_punch' : 'click_hit', { throttle: 25, volume: crit ? 0.9 : fist ? 0.7 : 0.55, voices: 6 });
       const onHit = CursorOnHit[cursor.id];
       if (onHit) onHit(this, target);
       if (crit) {
@@ -492,7 +497,8 @@ const Game = {
       }
     } else {
       this.effects.push(new ClickRipple(x, y, '#b8b2a3', false));
-      Sfx.play('click_miss', { throttle: 25, volume: 0.35, voices: 4 });
+      if (fist) this.effects.push(new ChalkPuff(x, y, false));
+      Sfx.play(fist ? 'chalk_punch' : 'click_miss', { throttle: 25, volume: fist ? 0.32 : 0.35, voices: 4 });
     }
 
     if (cursor.every > 0 && this.cursorCharge % cursor.every === 0) {
@@ -886,15 +892,13 @@ const Game = {
     if (this.state === 'playing' && this.spawnLeft === 0 && this.enemies.length === 0) {
       this.banner = null;
       Sfx.play('wave_clear', { volume: 0.75 });
-      // every tenth wave out in endless pays coins, and pays them now - a run
-      // that dies at wave 27 keeps what it earned at 10 and 20
+      // every fifth wave can pay coins, and pays them now - a run that dies
+      // at wave 12 keeps what it earned at 5 and 10
       if (this.wave === 10) Achievements.onWave10(this);
-      if (this.endless && this.wave % COIN_RULES.every === 0) {
-        this.earnCoins(coinsForEndlessMilestone(this.difficulty, this.wave / COIN_RULES.every));
-        if (this.difficulty !== 'easy') this.earnChest(1);
-      }
+      this.earnCoins(coinsForWave(this.difficulty, this.wave));
+      if (this.endless && this.wave % 10 === 0 && this.difficulty !== 'easy') this.earnChest(1);
+      if (this.endless && this.wave === WAVES_PER_RUN && this.difficulty !== 'easy') this.earnChest(1);
       if (!this.endless && this.wave >= WAVES_PER_RUN) {   // nothing left to spend it on
-        this.earnCoins(coinsForVictory(this.difficulty));
         if (this.difficulty !== 'easy') this.earnChest(1);
         this.state = 'victory';
         UI.showEnd(this, true);

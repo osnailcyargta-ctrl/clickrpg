@@ -164,25 +164,28 @@ const Save = {
 };
 
 /* ---- how coins are earned ---------------------------------------------
-   Finishing the ten-wave run: 1 on Normal, 2 on Hard.
-   Endless, every tenth wave cleared: on Normal the first pays 1 and each
-   after pays 1 more, up to 5 a time; on Hard the first pays 2, up to 10.
-   Easy pays nothing - it is there to learn on. */
+   Every fifth wave cleared can pay:
+     wave 5  - a coin half the time (Normal and Hard)
+     wave 10 - a coin (Normal and Hard)
+     wave 15 - beating Ignis: 1 on Easy and Normal, 2 on Hard
+   Endless goes on past 15, and every fifth wave after pays 1 on Normal and
+   2 on Hard. Easy pays only for Ignis - it is there to learn on. */
 const COIN_RULES = {
-  victory: { normal: 1, hard: 2 },
-  endless: { normal: { first: 1, cap: 5 }, hard: { first: 2, cap: 10 } },
-  every: 10
+  every: 5,
+  wave5: 0.5,
+  wave10: 1,
+  victory: { easy: 1, normal: 1, hard: 2 },
+  past: { normal: 1, hard: 2 }
 };
 
-function coinsForVictory(diff) {
-  return COIN_RULES.victory[diff] || 0;
-}
-
-/* milestone 1 is wave 10, milestone 2 is wave 20, and so on */
-function coinsForEndlessMilestone(diff, milestone) {
-  const r = COIN_RULES.endless[diff];
-  if (!r || milestone < 1) return 0;
-  return Math.min(r.cap, r.first + (milestone - 1));
+/* What clearing `wave` pays, rolled now. */
+function coinsForWave(diff, wave) {
+  if (wave % COIN_RULES.every) return 0;
+  if (wave === WAVES_PER_RUN) return COIN_RULES.victory[diff] || 0;
+  if (diff === 'easy') return 0;
+  if (wave === 5) return Math.random() < COIN_RULES.wave5 ? 1 : 0;
+  if (wave === 10) return COIN_RULES.wave10;
+  return wave > WAVES_PER_RUN ? COIN_RULES.past[diff] || 0 : 0;
 }
 
 Save.load();

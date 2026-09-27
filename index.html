@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Patrick+Hand&display=swap">
-<link rel="stylesheet" href="style.css?v=25">
+<link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -70,6 +70,7 @@
     <button class="book-close" data-go="front" aria-label="close" data-doodle="ink" data-paper="1">&times;</button>
     <div class="page page-left">
       <h2>BESTIARY</h2>
+      <div class="book-prog"><canvas id="beast-bar" class="prog-bar"></canvas><b id="beast-pct"></b></div>
       <div id="beast-list" class="beast-list"></div>
     </div>
     <div class="spine" data-doodle="#b8b2a3" data-weight="1.6"></div>
@@ -90,7 +91,7 @@
     <h2>SKINS</h2>
     <div class="coin-purse"><i class="coin" data-doodle="#a5741b" data-fill="#f2c230" data-shape="circle" data-weight="2"></i><b id="coin-count">0</b><span>coins</span></div>
     <div id="skin-list" class="skin-list"></div>
-    <p class="hint coin-rules">Normal win: 1 coin &middot; Hard win: 2 &middot; Endless: every 10 waves</p>
+    <p class="hint coin-rules">Wave 5: maybe 1 &middot; wave 10: 1 &middot; beat Ignis: 1, Hard 2 &middot; Endless: every 5 waves</p>
     <p class="hint save-warn hidden" id="save-warn">this browser is not keeping saves - coins last until the tab closes</p>
   </div>
 </div>
@@ -158,40 +159,41 @@
 </div>
 
 <!-- BUILD: bump this (and the ?v= on every asset) to beat browser caches -->
-<script>window.BUILD_V = "25";</script>
-<script src="js/audio.js?v=25"></script>
-<script src="js/rough.js?v=25"></script>
-<script src="js/config.js?v=25"></script>
-<script src="js/save.js?v=25"></script>
-<script src="js/entities.js?v=25"></script>
-<script src="js/hive.js?v=25"></script>
-<script src="js/fx.js?v=25"></script>
-<script src="js/depth.js?v=25"></script>
-<script src="js/deaths.js?v=25"></script>
-<script src="js/auger.js?v=25"></script>
-<script src="js/ignis_sheet.js?v=25"></script>
-<script src="js/ignis.js?v=25"></script>
-<script src="js/trapper.js?v=25"></script>
-<script src="js/skills.js?v=25"></script>
-<script src="js/offers.js?v=25"></script>
-<script src="js/cursors.js?v=25"></script>
-<script src="js/skins.js?v=25"></script>
-<script src="js/cryo.js?v=25"></script>
-<script src="js/relics.js?v=25"></script>
-<script src="js/achievements.js?v=25"></script>
-<script src="js/protector.js?v=25"></script>
-<script src="js/hammer.js?v=25"></script>
-<script src="js/thunder.js?v=25"></script>
-<script src="js/drillgear.js?v=25"></script>
-<script src="js/mole.js?v=25"></script>
-<script src="js/flourish.js?v=25"></script>
-<script src="js/doodle.js?v=25"></script>
-<script src="js/settings.js?v=25"></script>
-<script src="js/scrawl.js?v=25"></script>
-<script src="js/bestiary.js?v=25"></script>
-<script src="js/menu.js?v=25"></script>
-<script src="js/more.js?v=25"></script>
-<script src="js/ui.js?v=25"></script>
-<script src="js/game.js?v=25"></script>
+<script>window.BUILD_V = "26";</script>
+<script src="js/audio.js?v=26"></script>
+<script src="js/rough.js?v=26"></script>
+<script src="js/config.js?v=26"></script>
+<script src="js/save.js?v=26"></script>
+<script src="js/entities.js?v=26"></script>
+<script src="js/hive.js?v=26"></script>
+<script src="js/fx.js?v=26"></script>
+<script src="js/depth.js?v=26"></script>
+<script src="js/deaths.js?v=26"></script>
+<script src="js/auger.js?v=26"></script>
+<script src="js/ignis_sheet.js?v=26"></script>
+<script src="js/ignis.js?v=26"></script>
+<script src="js/trapper.js?v=26"></script>
+<script src="js/skills.js?v=26"></script>
+<script src="js/offers.js?v=26"></script>
+<script src="js/cursors.js?v=26"></script>
+<script src="js/skins.js?v=26"></script>
+<script src="js/cryo.js?v=26"></script>
+<script src="js/relics.js?v=26"></script>
+<script src="js/achievements.js?v=26"></script>
+<script src="js/protector.js?v=26"></script>
+<script src="js/hammer.js?v=26"></script>
+<script src="js/thunder.js?v=26"></script>
+<script src="js/drillgear.js?v=26"></script>
+<script src="js/mole.js?v=26"></script>
+<script src="js/fist.js?v=26"></script>
+<script src="js/flourish.js?v=26"></script>
+<script src="js/doodle.js?v=26"></script>
+<script src="js/settings.js?v=26"></script>
+<script src="js/scrawl.js?v=26"></script>
+<script src="js/bestiary.js?v=26"></script>
+<script src="js/menu.js?v=26"></script>
+<script src="js/more.js?v=26"></script>
+<script src="js/ui.js?v=26"></script>
+<script src="js/game.js?v=26"></script>
 </body>
 </html>

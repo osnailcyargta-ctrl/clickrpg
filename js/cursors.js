@@ -347,6 +347,9 @@ const CursorMarks = {
 
 };
 
+// where the charge ring goes, for sprites that do not sit on the hotspot
+const CursorRings = {};
+
 function drawCursor(ctx, cursor, x, y, charge, pressed, t, marks, ghost, doubleId) {
   const s = 1 - pressed * 0.16;           // squash while held
   const look = cursorLook(cursor.id);     // a worn skin redraws it
@@ -390,13 +393,15 @@ function drawCursor(ctx, cursor, x, y, charge, pressed, t, marks, ghost, doubleI
   // charge ring, filling as the weapon gets closer to firing
   if (cursor.every > 0) {
     const p = (charge % cursor.every) / cursor.every;
-    const r = 13;
+    // round the hotspot - or, for a sprite that sits behind it, round the sprite
+    const ring = CursorRings[look.sprite] || { dx: 0, dy: -2, r: 13 };
+    const rx = x + ring.dx * s, ry = y + ring.dy * s, r = ring.r * s;
     ctx.save();
     ctx.globalAlpha = 0.16;
-    Rough.circle(ctx, x, y - 2, r, { color: '#9a9a9a', width: 1.6, jitter: 1 });
+    Rough.circle(ctx, rx, ry, r, { color: '#9a9a9a', width: 1.6, jitter: 1 });
     ctx.globalAlpha = 0.95;
     if (p > 0.001) {
-      Rough.arc(ctx, x, y - 2, r, -Math.PI / 2, -Math.PI / 2 + p * Math.PI * 2,
+      Rough.arc(ctx, rx, ry, r, -Math.PI / 2, -Math.PI / 2 + p * Math.PI * 2,
         { color: look.color, width: 3, jitter: 1.2, passes: 1 });
     }
     ctx.restore();

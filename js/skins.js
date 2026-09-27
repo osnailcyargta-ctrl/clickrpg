@@ -105,6 +105,7 @@ function cursorLook(id) {
 function sentryLook(type) { return skinLook('sentry:' + type); }
 
 function skillLook(cursorId) {
+  if (cursorId === 'fist') return fistSkill();         // one of three, rolled ahead (js/fist.js)
   const base = skillFor(cursorId);
   const s = skinLook('cursor:' + cursorId);
   if (!s || !s.skillName) return base;

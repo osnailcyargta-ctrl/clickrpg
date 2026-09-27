@@ -27,7 +27,9 @@ const Sfx = {
     'hammer_lift', 'hammer_tick', 'hammer_slam', 'sk_quake',
     'ice_shatter', 'sk_hail',
     'ignis_rise', 'ignis_roar', 'ignis_thrust', 'ignis_summon', 'ignis_block', 'orb_dash',
-    'bones_fall', 'bones_click', 'ignis_reform', 'ignis_slam', 'ignis_death', 'heart_break'
+    'bones_fall', 'bones_click', 'ignis_reform', 'ignis_slam', 'ignis_death', 'heart_break',
+    'chalk_punch', 'chalk_burst', 'fist_clench', 'gun_cock', 'finger_gun', 'fist_rise', 'fist_fall',
+    'fist_slam', 'haymaker', 'fling', 'fling_ding', 'chalk_crumble'
   ],
   path: 'assets/sfx/',
   ver: (typeof window !== 'undefined' && window.BUILD_V) ? '?v=' + window.BUILD_V : '',
