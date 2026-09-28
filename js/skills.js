@@ -53,6 +53,7 @@ class SkillCinematic {
   update(dt, game) {
     this.t += dt;
     if (this.over.length) this.over = this.over.filter(o => !o.finished);
+    if (this.lit && this.payloadFired) SkillFX.emit(game, this, dt);
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt / 0.22);
     if (!this.payloadFired && this.t >= this.windup) {
       this.payloadFired = true;
@@ -61,6 +62,10 @@ class SkillCinematic {
       const fire = SkillPayloads[this.cursorId] || SkillPayloads.plain;
       const extra = fire(game, this);
       if (extra) this.dur = Math.max(this.dur, this.windup + extra);
+      // the page stays dark while the skill plays, and the skill lights it
+      // (js/skillfx.js); the Chalk Fist brings its own blackboard
+      this.lit = this.cursorId !== 'fist';
+      if (this.lit && !this.hold) { this.hold = Math.max(0.6, (extra || 1.5) - 0.5); this.holdLevel = 0.66; }
       game.shake(16);
     }
     return this.t < this.dur;
@@ -82,7 +87,9 @@ class SkillCinematic {
         ? 0.78 + (this.holdLevel - 0.78) * E.clamp01((p - this.windup) / 0.35)
         : Math.max(0, top - E.out((p - held) / Math.max(0.3, this.dur - held)) * top);
 
-    if (dark > 0.01) {
+    if (dark > 0.01 && this.lit && this.payloadFired) {
+      SkillFX.darkness(ctx, Game, this, dark);          // the skill's own light burnt into the dark
+    } else if (dark > 0.01) {
       ctx.save();
       ctx.globalAlpha = dark;
       ctx.fillStyle = '#141018';

@@ -346,6 +346,20 @@ instead of 3.
 | **Deep Ink** | +0.3s on every status you inflict, per level: burns, slows, stains, stuns. |
 | **Tape Patch** | Tapes one castle segment back together. Only offered while damaged. |
 
+## Skills are lit
+
+Every weapon's skill plays the way Ignis's fight does (`js/skillfx.js`):
+once the payload lands the page is held dark, and the skill is what lights
+it - every bolt, ring, blade, blast, boomerang and shockwave burns light into
+the dark in its weapon's own colour (orange EXCLAMATION, blue THUNDERHEAD,
+violet PERIMETER, red GUILLOTINE, yellow EIGHT WAYS, blue CLOUDBURST, green
+CROSSHATCH, pink SECOND DRAFT, violet-and-red POLE REVERSAL, amber FLIGHT
+PATH, orange QUAKE; the skins in theirs), glows over it, and throws off
+sparks of that colour, while motes of it drift up across the screen. The
+castle and your cursor keep a little light. CLOUDBURST's flood now lands in a
+ring, CROSSHATCH strikes through everything it bites, EXCLAMATION lands with
+a burning rim, a shock ring and cracks. The Chalk Fist keeps its blackboard.
+
 ## Settings
 
 In MORE, or from the pause screen: **3D parallax** on or off, **graphics**,
@@ -421,6 +435,11 @@ cinders drift up across the screen, and his big moments flash it orange.
 Where he stands in his second life the ground scorches and burns; his slam
 and his roar roll a ring of fire out across the lawn, and when he rises again
 a pillar of fire goes up out of the bones.
+
+A heart broken by hand has a **25% chance to leave a green cross** behind.
+Nobody has to click it: it hangs a beat, then flies home to the castle on
+its own and mends **half a segment** - so a long Hard run is not thrown away
+at the last fight.
 
 The hearts and the orbs are **easier to click than they look**: a click
 reaches a heart from 34px and an orb from 44px, and a click near him and one
@@ -535,6 +554,7 @@ js/drillgear.js   how the Sentry Drill looks on each sentry
 js/mole.js        the Moleman skin
 js/hammer.js      the Sledgehammer and its QUAKE
 js/fist.js        the Chalk Fist, its jab, and its three skills
+js/skillfx.js     every skill lit: the dark, the light, the sparks
 js/flourish.js    decoration only: flares and page washes on every ability
 js/auger.js       the Auger, endless only
 js/trapper.js     the Trapper sentry

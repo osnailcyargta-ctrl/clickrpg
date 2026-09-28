@@ -34,7 +34,7 @@ const IGNIS = {
   THRUST: [3.4, 2.5], EXPOSED: [5, 4],
   HEART_LIFE: 5,
   BLOCK_CHANCE: 0.45, BLOCK_TIME: 1.5, BLOCK_COOL: 1.2, BLOCK_BOX: BLOCK * 1.5,
-  ORB_SPEED: 560,
+  ORB_SPEED: 560, HEAL_CHANCE: 0.25, HEAL: 0.5,
   HEART_R: GROUND_RADIUS + BLOCK,
   SCALE: 1.1, CHEST: 62
 };
@@ -937,6 +937,54 @@ class IgnisStaffReturn {
   }
 }
 
+/* What a heart broken by hand sometimes leaves: a little green cross of
+   life. Nobody has to click it - it hangs a beat, then goes home to the
+   castle on its own and mends half a segment. */
+class IgnisHeal {
+  constructor(x, y) {
+    this.id = nextId(); this.x = x; this.y = y; this.t = 0; this.trail = [];
+    this.vx = Rough.jit(60); this.vy = -90;
+    this.done = false;
+    Sfx.play('skill_ready', { volume: 0.5, rate: 1.6 });
+  }
+  update(dt, game) {
+    this.t += dt;
+    if (this.t < 0.45) {                                  // popped out, hanging
+      this.x += this.vx * dt; this.y += this.vy * dt; this.vx *= 1 - dt * 4; this.vy *= 1 - dt * 4;
+    } else {                                              // then home, faster and faster
+      const d = Math.hypot(this.x, this.y) || 1, sp = 120 + (this.t - 0.45) * 900;
+      this.x -= this.x / d * Math.min(d, sp * dt); this.y -= this.y / d * Math.min(d, sp * dt);
+      this.trail.push([this.x, this.y]); if (this.trail.length > 9) this.trail.shift();
+      if (d <= game.castleRadius * 0.6) {
+        game.castleHp = Math.min(game.maxHp, game.castleHp + IGNIS.HEAL);
+        game.effects.push(new FloatText(0, -game.castleRadius - 30, '+' + IGNIS.HEAL + ' hp', '#3fae5a', 22, true));
+        game.effects.push(new Flare(0, 0, { color: '#6fe08a', core: '#eaffef', r: game.castleRadius * 1.3, dur: 0.6, rays: 12, motes: 10, rings: 2 }));
+        Sfx.play('ward', { volume: 0.8, rate: 1.4 });
+        UI.syncHud(game);
+        return false;
+      }
+    }
+    return this.t < 6;
+  }
+  light() { return [this.x, this.y, 110, 0.9, '#6fe08a']; }
+  draw(ctx, time) {
+    Rough.boil(this.id, Math.floor(time * 12));
+    for (let i = 1; i < this.trail.length; i++) {
+      const p = this.trail[i - 1], q = this.trail[i];
+      Rough.line(ctx, p[0], p[1], q[0], q[1], { color: i % 2 ? '#6fe08a' : '#eaffef', width: 1 + i * 0.8, jitter: 0.8, passes: 1, alpha: i / this.trail.length });
+    }
+    const pulse = 1 + Math.sin(this.t * 12) * 0.12, s = 9 * pulse;
+    igGlow(ctx, this.x, this.y, 40 * pulse, '#4fd06a', 0.9);
+    igGlow(ctx, this.x, this.y, 16, '#eaffef', 0.8);
+    const plus = [[-s * 0.35, -s], [s * 0.35, -s], [s * 0.35, -s * 0.35], [s, -s * 0.35], [s, s * 0.35], [s * 0.35, s * 0.35],
+      [s * 0.35, s], [-s * 0.35, s], [-s * 0.35, s * 0.35], [-s, s * 0.35], [-s, -s * 0.35], [-s * 0.35, -s * 0.35]]
+      .map(p => [this.x + p[0], this.y + p[1]]);
+    Rough.scribble(ctx, plus, { color: '#3fae5a', spacing: 2.2, width: 2.6, overflow: 1.05 });
+    Rough.scribble(ctx, plus, { color: '#b8f5c6', spacing: 5, width: 1.6, overflow: 0.8, alpha: 0.8, angle: 0.9 });
+    Rough.poly(ctx, plus, { color: '#1c5a2c', width: 1.8, jitter: 0.4 });
+  }
+}
+
 /* A ring of fire rolling out across the ground from where he stands. */
 class IgnisFireRing {
   constructor(x, y, R) {
@@ -1287,6 +1335,7 @@ const IgnisHud = {
       else if (f instanceof IgnisSigil) add(f.x, f.y, 130, Math.sin(f.t / f.dur * Math.PI) * 0.8, '#ff7a2d');
       else if (f instanceof IgnisRift) add(f.x, f.y, 160, Math.max(0, 1 - Math.max(0, f.t - 3) / 3) * 0.9, '#ff4a1d');
       else if (f instanceof IgnisDeath) add(f.e.x, f.e.y, 260, Math.max(0, 1 - f.t / 9), '#ff7a2d');
+      else if (f instanceof IgnisHeal) { const l = f.light(); add(l[0], l[1], l[2], l[3], l[4]); }
     }
     // the dark, at half size, with the lights burnt out of it
     const cv = this.cv || (this.cv = document.createElement('canvas'));

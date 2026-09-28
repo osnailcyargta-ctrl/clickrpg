@@ -1239,7 +1239,7 @@ const Game = {
     }
     ctx.save();
     ctx.globalAlpha = 0.75;
-    Rough.text(ctx, Math.max(0, this.castleHp) + ' / ' + this.maxHp, x, y - 19, 13, '#6b6b6b');
+    Rough.text(ctx, Math.max(0, Math.round(this.castleHp * 10) / 10) + ' / ' + this.maxHp, x, y - 19, 13, '#6b6b6b');
     ctx.restore();
   }
 };

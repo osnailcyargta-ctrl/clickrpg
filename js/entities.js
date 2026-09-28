@@ -137,7 +137,10 @@ class Enemy {
     if (this.dead) return;
     if (this.kind === 'ignis' && this.ignisDown(game)) return;   // bones first, then the end
     this.dead = true;
-    if (this.kind === 'heart') Ignis.decompile(game, this);       // broken, it becomes an orb
+    if (this.kind === 'heart') {
+      Ignis.decompile(game, this);
+      if (Math.random() < IGNIS.HEAL_CHANCE) game.effects.push(new IgnisHeal(this.x, this.y));   // a heart broken by hand may leave a little life behind
+    }       // broken, it becomes an orb
     if (this.kind === 'hive') {                // phase 3 walks out of the wreck
       const q = game.spawnMinion('queen', this.x, this.y, 0, game.waveSpec ? game.waveSpec.speed : 55);
       q.spawnT = 0; q.skillT = 2.4;
