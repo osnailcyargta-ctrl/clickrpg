@@ -1006,7 +1006,9 @@ const Game = {
     Rough.boil(7, t * 0.35);
     const R = this.castleRadius;
     const hit = E.pop(this.castleHitT);
-    const dmg = Math.min(5, Math.max(0, this.maxHp - this.castleHp));   // 0 (fine) .. 5 (gone)
+    // 0 (fine) .. 5 (gone), whole steps only: a half-mended segment (the
+    // Ignis heal) still looks like the damage it had
+    const dmg = Math.min(5, Math.max(0, Math.floor(this.maxHp - this.castleHp + 1e-6)));
 
     if (this.collapse > 0) { this.drawCollapse(ctx, R, t); return; }
 
